@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { AddStudentDialog } from './AddStudentDialog';
 import { TaskManagementDialog } from './TaskManagementDialog';
+import { RewardManagementDialog } from './RewardManagementDialog'; // Yeni import
 
 interface Student {
   id: string;
@@ -17,6 +18,7 @@ const StudentManagement = () => {
   const [loading, setLoading] = useState(true);
   const [isAddStudentOpen, setAddStudentOpen] = useState(false);
   const [isTaskManagementOpen, setTaskManagementOpen] = useState(false);
+  const [isRewardManagementOpen, setRewardManagementOpen] = useState(false); // Yeni state
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   const fetchStudents = useCallback(async () => {
@@ -47,6 +49,11 @@ const StudentManagement = () => {
     setTaskManagementOpen(true);
   };
 
+  const handleOpenRewardManagement = (student: Student) => { // Yeni fonksiyon
+    setSelectedStudent(student);
+    setRewardManagementOpen(true);
+  };
+
   return (
     <>
       <Card>
@@ -69,9 +76,14 @@ const StudentManagement = () => {
               {students.map((student) => (
                 <li key={student.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
                   <span>{student.first_name} {student.last_name}</span>
-                  <Button variant="outline" size="sm" onClick={() => handleOpenTaskManagement(student)}>
-                    Görevleri Yönet
-                  </Button>
+                  <div className="space-x-2">
+                    <Button variant="outline" size="sm" onClick={() => handleOpenTaskManagement(student)}>
+                      Görevleri Yönet
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={() => handleOpenRewardManagement(student)}>
+                      Ödül Gönder
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -89,6 +101,11 @@ const StudentManagement = () => {
         student={selectedStudent}
         isOpen={isTaskManagementOpen}
         onClose={() => setTaskManagementOpen(false)}
+      />
+      <RewardManagementDialog
+        student={selectedStudent}
+        isOpen={isRewardManagementOpen}
+        onClose={() => setRewardManagementOpen(false)}
       />
     </>
   );

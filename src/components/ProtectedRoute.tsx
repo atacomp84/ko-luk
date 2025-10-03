@@ -1,74 +1,87 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { Skeleton } from './ui/skeleton';
 
+interface Profile {
+  role: string;
+}
+
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles: string[] }) => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<{ role: string } | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<'loading' | 'authorized' | 'unauthorized'>('loading');
   const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
-    const getSessionAndProfile = async () => {
+    const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
 
-      if (session?.user) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (profileData) {
-          setProfile(profileData);
-          if (!allowedRoles.includes(profileData.role)) {
-            navigate('/');
-          }
-        } else {
-           navigate('/auth');
-        }
-      } else {
+      if (!session?.user) {
+        setStatus('unauthorized');
         navigate('/auth');
+        return;
       }
-      setLoading(false);
+
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+
+      if (error || !profile) {
+        // Profil henüz oluşturulmamış olabilir, kısa bir gecikme ile tekrar deneyin
+        setTimeout(() => {
+            supabase.from('profiles').select('role').eq('id', session.user.id).single().then(({data: retryProfile}) => {
+                if(retryProfile && allowedRoles.includes(retryProfile.role)) {
+                    setStatus('authorized');
+                } else {
+                    setStatus('unauthorized');
+                    navigate('/');
+                }
+            })
+        }, 1000);
+        return;
+      }
+
+      if (allowedRoles.includes(profile.role)) {
+        setStatus('authorized');
+      } else {
+        setStatus('unauthorized');
+        navigate('/'); // Yetkisiz rol, ana sayfaya yönlendir
+      }
     };
 
-    getSessionAndProfile();
+    checkAuth();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setStatus('unauthorized');
         navigate('/auth');
-      } else if (_event === 'SIGNED_IN' && location.pathname === '/auth') {
-        getSessionAndProfile();
       }
     });
 
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [navigate, allowedRoles, location.pathname]);
+  }, [navigate, allowedRoles]);
 
-  if (loading) {
+  if (status === 'loading') {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
-            <div className="p-8 space-y-4">
-                <Skeleton className="h-12 w-64" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-            </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="p-8 space-y-4 w-full max-w-md">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-8 w-3/4" />
+          <Skeleton className="h-20 w-full" />
         </div>
+      </div>
     );
   }
 
-  if (!session || !profile || !allowedRoles.includes(profile.role)) {
-    return null;
+  if (status === 'authorized') {
+    return <>{children}</>;
   }
 
-  return <>{children}</>;
+  return null; // 'unauthorized' durumunda yönlendirme zaten yapıldı
 };
 
 export default ProtectedRoute;

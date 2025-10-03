@@ -3,9 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Copy } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
 import StudentTasks from "@/components/student/StudentTasks";
+import StudentRewards from "@/components/student/StudentRewards";
 
 interface Profile {
     first_name: string;
@@ -54,7 +56,18 @@ const StudentDashboard = () => {
             <h2 className="text-xl font-semibold">Hoş Geldin, {profile?.first_name}!</h2>
           </div>
 
-          <StudentTasks />
+          <Tabs defaultValue="tasks" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="tasks">Görevlerim</TabsTrigger>
+              <TabsTrigger value="rewards">Ödüllerim</TabsTrigger>
+            </TabsList>
+            <TabsContent value="tasks">
+              <StudentTasks />
+            </TabsContent>
+            <TabsContent value="rewards">
+              <StudentRewards />
+            </TabsContent>
+          </Tabs>
 
           <Card>
             <CardHeader>
