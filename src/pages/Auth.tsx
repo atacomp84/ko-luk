@@ -18,9 +18,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
+import { useAuth } from "@/contexts/AuthContext"; // useAuth import ediliyor
 
 export default function AuthPage() {
   const navigate = useNavigate();
+  const { session, loading: authLoading } = useAuth(); // Merkezi AuthContext'ten session durumu alınıyor
   const [activeTab, setActiveTab] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,14 +33,13 @@ export default function AuthPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate("/");
-      }
-    };
-    checkSession();
-  }, [navigate]);
+    // AuthContext'ten gelen session bilgisi değiştiğinde bu effect çalışır.
+    // Eğer kullanıcı zaten giriş yapmışsa (session varsa), onu ana sayfaya yönlendir.
+    // Bu, giriş yaptıktan sonra yönlendirmenin doğru zamanda yapılmasını sağlar.
+    if (!authLoading && session) {
+      navigate("/");
+    }
+  }, [session, authLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,10 +51,10 @@ export default function AuthPage() {
     });
     if (error) {
       setError(error.message);
-    } else {
-      navigate("/");
+      setLoading(false);
     }
-    setLoading(false);
+    // Başarılı girişten sonra navigate() komutu buradan kaldırıldı.
+    // Yönlendirme artık yukarıdaki useEffect tarafından yönetilecek.
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -76,17 +77,18 @@ export default function AuthPage() {
       setLoading(false);
       setError(signUpError.message);
     } else {
-      // Otomatik oturumu sonlandırarak manuel girişi zorunlu kıl
       await supabase.auth.signOut();
       setLoading(false);
       showSuccess("Kayıt başarılı! Lütfen giriş yapın.");
-      
-      // Şifre alanını temizle, e-postayı kolaylık olması için tut
       setPassword("");
-      // Giriş yap sekmesine geç
       setActiveTab("login");
     }
   };
+
+  // Eğer session zaten varsa (örneğin sayfa yenilendiğinde), yönlendirme gerçekleşene kadar bir şey gösterme
+  if (authLoading || session) {
+    return null; // veya bir yükleme göstergesi
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
