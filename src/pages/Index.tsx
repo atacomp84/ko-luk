@@ -60,21 +60,21 @@ const Index = () => {
 
   const renderGuestView = () => (
     <>
-      <h1 className="text-4xl font-bold mb-4">Welcome to the LGS Coaching Platform</h1>
+      <h1 className="text-4xl font-bold mb-4">LGS Koçluk Platformuna Hoş Geldiniz</h1>
       <p className="text-xl text-gray-600 mb-6">
-        Please log in or register to continue.
+        Devam etmek için lütfen giriş yapın veya kayıt olun.
       </p>
-      <Button onClick={() => navigate('/auth')}>Login / Register</Button>
+      <Button onClick={() => navigate('/auth')}>Giriş Yap / Kayıt Ol</Button>
     </>
   );
 
   const renderUserView = () => (
     <>
-      <h1 className="text-4xl font-bold mb-4">Welcome, {profile?.first_name}!</h1>
+      <h1 className="text-4xl font-bold mb-4">Hoş geldin, {profile?.first_name}!</h1>
       <p className="text-xl text-gray-600 mb-6">
-        You are logged in as a {profile?.role}.
+        Bir {profile?.role === 'student' ? 'öğrenci' : 'koç'} olarak giriş yaptınız.
       </p>
-      <Button onClick={handleLogout}>Logout</Button>
+      <Button onClick={handleLogout}>Çıkış Yap</Button>
     </>
   );
 
