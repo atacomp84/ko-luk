@@ -17,9 +17,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { showSuccess } from "@/utils/toast";
 
 export default function AuthPage() {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -58,7 +60,7 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { data, error: signUpError } = await supabase.auth.signUp({
+    const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -71,27 +73,24 @@ export default function AuthPage() {
     });
 
     if (signUpError) {
+      setLoading(false);
       setError(signUpError.message);
-    } else if (data.session) { // Kullanıcı giriş yaptıysa...
-      // Doğrudan ilgili panele yönlendir
-      if (role === 'student') {
-        navigate('/student/dashboard');
-      } else if (role === 'coach') {
-        navigate('/coach/dashboard');
-      } else {
-        navigate('/'); // Her ihtimale karşı
-      }
     } else {
-      // E-posta onayı gibi bir durum varsa burası çalışır
-      navigate("/");
+      // Otomatik oturumu sonlandırarak manuel girişi zorunlu kıl
+      await supabase.auth.signOut();
+      setLoading(false);
+      showSuccess("Kayıt başarılı! Lütfen giriş yapın.");
+      
+      // Şifre alanını temizle, e-postayı kolaylık olması için tut
+      setPassword("");
+      // Giriş yap sekmesine geç
+      setActiveTab("login");
     }
-    
-    setLoading(false);
   };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <Tabs defaultValue="login" className="w-[400px]">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-[400px]">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="login">Giriş Yap</TabsTrigger>
           <TabsTrigger value="register">Kayıt Ol</TabsTrigger>
