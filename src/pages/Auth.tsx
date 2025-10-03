@@ -18,11 +18,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
-import { useAuth } from "@/contexts/AuthContext"; // useAuth import ediliyor
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function AuthPage() {
   const navigate = useNavigate();
-  const { session, loading: authLoading } = useAuth(); // Merkezi AuthContext'ten session durumu alınıyor
+  const { session, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,10 +33,9 @@ export default function AuthPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // AuthContext'ten gelen session bilgisi değiştiğinde bu effect çalışır.
-    // Eğer kullanıcı zaten giriş yapmışsa (session varsa), onu ana sayfaya yönlendir.
-    // Bu, giriş yaptıktan sonra yönlendirmenin doğru zamanda yapılmasını sağlar.
+    console.log(`[AuthPage] useEffect tetiklendi. Durum: authLoading=${authLoading}, session=${!!session}`);
     if (!authLoading && session) {
+      console.log('[AuthPage] Oturum var ve yükleme bitti. Ana sayfaya yönlendiriliyor...');
       navigate("/");
     }
   }, [session, authLoading, navigate]);
@@ -45,16 +44,19 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    console.log('[AuthPage] Giriş yapma işlemi başlatıldı.');
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     if (error) {
+      console.error('[AuthPage] Giriş hatası:', error.message);
       setError(error.message);
       setLoading(false);
+    } else {
+      console.log('[AuthPage] Giriş başarılı. Yönlendirme useEffect tarafından yapılacak.');
+      // setLoading(false) burada kaldırıldı, çünkü yönlendirme olana kadar UI'ın beklemede kalması daha iyi.
     }
-    // Başarılı girişten sonra navigate() komutu buradan kaldırıldı.
-    // Yönlendirme artık yukarıdaki useEffect tarafından yönetilecek.
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -85,10 +87,16 @@ export default function AuthPage() {
     }
   };
 
-  // Eğer session zaten varsa (örneğin sayfa yenilendiğinde), yönlendirme gerçekleşene kadar bir şey gösterme
-  if (authLoading || session) {
-    return null; // veya bir yükleme göstergesi
+  if (authLoading) {
+    console.log('[AuthPage] Auth yükleniyor, render erteleniyor.');
+    return <div>Yükleniyor...</div>; // Yönlendirme sırasında boş ekran yerine bir yükleme göstergesi
   }
+  
+  if (session) {
+    console.log('[AuthPage] Oturum zaten var, render erteleniyor (yönlendirme bekleniyor).');
+    return null;
+  }
+
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -133,7 +141,7 @@ export default function AuthPage() {
                     <Alert variant="destructive">
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>Hata</AlertTitle>
-                      <AlertDescription>{error}</AlertDescription>
+                      <AlertDescription>{error}</Description>
                     </Alert>
                   )}
                   <Button type="submit" className="w-full" disabled={loading}>
@@ -203,7 +211,7 @@ export default function AuthPage() {
                     <Alert variant="destructive">
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>Hata</AlertTitle>
-                      <AlertDescription>{error}</AlertDescription>
+                      <AlertDescription>{error}</Description>
                     </Alert>
                   )}
                   <Button type="submit" className="w-full" disabled={loading}>

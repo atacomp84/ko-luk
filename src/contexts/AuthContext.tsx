@@ -25,55 +25,62 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Uygulama ilk yüklendiğinde mevcut oturumu kontrol et
+    console.log('[AuthContext] Provider ilk kez yükleniyor. Başlangıç oturumu kontrol edilecek.');
     const getInitialSession = async () => {
       const { data: { session: initialSession } } = await supabase.auth.getSession();
+      console.log('[AuthContext] Başlangıç oturumu sonucu:', initialSession ? 'Oturum var' : 'Oturum yok');
       
       if (initialSession?.user) {
+        console.log('[AuthContext] Başlangıç oturumunda kullanıcı var. Profil çekiliyor...');
         const { data: userProfile } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', initialSession.user.id)
           .single();
+        console.log('[AuthContext] Başlangıç profili çekildi:', userProfile);
         setProfile(userProfile);
       }
       
       setSession(initialSession);
       setUser(initialSession?.user ?? null);
       setLoading(false);
+      console.log('[AuthContext] Başlangıç durumu ayarlandı. Yükleme tamamlandı.');
     };
 
     getInitialSession();
 
-    // 2. Gelecekteki tüm kimlik doğrulama değişikliklerini dinle (Giriş, Çıkış vb.)
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (_event, newSession) => {
+        console.log(`[AuthContext] onAuthStateChange tetiklendi. Olay: ${_event}`, newSession);
         setSession(newSession);
         setUser(newSession?.user ?? null);
 
         if (newSession?.user) {
+          console.log('[AuthContext] Yeni oturumda kullanıcı var. Profil çekiliyor...');
           const { data: userProfile } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', newSession.user.id)
             .single();
+          console.log('[AuthContext] Yeni oturum için profil çekildi:', userProfile);
           setProfile(userProfile);
         } else {
+          console.log('[AuthContext] Oturum kapandı. Profil temizleniyor.');
           setProfile(null);
         }
         
-        // Yeni bir oturum durumu geldiğinde yüklemenin bittiğinden emin ol
         if (loading) {
             setLoading(false);
+            console.log('[AuthContext] Auth state değişikliği sonrası yükleme durumu false yapıldı.');
         }
       }
     );
 
-    // Component kaldırıldığında dinleyiciyi temizle
     return () => {
+      console.log('[AuthContext] Provider kaldırılıyor. Auth dinleyicisi temizlenecek.');
       authListener.subscription.unsubscribe();
     };
-  }, []); // Boş dependency array, bu effect'in sadece bir kez çalışmasını sağlar. Bu çok önemlidir.
+  }, []);
 
   const value = {
     session,
@@ -82,7 +89,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     loading,
   };
 
-  // Yükleme tamamlanana kadar alt bileşenleri render etme
   return (
     <AuthContext.Provider value={value}>
       {children}

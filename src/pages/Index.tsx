@@ -10,16 +10,22 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log(`[IndexPage] useEffect tetiklendi. Durum: loading=${loading}, profile=${JSON.stringify(profile)}`);
     if (!loading && profile) {
       if (profile.role === 'coach') {
+        console.log('[IndexPage] Profil bir koç. /coach/dashboard adresine yönlendiriliyor.');
         navigate('/coach/dashboard');
       } else if (profile.role === 'student') {
+        console.log('[IndexPage] Profil bir öğrenci. /student/dashboard adresine yönlendiriliyor.');
         navigate('/student/dashboard');
       }
+    } else if (!loading && !profile) {
+        console.log('[IndexPage] Yükleme bitti ama profil yok. Karşılama ekranı gösterilecek.');
     }
   }, [loading, profile, navigate]);
 
   if (loading) {
+    console.log('[IndexPage] Auth durumu yükleniyor. Skeleton gösteriliyor.');
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
         <div className="text-center p-8 space-y-4">
