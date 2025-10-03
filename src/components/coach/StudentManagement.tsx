@@ -1,9 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
-import AddStudentDialog from './AddStudentDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface Student {
@@ -15,7 +12,6 @@ interface Student {
 const StudentManagement = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const fetchStudents = useCallback(async () => {
     setLoading(true);
@@ -41,43 +37,31 @@ const StudentManagement = () => {
   }, [fetchStudents]);
 
   return (
-    <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Öğrenci Yönetimi</CardTitle>
-            <CardDescription>Öğrencilerinizi görüntüleyin ve yenilerini ekleyin.</CardDescription>
+    <Card>
+      <CardHeader>
+        <CardTitle>Öğrencilerim</CardTitle>
+        <CardDescription>Size kayıtlı olan öğrencileri burada görebilirsiniz.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
           </div>
-          <Button onClick={() => setIsDialogOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Öğrenci Ekle
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : students.length > 0 ? (
-            <ul className="space-y-2">
-              {students.map((student) => (
-                <li key={student.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                  <span>{student.first_name} {student.last_name}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-center text-gray-500 py-4">Henüz öğrenciniz yok.</p>
-          )}
-        </CardContent>
-      </Card>
-      <AddStudentDialog
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        onStudentAdded={fetchStudents}
-      />
-    </>
+        ) : students.length > 0 ? (
+          <ul className="space-y-2">
+            {students.map((student) => (
+              <li key={student.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                <span>{student.first_name} {student.last_name}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-center text-gray-500 py-4">Henüz size kayıtlı bir öğrenci yok.</p>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

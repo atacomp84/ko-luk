@@ -17,6 +17,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { showError } from "@/utils/toast";
+
+interface Coach {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -27,6 +35,8 @@ export default function AuthPage() {
   const [role, setRole] = useState<"student" | "coach">("student");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [coaches, setCoaches] = useState<Coach[]>([]);
+  const [selectedCoach, setSelectedCoach] = useState<string | null>(null);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -37,6 +47,22 @@ export default function AuthPage() {
     };
     checkSession();
   }, [navigate]);
+
+  useEffect(() => {
+    const fetchCoaches = async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .eq('role', 'coach');
+      
+      if (error) {
+        console.error('Koçlar getirilirken hata:', error);
+      } else {
+        setCoaches(data);
+      }
+    };
+    fetchCoaches();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,9 +82,13 @@ export default function AuthPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (role === 'student' && !selectedCoach) {
+      showError('Lütfen bir koç seçin.');
+      return;
+    }
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signUp({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -69,11 +99,27 @@ export default function AuthPage() {
         },
       },
     });
-    if (error) {
-      setError(error.message);
-    } else {
-      navigate("/");
+
+    if (signUpError) {
+      setError(signUpError.message);
+      setLoading(false);
+      return;
     }
+
+    if (data.user && role === 'student' && selectedCoach) {
+      const { error: pairError } = await supabase
+        .from('coach_student_pairs')
+        .insert({ coach_id: selectedCoach, student_id: data.user.id });
+
+      if (pairError) {
+        setError('Kayıt başarılı ancak koç ataması yapılamadı: ' + pairError.message);
+      } else {
+        navigate("/");
+      }
+    } else if (data.user) {
+        navigate("/");
+    }
+    
     setLoading(false);
   };
 
@@ -186,6 +232,23 @@ export default function AuthPage() {
                       </div>
                     </RadioGroup>
                   </div>
+                  {role === 'student' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="coach-select">Koç Seçin</Label>
+                      <Select onValueChange={setSelectedCoach}>
+                        <SelectTrigger id="coach-select">
+                          <SelectValue placeholder="Bir koç seçin..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {coaches.map((coach) => (
+                            <SelectItem key={coach.id} value={coach.id}>
+                              {coach.first_name} {coach.last_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   {error && (
                     <Alert variant="destructive">
                       <AlertCircle className="h-4 w-4" />
