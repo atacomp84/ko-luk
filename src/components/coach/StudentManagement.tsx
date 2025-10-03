@@ -33,8 +33,8 @@ const StudentManagement = () => {
       if (error) {
         console.error('Öğrenciler getirilirken hata:', error);
       } else if (data) {
-        const studentData = data.map(item => item.profiles as Student).filter(Boolean);
-        setStudents(studentData);
+        const studentData = data.flatMap(item => item.profiles || []);
+        setStudents(studentData as Student[]);
       }
     }
     setLoading(false);
