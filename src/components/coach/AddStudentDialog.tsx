@@ -28,34 +28,23 @@ export const AddStudentDialog = ({ isOpen, onClose, onStudentAdded }: AddStudent
     if (isOpen) {
       const fetchUnassignedStudents = async () => {
         setLoading(true);
-        // Rpc'yi çağırmak yerine, tüm öğrencileri alıp mevcut eşleşmelerle filtreleyebiliriz.
-        const { data: allStudents, error: studentsError } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name')
-          .eq('role', 'student');
-
-        if (studentsError) {
-          showError('Öğrenciler getirilirken hata oluştu.');
-          console.error(studentsError);
-          setLoading(false);
-          return;
-        }
-
-        const { data: pairedStudents, error: pairsError } = await supabase
-          .from('coach_student_pairs')
-          .select('student_id');
-
-        if (pairsError) {
-          showError('Eşleşmiş öğrenciler getirilirken hata oluştu.');
-          console.error(pairsError);
-          setLoading(false);
-          return;
-        }
-
-        const pairedStudentIds = new Set(pairedStudents.map(p => p.student_id));
-        const unassigned = allStudents.filter(s => !pairedStudentIds.has(s.id));
         
-        setUnassignedStudents(unassigned);
+        // Akıllı Sorgu: Doğrudan hiçbir koça atanmamış öğrencileri getir.
+        // coach_student_pairs!left(*) ile bir "sol birleştirme" yapıyoruz.
+        // .is('coach_student_pairs.id', null) ile de eşleşmesi olmayanları (yani boşta olanları) filtreliyoruz.
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, coach_student_pairs!left(*)')
+          .eq('role', 'student')
+          .is('coach_student_pairs.id', null);
+
+        if (error) {
+          showError('Boştaki öğrenciler getirilirken bir hata oluştu.');
+          console.error(error);
+        } else {
+          setUnassignedStudents(data as Student[]);
+        }
+        
         setLoading(false);
       };
       fetchUnassignedStudents();
