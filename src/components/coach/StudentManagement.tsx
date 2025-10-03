@@ -5,7 +5,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { AddStudentDialog } from './AddStudentDialog';
 import { TaskManagementDialog } from './TaskManagementDialog';
-import { RewardManagementDialog } from './RewardManagementDialog'; // Yeni import
+import { RewardManagementDialog } from './RewardManagementDialog';
+import { showError } from '@/utils/toast';
 
 interface Student {
   id: string;
@@ -18,25 +19,51 @@ const StudentManagement = () => {
   const [loading, setLoading] = useState(true);
   const [isAddStudentOpen, setAddStudentOpen] = useState(false);
   const [isTaskManagementOpen, setTaskManagementOpen] = useState(false);
-  const [isRewardManagementOpen, setRewardManagementOpen] = useState(false); // Yeni state
+  const [isRewardManagementOpen, setRewardManagementOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   const fetchStudents = useCallback(async () => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data, error } = await supabase
-        .from('coach_student_pairs')
-        .select('profiles(id, first_name, last_name)')
-        .eq('coach_id', user.id);
-
-      if (error) {
-        console.error('Öğrenciler getirilirken hata:', error);
-      } else if (data) {
-        const studentData = data.flatMap(item => item.profiles || []);
-        setStudents(studentData as Student[]);
-      }
+    if (!user) {
+      setLoading(false);
+      return;
     }
+
+    // Adım 1: Koçun öğrenci ID'lerini al
+    const { data: pairs, error: pairsError } = await supabase
+      .from('coach_student_pairs')
+      .select('student_id')
+      .eq('coach_id', user.id);
+
+    if (pairsError) {
+      showError('Öğrenci listesi getirilirken bir hata oluştu.');
+      console.error('Error fetching student pairs:', pairsError);
+      setStudents([]);
+      setLoading(false);
+      return;
+    }
+
+    const studentIds = pairs.map(p => p.student_id);
+
+    if (studentIds.length > 0) {
+      // Adım 2: ID'leri kullanarak profil bilgilerini al
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', studentIds);
+
+      if (profilesError) {
+        showError('Öğrenci profilleri getirilirken bir hata oluştu.');
+        console.error('Error fetching profiles:', profilesError);
+        setStudents([]);
+      } else {
+        setStudents(profiles as Student[]);
+      }
+    } else {
+      setStudents([]);
+    }
+
     setLoading(false);
   }, []);
 
@@ -49,7 +76,7 @@ const StudentManagement = () => {
     setTaskManagementOpen(true);
   };
 
-  const handleOpenRewardManagement = (student: Student) => { // Yeni fonksiyon
+  const handleOpenRewardManagement = (student: Student) => {
     setSelectedStudent(student);
     setRewardManagementOpen(true);
   };
