@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { AddStudentDialog } from './AddStudentDialog';
 import { TaskManagementDialog } from './TaskManagementDialog';
-import { RewardManagementDialog } from './RewardManagementDialog'; // Yeni import
+import { RewardManagementDialog } from './RewardManagementDialog';
 
 interface Student {
   id: string;
@@ -18,23 +18,27 @@ const StudentManagement = () => {
   const [loading, setLoading] = useState(true);
   const [isAddStudentOpen, setAddStudentOpen] = useState(false);
   const [isTaskManagementOpen, setTaskManagementOpen] = useState(false);
-  const [isRewardManagementOpen, setRewardManagementOpen] = useState(false); // Yeni state
+  const [isRewardManagementOpen, setRewardManagementOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   const fetchStudents = useCallback(async () => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
+      // GÜNCELLENMİŞ SORGU:
+      // Bu sorgu, doğrudan mevcut koça atanmış olan öğrenci profillerini getirir.
+      // 'coach_student_pairs!inner(*)' sayesinde sadece bir koça atanmış öğrenciler gelir.
       const { data, error } = await supabase
-        .from('coach_student_pairs')
-        .select('profiles(id, first_name, last_name)')
-        .eq('coach_id', user.id);
+        .from('profiles')
+        .select('id, first_name, last_name, coach_student_pairs!inner(*)')
+        .eq('role', 'student')
+        .eq('coach_student_pairs.coach_id', user.id);
 
       if (error) {
         console.error('Öğrenciler getirilirken hata:', error);
+        setStudents([]); // Hata durumunda listeyi boşalt
       } else if (data) {
-        const studentData = data.flatMap(item => item.profiles || []);
-        setStudents(studentData as Student[]);
+        setStudents(data as Student[]);
       }
     }
     setLoading(false);
@@ -49,7 +53,7 @@ const StudentManagement = () => {
     setTaskManagementOpen(true);
   };
 
-  const handleOpenRewardManagement = (student: Student) => { // Yeni fonksiyon
+  const handleOpenRewardManagement = (student: Student) => {
     setSelectedStudent(student);
     setRewardManagementOpen(true);
   };
