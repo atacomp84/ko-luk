@@ -141,7 +141,7 @@ export default function AuthPage() {
                     <Alert variant="destructive">
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>Hata</AlertTitle>
-                      <AlertDescription>{error}</Description>
+                      <AlertDescription>{error}</AlertDescription>
                     </Alert>
                   )}
                   <Button type="submit" className="w-full" disabled={loading}>
@@ -211,7 +211,7 @@ export default function AuthPage() {
                     <Alert variant="destructive">
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>Hata</AlertTitle>
-                      <AlertDescription>{error}</Description>
+                      <AlertDescription>{error}</AlertDescription>
                     </Alert>
                   )}
                   <Button type="submit" className="w-full" disabled={loading}>
