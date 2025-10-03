@@ -58,7 +58,7 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -72,7 +72,17 @@ export default function AuthPage() {
 
     if (signUpError) {
       setError(signUpError.message);
+    } else if (data.session) { // Kullanıcı giriş yaptıysa...
+      // Doğrudan ilgili panele yönlendir
+      if (role === 'student') {
+        navigate('/student/dashboard');
+      } else if (role === 'coach') {
+        navigate('/coach/dashboard');
+      } else {
+        navigate('/'); // Her ihtimale karşı
+      }
     } else {
+      // E-posta onayı gibi bir durum varsa burası çalışır
       navigate("/");
     }
     

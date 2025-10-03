@@ -10,7 +10,7 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkUserAndRedirect = async () => {
+    const checkUserAndRedirect = async (retryCount = 3) => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
@@ -24,8 +24,11 @@ const Index = () => {
           navigate('/coach/dashboard');
         } else if (profileData?.role === 'student') {
           navigate('/student/dashboard');
+        } else if (retryCount > 0) {
+          // Profil henüz veritabanı trigger'ı tarafından oluşturulmamış olabilir, yeniden deneyelim.
+          setTimeout(() => checkUserAndRedirect(retryCount - 1), 500);
         } else {
-          // Profil bulunamazsa veya rolü yoksa, giriş sayfasına yönlendirilebilir veya burada kalabilir.
+          // Denemelerden sonra profil hala bulunamadıysa, yüklemeyi durdur ve sayfayı göster.
           setLoading(false);
         }
       } else {
@@ -35,8 +38,8 @@ const Index = () => {
 
     checkUserAndRedirect();
     
-    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN') {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
         checkUserAndRedirect();
       }
     });
