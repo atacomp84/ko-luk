@@ -25,46 +25,70 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('[AuthContext] Kimlik doğrulama durumu dinleyicisi kuruluyor.');
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log(`[AuthContext] Kimlik doğrulama durumu değişti. Olay: ${_event}`);
+    const initializeSession = async () => {
       try {
-        setSession(session);
-        setUser(session?.user ?? null);
+        console.log('[AuthContext] Başlangıç oturumu kontrol ediliyor...');
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        if (error) throw error;
 
-        if (session?.user) {
-          console.log(`[AuthContext] Kullanıcı oturumu bulundu (${session.user.id}). Profil çekiliyor...`);
-          const { data: userProfile, error } = await supabase
+        setSession(initialSession);
+        setUser(initialSession?.user ?? null);
+
+        if (initialSession?.user) {
+          console.log(`[AuthContext] Oturum bulundu (${initialSession.user.id}). Profil çekiliyor...`);
+          const { data: userProfile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', session.user.id)
+            .eq('id', initialSession.user.id)
             .single();
           
-          if (error) {
-              console.error("[AuthContext] Profil çekilirken hata oluştu:", error.message);
-              setProfile(null);
+          if (profileError) {
+            console.error("[AuthContext] Başlangıç profili çekilirken hata:", profileError.message);
+            setProfile(null);
           } else {
-              console.log("[AuthContext] Profil başarıyla çekildi.");
-              setProfile(userProfile);
+            console.log("[AuthContext] Başlangıç profili başarıyla çekildi.");
+            setProfile(userProfile);
           }
         } else {
-          console.log("[AuthContext] Kullanıcı oturumu yok. Profil temizleniyor.");
           setProfile(null);
         }
       } catch (e) {
-        console.error("[AuthContext] onAuthStateChange içinde beklenmedik bir hata oluştu:", e);
-        setProfile(null);
+        console.error("[AuthContext] Başlangıç oturum kontrolü sırasında hata:", e);
       } finally {
-        console.log("[AuthContext] Kimlik doğrulama işlemi tamamlandı. Yükleme durumu false olarak ayarlanıyor.");
+        console.log("[AuthContext] Başlangıç kontrolü tamamlandı. Yükleme bitti.");
         setLoading(false);
+      }
+    };
+
+    initializeSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log(`[AuthContext] Kimlik doğrulama durumu değişti. Olay: ${_event}. Oturum güncelleniyor.`);
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        const { data: userProfile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (error) {
+            console.error("[AuthContext] Profil güncellenirken hata:", error.message);
+            setProfile(null);
+        } else {
+            setProfile(userProfile);
+        }
+      } else {
+        setProfile(null);
       }
     });
 
     return () => {
-      console.log('[AuthContext] Kimlik doğrulama durumu dinleyicisi temizleniyor.');
       subscription.unsubscribe();
     };
-  }, []); // Boş bağımlılık dizisi, bu effect'in yalnızca bir kez çalışmasını sağlar.
+  }, []);
 
   const value = {
     session,
