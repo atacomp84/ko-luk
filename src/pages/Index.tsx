@@ -5,39 +5,39 @@ import { Button } from '@/components/ui/button';
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { Skeleton } from '@/components/ui/skeleton';
 
-interface Profile {
-  first_name: string;
-  role: 'coach' | 'student';
-}
-
 const Index = () => {
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchUserAndProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+    const checkUserAndRedirect = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('first_name, role')
-          .eq('id', user.id)
+          .select('role')
+          .eq('id', session.user.id)
           .single();
-        setProfile(profileData);
+        
+        if (profileData?.role === 'coach') {
+          navigate('/coach/dashboard');
+        } else if (profileData?.role === 'student') {
+          navigate('/student/dashboard');
+        } else {
+          // Profil bulunamazsa veya rolü yoksa, giriş sayfasına yönlendirilebilir veya burada kalabilir.
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
-    fetchUserAndProfile();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-         fetchUserAndProfile();
-      }
-      if (event === 'SIGNED_OUT') {
-        setProfile(null);
-        navigate('/');
+    checkUserAndRedirect();
+    
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN') {
+        checkUserAndRedirect();
       }
     });
 
@@ -46,42 +46,26 @@ const Index = () => {
     };
   }, [navigate]);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-  };
-
-  const renderLoading = () => (
-    <div className="space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-6 w-48" />
-        <Skeleton className="h-10 w-24" />
-    </div>
-  );
-
-  const renderGuestView = () => (
-    <>
-      <h1 className="text-4xl font-bold mb-4">LGS Koçluk Platformuna Hoş Geldiniz</h1>
-      <p className="text-xl text-gray-600 mb-6">
-        Devam etmek için lütfen giriş yapın veya kayıt olun.
-      </p>
-      <Button onClick={() => navigate('/auth')}>Giriş Yap / Kayıt Ol</Button>
-    </>
-  );
-
-  const renderUserView = () => (
-    <>
-      <h1 className="text-4xl font-bold mb-4">Hoş geldin, {profile?.first_name}!</h1>
-      <p className="text-xl text-gray-600 mb-6">
-        Bir {profile?.role === 'student' ? 'öğrenci' : 'koç'} olarak giriş yaptınız.
-      </p>
-      <Button onClick={handleLogout}>Çıkış Yap</Button>
-    </>
-  );
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
+        <div className="text-center p-8 space-y-4">
+          <Skeleton className="h-10 w-96" />
+          <Skeleton className="h-6 w-80" />
+          <Skeleton className="h-10 w-48" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
       <div className="text-center p-8">
-        {loading ? renderLoading() : (profile ? renderUserView() : renderGuestView())}
+        <h1 className="text-4xl font-bold mb-4">LGS Koçluk Platformuna Hoş Geldiniz</h1>
+        <p className="text-xl text-gray-600 mb-6">
+          Devam etmek için lütfen giriş yapın veya kayıt olun.
+        </p>
+        <Button onClick={() => navigate('/auth')}>Giriş Yap / Kayıt Ol</Button>
       </div>
       <div className="absolute bottom-4">
         <MadeWithDyad />
