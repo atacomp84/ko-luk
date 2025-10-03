@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Copy } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
+import StudentTasks from "@/components/student/StudentTasks";
 
 interface Profile {
     first_name: string;
@@ -51,14 +52,15 @@ const StudentDashboard = () => {
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 space-y-6">
           <div className="p-8 bg-white rounded-lg shadow">
             <h2 className="text-xl font-semibold">Hoş Geldin, {profile?.first_name}!</h2>
-            <p className="mt-2 text-gray-600">Ödevlerini ve ödüllerini görmek için yakında burayı kontrol edebilirsin.</p>
           </div>
+
+          <StudentTasks />
 
           <Card>
             <CardHeader>
               <CardTitle>Kullanıcı ID'niz</CardTitle>
               <CardDescription>
-                Koçunuzun sizi sistemine ekleyebilmesi için bu ID'yi onunla paylaşın.
+                Bu ID, sistemdeki benzersiz kimliğinizdir.
               </CardDescription>
             </CardHeader>
             <CardContent>
