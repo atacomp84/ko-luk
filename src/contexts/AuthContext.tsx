@@ -25,41 +25,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Bu `useEffect`, bileşen yüklendiğinde yalnızca bir kez çalışır.
-    // Supabase'in kimlik doğrulama durumu dinleyicisini kurar.
+    console.log('[AuthContext] Kimlik doğrulama durumu dinleyicisi kuruluyor.');
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      // Bu callback, ilk başta mevcut oturum durumuyla hemen bir kez,
-      // ve daha sonra her kimlik doğrulama değişikliğinde (giriş, çıkış vb.) tekrar çalışır.
+      console.log(`[AuthContext] Kimlik doğrulama durumu değişti. Olay: ${_event}`);
+      try {
+        setSession(session);
+        setUser(session?.user ?? null);
 
-      setSession(session);
-      setUser(session?.user ?? null);
-
-      if (session?.user) {
-        // Eğer bir kullanıcı oturumu varsa, profil bilgilerini çek.
-        const { data: userProfile, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (error) {
-            console.error("Profil getirilirken hata oluştu:", error);
-            setProfile(null);
+        if (session?.user) {
+          console.log(`[AuthContext] Kullanıcı oturumu bulundu (${session.user.id}). Profil çekiliyor...`);
+          const { data: userProfile, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (error) {
+              console.error("[AuthContext] Profil çekilirken hata oluştu:", error.message);
+              setProfile(null);
+          } else {
+              console.log("[AuthContext] Profil başarıyla çekildi.");
+              setProfile(userProfile);
+          }
         } else {
-            setProfile(userProfile);
+          console.log("[AuthContext] Kullanıcı oturumu yok. Profil temizleniyor.");
+          setProfile(null);
         }
-      } else {
-        // Eğer kullanıcı oturumu yoksa, profil bilgilerini temizle.
+      } catch (e) {
+        console.error("[AuthContext] onAuthStateChange içinde beklenmedik bir hata oluştu:", e);
         setProfile(null);
+      } finally {
+        console.log("[AuthContext] Kimlik doğrulama işlemi tamamlandı. Yükleme durumu false olarak ayarlanıyor.");
+        setLoading(false);
       }
-      
-      // Kimlik doğrulama durumu belirlendikten ve profil bilgileri çekildikten sonra,
-      // yükleme durumunu `false` olarak ayarlayabiliriz.
-      setLoading(false);
     });
 
-    // Bu temizleme fonksiyonu, bileşen kaldırıldığında çalışır ve dinleyiciyi kapatır.
     return () => {
+      console.log('[AuthContext] Kimlik doğrulama durumu dinleyicisi temizleniyor.');
       subscription.unsubscribe();
     };
   }, []); // Boş bağımlılık dizisi, bu effect'in yalnızca bir kez çalışmasını sağlar.
