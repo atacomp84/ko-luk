@@ -1,53 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
-  const [loading, setLoading] = useState(true);
+  const { loading, profile } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkUserAndRedirect = async (retryCount = 3) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (profileData?.role === 'coach') {
-          navigate('/coach/dashboard');
-        } else if (profileData?.role === 'student') {
-          navigate('/student/dashboard');
-        } else if (retryCount > 0) {
-          // Profil henüz veritabanı trigger'ı tarafından oluşturulmamış olabilir, yeniden deneyelim.
-          setTimeout(() => checkUserAndRedirect(retryCount - 1), 500);
-        } else {
-          // Denemelerden sonra profil hala bulunamadıysa, yüklemeyi durdur ve sayfayı göster.
-          setLoading(false);
-        }
-      } else {
-        setLoading(false);
+    if (!loading && profile) {
+      if (profile.role === 'coach') {
+        navigate('/coach/dashboard');
+      } else if (profile.role === 'student') {
+        navigate('/student/dashboard');
       }
-    };
-
-    checkUserAndRedirect();
-    
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        checkUserAndRedirect();
-      }
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [navigate]);
+    }
+  }, [loading, profile, navigate]);
 
   if (loading) {
     return (
@@ -61,6 +31,7 @@ const Index = () => {
     );
   }
 
+  // Yükleme bitti ve profil yoksa (kullanıcı giriş yapmamışsa) bu sayfa gösterilir.
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
       <div className="text-center p-8">
