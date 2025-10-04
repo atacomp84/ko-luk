@@ -429,9 +429,12 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                               <h4 className="font-bold text-sm mb-2 text-blue-600">{t('coach.awaitingApproval')}</h4>
                               {tasksAwaitingApproval.map(task => (
                                 <div key={task.id} className="flex items-center justify-between p-3 rounded-md mb-2 bg-blue-100 dark:bg-blue-900/30">
-                                  <div onClick={() => handleTaskClick(task)} className="flex-grow cursor-pointer hover:opacity-80">
-                                    <p className="font-bold">{`${task.subject}: ${task.topic}`}</p>
-                                    <p className="text-xs font-semibold mt-1 capitalize">{t(getStatusTranslationKey(task.status))}</p>
+                                  <div onClick={() => handleTaskClick(task)} className="flex-grow cursor-pointer hover:opacity-80 flex items-center gap-2">
+                                    <CheckCircle2 className="h-5 w-5 text-blue-600 shrink-0" />
+                                    <div>
+                                      <p className="font-bold">{`${task.subject}: ${task.topic}`}</p>
+                                      <p className="text-xs font-semibold mt-1 capitalize">{t(getStatusTranslationKey(task.status))}</p>
+                                    </div>
                                   </div>
                                   <Button variant="ghost" size="icon" className="ml-2 shrink-0" onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(task); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                 </div>
