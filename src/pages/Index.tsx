@@ -1,60 +1,41 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { MadeWithDyad } from "@/components/made-with-dyad";
-import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/contexts/AuthContext';
-import { ThemeToggle } from '@/components/theme-toggle';
-import { LanguageSwitcher } from '@/components/language-switcher';
-import { useTranslation } from 'react-i18next';
-import { Rocket } from 'lucide-react';
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { GraduationCap, Clock } from "lucide-react";
+import { LanguageToggle } from "@/components/ui/language-toggle";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
-const Index = () => {
-  const { loading, profile } = useAuth();
-  const navigate = useNavigate();
-  const { t } = useTranslation();
-
-  useEffect(() => {
-    if (!loading && profile) {
-      if (profile.role === 'coach') {
-        navigate('/coach/dashboard');
-      } else if (profile.role === 'student') {
-        navigate('/student/dashboard');
-      }
-    }
-  }, [loading, profile, navigate]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-        <div className="text-center p-8 space-y-4">
-          <Skeleton className="h-10 w-96" />
-          <Skeleton className="h-6 w-80" />
-          <Skeleton className="h-10 w-48" />
-        </div>
-      </div>
-    );
-  }
-
+function Index() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 relative">
-       <div className="absolute top-4 right-4 flex items-center gap-2">
-          <LanguageSwitcher />
+    <div className="relative flex min-h-screen w-full flex-col items-center justify-center bg-white bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] dark:bg-slate-950 dark:bg-[radial-gradient(rgba(255,255,255,.1)_1px,transparent_1px)]">
+      <header className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 md:p-6">
+        <Link to="/" className="flex items-center gap-2 text-lg font-semibold">
+          <GraduationCap className="h-6 w-6 text-primary" />
+          <span>Koçum Takipte</span>
+        </Link>
+        <div className="flex items-center gap-2">
+          <LanguageToggle />
           <ThemeToggle />
         </div>
-      <div className="text-center p-8">
-        <Rocket className="h-16 w-16 text-primary mx-auto mb-6" />
-        <h1 className="text-4xl font-bold mb-4">{t('index.welcomeTitle')}</h1>
-        <p className="text-xl text-muted-foreground mb-6">
-          {t('index.welcomeDescription')}
+      </header>
+
+      <main className="flex flex-1 flex-col items-center justify-center px-4 text-center">
+        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/20">
+            <Clock className="h-8 w-8 text-primary" />
+          </div>
+        </div>
+        <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl">
+          Koçum Takipte
+        </h1>
+        <p className="mx-auto mt-4 max-w-[600px] text-muted-foreground md:text-xl">
+          Çocuğunuzun ders çalışma sürecini takip etmek için giriş yapın veya kayıt olun.
         </p>
-        <Button onClick={() => navigate('/auth')} size="lg">{t('index.ctaButton')}</Button>
-      </div>
-      <div className="absolute bottom-4">
-        <MadeWithDyad />
-      </div>
+        <Button asChild size="lg" className="mt-8">
+          <Link to="/login">Giriş Yap / Kayıt Ol</Link>
+        </Button>
+      </main>
     </div>
   );
-};
+}
 
 export default Index;
