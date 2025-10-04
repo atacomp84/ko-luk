@@ -131,6 +131,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   useEffect(() => {
     if (taskType === 'soru_cozumu') {
       setQuestionCount(20);
+      setDescription('');
     } else {
       setQuestionCount('');
     }
@@ -153,7 +154,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       subject: selectedSubject,
       topic: selectedTopic,
       task_type: taskType,
-      description: description || null,
+      description: taskType === 'konu_anlatimi' ? (description || null) : null,
       question_count: taskType === 'soru_cozumu' ? Number(questionCount) : null,
       status: 'pending',
     };
@@ -335,11 +336,15 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
 
     const finalData = Object.entries(dataBySubject).map(([subject, topics]) => ({
       subject,
-      data: Object.entries(topics).map(([topic, counts]) => ({
-        topic,
-        ...counts,
-        net: (counts.correct - counts.wrong / 3).toFixed(2),
-      })),
+      data: Object.entries(topics).map(([topic, counts]) => {
+        const total = counts.correct + counts.wrong + counts.empty;
+        return {
+          topic,
+          ...counts,
+          total,
+          net: (counts.correct - counts.wrong / 3).toFixed(2),
+        };
+      }),
     }));
     return finalData;
   }, [tasks]);
@@ -391,10 +396,10 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                               <h3 className="font-semibold">{t('coach.selectTopic')}</h3>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                   <Select value={selectedSubject} onValueChange={setSelectedSubject}><SelectTrigger><SelectValue placeholder={t('coach.selectSubjectPlaceholder')} /></SelectTrigger><SelectContent>{lgsSubjects.map(subject => (<SelectItem key={subject.name} value={subject.name}>{subject.name}</SelectItem>))}</SelectContent></Select>
-                                  <Select value={selectedTopic} onValueChange={setSelectedTopic} disabled={!selectedSubject}><SelectTrigger><SelectValue placeholder={t('coach.selectTopicPlaceholder')} /></SelectTrigger><SelectContent>{availableTopics.map(topic => (<SelectItem key={topic} value={topic}><div className="flex items-center justify-between w-full"><span>{topic}</span><div className="flex items-center gap-1.5">{topicAssignmentStats[topic]?.explanations > 0 && <Badge variant="outline" className="bg-blue-100 text-blue-700">{topicAssignmentStats[topic].explanations} Anlatım</Badge>}{topicAssignmentStats[topic]?.questions > 0 && <Badge variant="outline" className="bg-purple-100 text-purple-700">{topicAssignmentStats[topic].questions} Soru</Badge>}</div></div></SelectItem>))}</SelectContent></Select>
+                                  <Select value={selectedTopic} onValueChange={setSelectedTopic} disabled={!selectedSubject}><SelectTrigger><SelectValue placeholder={t('coach.selectTopicPlaceholder')}>{selectedTopic || null}</SelectValue></SelectTrigger><SelectContent>{availableTopics.map(topic => (<SelectItem key={topic} value={topic}><div className="flex items-center justify-between w-full"><span>{topic}</span><div className="flex items-center gap-1.5">{topicAssignmentStats[topic]?.explanations > 0 && <Badge variant="outline" className="bg-blue-100 text-blue-700">{topicAssignmentStats[topic].explanations} Anlatım</Badge>}{topicAssignmentStats[topic]?.questions > 0 && <Badge variant="outline" className="bg-purple-100 text-purple-700">{topicAssignmentStats[topic].questions} Soru</Badge>}</div></div></SelectItem>))}</SelectContent></Select>
                               </div>
                           </div>
-                          {selectedTopic && (<div className="space-y-6"><div className="space-y-2"><h3 className="font-semibold">{t('coach.selectTaskType')}</h3><RadioGroup value={taskType} onValueChange={(v: 'konu_anlatimi' | 'soru_cozumu') => setTaskType(v)}><div className="flex items-center space-x-2"><RadioGroupItem value="konu_anlatimi" id="r1" /><Label htmlFor="r1">{t('coach.topicExplanation')}</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="soru_cozumu" id="r2" /><Label htmlFor="r2">{t('coach.questionSolving')}</Label></div></RadioGroup></div>{taskType === 'soru_cozumu' && (<div className="space-y-2"><Label htmlFor="question-count">{t('coach.questionCount')}</Label><NumberInput value={questionCount} onChange={setQuestionCount} required /></div>)}<div className="space-y-2"><div className="flex items-center justify-between"><Label htmlFor="description">{t('coach.taskDescriptionLabel')}</Label><Button asChild variant="ghost" size="icon"><a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer"><Youtube className="h-5 w-5 text-red-500" /></a></Button></div><Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Öğrenciye not veya video linki..." /></div></div>)}
+                          {selectedTopic && (<div className="space-y-6"><div className="space-y-2"><h3 className="font-semibold">{t('coach.selectTaskType')}</h3><RadioGroup value={taskType} onValueChange={(v: 'konu_anlatimi' | 'soru_cozumu') => setTaskType(v)}><div className="flex items-center space-x-2"><RadioGroupItem value="konu_anlatimi" id="r1" /><Label htmlFor="r1">{t('coach.topicExplanation')}</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="soru_cozumu" id="r2" /><Label htmlFor="r2">{t('coach.questionSolving')}</Label></div></RadioGroup></div>{taskType === 'soru_cozumu' && (<div className="space-y-2"><Label htmlFor="question-count">{t('coach.questionCount')}</Label><NumberInput value={questionCount} onChange={setQuestionCount} required /></div>)}{taskType === 'konu_anlatimi' && (<div className="space-y-2"><div className="flex items-center justify-between"><Label htmlFor="description">{t('coach.taskDescriptionLabel')}</Label><Button asChild variant="ghost" size="icon"><a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer"><Youtube className="h-5 w-5 text-red-500" /></a></Button></div><Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Öğrenciye not veya video linki..." /></div>)}</div>)}
                       </div>
                   </form>
                   <div className="space-y-4 flex flex-col overflow-hidden">
@@ -451,10 +456,11 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                             <YAxis />
                             <Tooltip />
                             <Bar dataKey="correct" stackId="a" fill="#22c55e" name={t('coach.scoreEntry.correct')} />
-                            <Bar dataKey="wrong" stackId="a" fill="#ef4444" name={t('coach.scoreEntry.wrong')}>
+                            <Bar dataKey="wrong" stackId="a" fill="#ef4444" name={t('coach.scoreEntry.wrong')} />
+                            <Bar dataKey="empty" stackId="a" fill="#3b82f6" name={t('coach.scoreEntry.empty')} />
+                            <Bar dataKey="total" stackId="b" fill="transparent">
                                 <LabelList dataKey="net" position="center" fill="#ffffff" fontWeight="bold" formatter={(value: number) => `Net: ${value}`} />
                             </Bar>
-                            <Bar dataKey="empty" stackId="a" fill="#3b82f6" name={t('coach.scoreEntry.empty')} />
                           </BarChart>
                         </ResponsiveContainer>
                       </CardContent>
