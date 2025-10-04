@@ -122,7 +122,13 @@
       "empty": "Boş",
       "saveAndApprove": "Kaydet ve Onayla",
       "validationError": "Toplam sayı (doğru + yanlış + boş) soru adedine ({{count}}) eşit olmalıdır."
-    }
+    },
+    "timeFilters": {
+      "weekly": "Haftalık",
+      "monthly": "Aylık",
+      "all": "Tümü"
+    },
+    "getReport": "Rapor Al"
   },
   "student": {
     "dashboardTitle": "Öğrenci Paneli",

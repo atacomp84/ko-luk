@@ -122,7 +122,13 @@
       "empty": "Empty",
       "saveAndApprove": "Save and Approve",
       "validationError": "The total number of answers (correct + wrong + empty) must equal the question count ({{count}})."
-    }
+    },
+    "timeFilters": {
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "all": "All Time"
+    },
+    "getReport": "Get Report"
   },
   "student": {
     "dashboardTitle": "Student Dashboard",

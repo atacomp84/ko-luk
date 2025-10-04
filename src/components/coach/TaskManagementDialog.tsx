@@ -14,13 +14,14 @@ import { NumberInput } from '../ui/NumberInput';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Book, Calculator, FlaskConical, Globe, Palette, MessageSquare, History, Youtube, ChevronsDownUp, BookMarked, ClipboardList, BookOpen } from 'lucide-react';
+import { Trash2, Book, Calculator, FlaskConical, Globe, Palette, MessageSquare, History, Youtube, ChevronsDownUp, BookMarked, ClipboardList, BookOpen, Download } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { startOfWeek, format } from 'date-fns';
+import { startOfWeek, format, isWithinInterval, subDays, subMonths } from 'date-fns';
 import { tr, enUS } from 'date-fns/locale';
+import { generateWordReport } from '@/lib/reportGenerator';
 
 interface Student {
   id: string;
@@ -53,6 +54,8 @@ interface TaskManagementDialogProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+type TimePeriod = 'weekly' | 'monthly' | 'all';
 
 const getSubjectIconComponent = (subject: string): React.ElementType => {
     switch (subject) {
@@ -128,6 +131,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   const [isSimpleApprovalOpen, setSimpleApprovalOpen] = useState(false);
   const [scoreData, setScoreData] = useState<ScoreData>({ correct: 0, empty: 0, wrong: 0 });
   const [openCollapsibles, setOpenCollapsibles] = useState<string[]>([]);
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>('weekly');
 
   const { t, i18n } = useTranslation();
   const dateLocale = i18n.language === 'tr' ? tr : enUS;
@@ -381,8 +385,21 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
 
   const isSubmitDisabled = !selectedTopic || (selectedSubject !== 'Kitap Okuma' && taskType === 'soru_cozumu' && (questionCount === '' || Number(questionCount) <= 0));
 
+  const filteredTasks = useMemo(() => {
+    const now = new Date();
+    if (timePeriod === 'weekly') {
+      const lastWeek = subDays(now, 7);
+      return tasks.filter(task => isWithinInterval(new Date(task.created_at), { start: lastWeek, end: now }));
+    }
+    if (timePeriod === 'monthly') {
+      const lastMonth = subMonths(now, 1);
+      return tasks.filter(task => isWithinInterval(new Date(task.created_at), { start: lastMonth, end: now }));
+    }
+    return tasks;
+  }, [tasks, timePeriod]);
+
   const analyticsData = useMemo(() => {
-    const questionTasks = tasks.filter(task => 
+    const questionTasks = filteredTasks.filter(task => 
       task.task_type === 'soru_cozumu' && 
       task.status === 'completed' &&
       task.correct_count != null &&
@@ -401,7 +418,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       return acc;
     }, {} as Record<string, Record<string, { correct: number; empty: number; wrong: number }>>);
 
-    const finalData = Object.entries(dataBySubject).map(([subject, topics]) => ({
+    return Object.entries(dataBySubject).map(([subject, topics]) => ({
       subject,
       data: Object.entries(topics).map(([topic, counts]) => {
         const total = counts.correct + counts.wrong + counts.empty;
@@ -413,11 +430,10 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
         };
       }),
     }));
-    return finalData;
-  }, [tasks]);
+  }, [filteredTasks]);
 
   const readingAnalyticsData = useMemo(() => {
-    const readingTasks = tasks.filter(task => 
+    const readingTasks = filteredTasks.filter(task => 
       task.subject === 'Kitap Okuma' && 
       task.status === 'completed'
     );
@@ -437,7 +453,18 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     return Object.entries(dataByWeek)
       .map(([week, pages]) => ({ week, pages }))
       .sort((a, b) => new Date(a.week).getTime() - new Date(b.week).getTime());
-  }, [tasks, dateLocale]);
+  }, [filteredTasks, dateLocale]);
+
+  const handleGenerateReport = () => {
+    if (!student) return;
+    const timePeriodText = t(`coach.timeFilters.${timePeriod}`);
+    generateWordReport(
+      `${student.first_name} ${student.last_name}`,
+      timePeriodText,
+      analyticsData,
+      readingAnalyticsData
+    );
+  };
 
   const getStatusBorderClass = (status: string) => {
     switch (status) {
@@ -483,7 +510,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
             </DialogTitle>
             <DialogDescription>{t('coach.taskManagementDescription')}</DialogDescription>
           </DialogHeader>
-          <Tabs defaultValue="addTask" onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
+          <Tabs defaultValue="addTask" value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
             <TabsList className="shrink-0 grid w-full grid-cols-2">
               <TabsTrigger value="addTask">{t('coach.addNewTaskTab')}</TabsTrigger>
               <TabsTrigger value="analytics">{t('coach.analytics')}</TabsTrigger>
@@ -618,66 +645,81 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                   </div>
               </div>
             </TabsContent>
-            <TabsContent value="analytics" className="flex-1 overflow-y-auto p-4">
-              {loading ? <Skeleton className="h-full w-full" /> : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {readingAnalyticsData.length > 0 && (
-                    <Card className="lg:col-span-2">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <BookOpen className="h-6 w-6 text-orange-500" />
-                            Kitap Okuma Performansı (Haftalık Sayfa Sayısı)
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <ResponsiveContainer width="100%" height={300}>
-                          <BarChart data={readingAnalyticsData} margin={{ top: 20, right: 20, left: -10, bottom: 20 }}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="week" />
-                            <YAxis />
-                            <Tooltip />
-                            <Bar dataKey="pages" fill="#f97316" name="Okunan Sayfa">
-                                <LabelList dataKey="pages" position="top" />
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </CardContent>
-                    </Card>
-                  )}
-                  {analyticsData.length > 0 ? (
-                    analyticsData.map(({ subject, data }) => {
-                      const Icon = getSubjectIconComponent(subject);
-                      const colorClass = getSubjectColorClass(subject);
-                      return (
-                      <Card key={subject}>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
-                              <Icon className={`h-6 w-6 ${colorClass}`} />
-                              {subject}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <ResponsiveContainer width="100%" height={400}>
-                            <BarChart data={data} margin={{ top: 20, right: 20, left: -10, bottom: 80 }}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="topic" height={100} interval={0} tick={<CustomizedAxisTick />} axisLine={false} tickLine={false} />
-                              <YAxis />
-                              <Tooltip />
-                              <Bar dataKey="correct" stackId="a" fill="#22c55e" name={t('coach.scoreEntry.correct')} />
-                              <Bar dataKey="wrong" stackId="a" fill="#ef4444" name={t('coach.scoreEntry.wrong')} />
-                              <Bar dataKey="empty" stackId="a" fill="#3b82f6" name={t('coach.scoreEntry.empty')}>
-                                  <LabelList dataKey="net" position="top" offset={5} fill="hsl(var(--foreground))" fontSize={12} fontWeight="bold" formatter={(value: number) => `Net: ${value.toFixed(2)}`} />
-                              </Bar>
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </CardContent>
-                      </Card>
-                    )})
-                  ) : readingAnalyticsData.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-10 lg:col-span-2">{t('coach.noTasksForChart')}</p>
-                  ) : null}
+            <TabsContent value="analytics" className="flex-1 overflow-y-auto p-4 space-y-4">
+              <Tabs defaultValue="weekly" onValueChange={(value) => setTimePeriod(value as TimePeriod)}>
+                <div className="flex justify-between items-center">
+                  <TabsList>
+                    <TabsTrigger value="weekly">{t('coach.timeFilters.weekly')}</TabsTrigger>
+                    <TabsTrigger value="monthly">{t('coach.timeFilters.monthly')}</TabsTrigger>
+                    <TabsTrigger value="all">{t('coach.timeFilters.all')}</TabsTrigger>
+                  </TabsList>
+                  <Button onClick={handleGenerateReport}>
+                    <Download className="mr-2 h-4 w-4" />
+                    {t('coach.getReport')}
+                  </Button>
                 </div>
-              )}
+                <div className="mt-4">
+                  {loading ? <Skeleton className="h-full w-full" /> : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {readingAnalyticsData.length > 0 && (
+                        <Card className="lg:col-span-2">
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <BookOpen className="h-6 w-6 text-orange-500" />
+                                Kitap Okuma Performansı (Haftalık Sayfa Sayısı)
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <ResponsiveContainer width="100%" height={300}>
+                              <BarChart data={readingAnalyticsData} margin={{ top: 20, right: 20, left: -10, bottom: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="week" />
+                                <YAxis />
+                                <Tooltip />
+                                <Bar dataKey="pages" fill="#f97316" name="Okunan Sayfa">
+                                    <LabelList dataKey="pages" position="top" />
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </CardContent>
+                        </Card>
+                      )}
+                      {analyticsData.length > 0 ? (
+                        analyticsData.map(({ subject, data }) => {
+                          const Icon = getSubjectIconComponent(subject);
+                          const colorClass = getSubjectColorClass(subject);
+                          return (
+                          <Card key={subject}>
+                            <CardHeader>
+                              <CardTitle className="flex items-center gap-2">
+                                  <Icon className={`h-6 w-6 ${colorClass}`} />
+                                  {subject}
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <ResponsiveContainer width="100%" height={400}>
+                                <BarChart data={data} margin={{ top: 20, right: 20, left: -10, bottom: 80 }}>
+                                  <CartesianGrid strokeDasharray="3 3" />
+                                  <XAxis dataKey="topic" height={100} interval={0} tick={<CustomizedAxisTick />} axisLine={false} tickLine={false} />
+                                  <YAxis />
+                                  <Tooltip />
+                                  <Bar dataKey="correct" stackId="a" fill="#22c55e" name={t('coach.scoreEntry.correct')} />
+                                  <Bar dataKey="wrong" stackId="a" fill="#ef4444" name={t('coach.scoreEntry.wrong')} />
+                                  <Bar dataKey="empty" stackId="a" fill="#3b82f6" name={t('coach.scoreEntry.empty')}>
+                                      <LabelList dataKey="net" position="top" offset={5} fill="hsl(var(--foreground))" fontSize={12} fontWeight="bold" formatter={(value: number) => `Net: ${value.toFixed(2)}`} />
+                                  </Bar>
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </CardContent>
+                          </Card>
+                        )})
+                      ) : readingAnalyticsData.length === 0 ? (
+                        <p className="text-center text-muted-foreground py-10 lg:col-span-2">{t('coach.noTasksForChart')}</p>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+              </Tabs>
             </TabsContent>
           </Tabs>
           <DialogFooter>
