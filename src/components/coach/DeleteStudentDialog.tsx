@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,10 +29,14 @@ export const DeleteStudentDialog = ({ isOpen, onClose, onConfirm, student }: Del
   const [step, setStep] = useState(1);
   const { t } = useTranslation();
 
-  const handleClose = () => {
-    setStep(1);
-    onClose();
-  };
+  // Diyalog kapandığında adımı sıfırla
+  useEffect(() => {
+    if (!isOpen) {
+      // Animasyonun bitmesi için küçük bir gecikme
+      const timer = setTimeout(() => setStep(1), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
 
   const handleConfirm = () => {
     onConfirm();
@@ -41,7 +45,7 @@ export const DeleteStudentDialog = ({ isOpen, onClose, onConfirm, student }: Del
   if (!student) return null;
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+    <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent>
         {step === 1 && (
           <>
@@ -52,8 +56,11 @@ export const DeleteStudentDialog = ({ isOpen, onClose, onConfirm, student }: Del
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={handleClose}>{t('coach.cancel')}</AlertDialogCancel>
-              <AlertDialogAction onClick={() => setStep(2)}>{t('coach.deleteStudent.step1.continue')}</AlertDialogAction>
+              <AlertDialogCancel>{t('coach.cancel')}</AlertDialogCancel>
+              <AlertDialogAction onClick={(e) => {
+                e.preventDefault(); // Anahtar düzeltme: Diyalogun kapanmasını engelle
+                setStep(2);
+              }}>{t('coach.deleteStudent.step1.continue')}</AlertDialogAction>
             </AlertDialogFooter>
           </>
         )}
@@ -66,7 +73,7 @@ export const DeleteStudentDialog = ({ isOpen, onClose, onConfirm, student }: Del
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={handleClose}>{t('coach.cancel')}</AlertDialogCancel>
+              <AlertDialogCancel>{t('coach.cancel')}</AlertDialogCancel>
               <Button variant="destructive" onClick={handleConfirm}>
                 {t('coach.deleteStudent.step2.confirm')}
               </Button>
