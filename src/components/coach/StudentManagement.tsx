@@ -95,29 +95,29 @@ const StudentManagement = () => {
 
   const handleConfirmDelete = async () => {
     if (!studentToDelete) return;
-
+  
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       handleCloseDeleteDialog();
       return;
     }
-
+  
+    // Onay diyaloğunu hemen kapat
+    handleCloseDeleteDialog();
+  
     const { error } = await supabase
       .from('coach_student_pairs')
       .delete()
       .match({ coach_id: user.id, student_id: studentToDelete.id });
-
+  
     if (error) {
       console.error("Öğrenci-koç eşleşmesi silinirken hata:", error);
       showError(t('coach.deleteStudent.error'));
     } else {
       showSuccess(t('coach.deleteStudent.success'));
-      // Düzeltme: Arayüzü anında güncellemek için öğrenciyi yerel state'den kaldır.
-      setStudents(prevStudents => prevStudents.filter(student => student.id !== studentToDelete.id));
+      // Arayüzün veritabanı ile senkronize olmasını sağlamak için öğrenci listesini yeniden çek
+      fetchStudents();
     }
-    
-    // Düzeltme: Tüm işlemler bittikten sonra diyalogu kapat ve state'i sıfırla.
-    handleCloseDeleteDialog();
   };
 
   return (
