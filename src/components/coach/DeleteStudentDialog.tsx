@@ -34,8 +34,6 @@ export const DeleteStudentDialog = ({ isOpen, onClose, onConfirm, student }: Del
     onClose();
   };
 
-  // Düzeltme: Bu fonksiyon artık sadece onConfirm'i çağırıyor.
-  // Kapatma işlemi, ana bileşen tarafından yönetilecek.
   const handleConfirm = () => {
     onConfirm();
   };
@@ -43,7 +41,7 @@ export const DeleteStudentDialog = ({ isOpen, onClose, onConfirm, student }: Del
   if (!student) return null;
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={handleClose}>
+    <AlertDialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <AlertDialogContent>
         {step === 1 && (
           <>
