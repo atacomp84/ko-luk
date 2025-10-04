@@ -110,7 +110,7 @@
       "title": "Görevi Değerlendir",
       "description": "Öğrencinin tamamladığı bu görevi onaylıyor musunuz?",
       "approve": "Onayla",
-      "reject": "Reddet"
+      "reject": "Tamamlanmadı"
     },
     "scoreEntry": {
       "title": "Puan Girişi",

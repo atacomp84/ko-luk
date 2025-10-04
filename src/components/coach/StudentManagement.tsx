@@ -11,12 +11,23 @@ import { showError, showSuccess } from '@/utils/toast';
 import { useTranslation } from 'react-i18next';
 import { Trash2, ClipboardList, Gift, UserPlus } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
 
 interface Student {
   id: string;
   first_name: string;
   last_name: string;
 }
+
+const avatarColors = [
+    "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300",
+    "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300",
+    "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300",
+    "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300",
+    "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300",
+    "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300",
+    "bg-pink-100 text-pink-700 dark:bg-pink-900/50 dark:text-pink-300",
+];
 
 const StudentManagement = () => {
   const [students, setStudents] = useState<Student[]>([]);
@@ -133,11 +144,11 @@ const StudentManagement = () => {
             </div>
           ) : students.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {students.map((student) => (
+              {students.map((student, index) => (
                 <Card key={student.id} className="flex flex-col justify-between">
                   <CardContent className="p-4 flex items-center gap-4">
                     <Avatar>
-                      <AvatarFallback>
+                      <AvatarFallback className={cn("font-bold", avatarColors[index % avatarColors.length])}>
                         {student.first_name?.[0]?.toUpperCase()}
                         {student.last_name?.[0]?.toUpperCase()}
                       </AvatarFallback>
@@ -145,15 +156,15 @@ const StudentManagement = () => {
                     <span className="font-semibold">{student.first_name} {student.last_name}</span>
                   </CardContent>
                   <div className="grid grid-cols-3 gap-1 p-2 border-t bg-muted/50">
-                      <Button variant="ghost" size="sm" onClick={() => handleOpenTaskManagement(student)} className="flex flex-col h-auto gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => handleOpenTaskManagement(student)} className="flex flex-col h-auto gap-1 hover:text-blue-600 dark:hover:text-blue-400">
                         <ClipboardList className="h-4 w-4" />
                         <span className="text-xs">{t('coach.manageTasks')}</span>
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleOpenRewardManagement(student)} className="flex flex-col h-auto gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => handleOpenRewardManagement(student)} className="flex flex-col h-auto gap-1 hover:text-green-600 dark:hover:text-green-400">
                         <Gift className="h-4 w-4" />
                         <span className="text-xs">{t('coach.sendReward')}</span>
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleOpenDeleteDialog(student)} className="flex flex-col h-auto gap-1 text-destructive hover:text-destructive">
+                      <Button variant="ghost" size="sm" onClick={() => handleOpenDeleteDialog(student)} className="flex flex-col h-auto gap-1 text-red-500 hover:text-red-700 dark:text-red-500 dark:hover:text-red-400">
                         <Trash2 className="h-4 w-4" />
                         <span className="text-xs">{t('coach.deleteTask.confirm')}</span>
                       </Button>

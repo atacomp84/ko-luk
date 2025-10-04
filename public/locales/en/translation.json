@@ -110,7 +110,7 @@
       "title": "Review Task",
       "description": "Do you approve this task completed by the student?",
       "approve": "Approve",
-      "reject": "Reject"
+      "reject": "Not Completed"
     },
     "scoreEntry": {
       "title": "Score Entry",

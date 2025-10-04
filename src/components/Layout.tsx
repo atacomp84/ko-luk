@@ -7,6 +7,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { LogOut, Rocket } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Badge } from './ui/badge';
 
 interface LayoutProps {
   children: ReactNode;
@@ -31,9 +32,9 @@ const Layout = ({ children, title }: LayoutProps) => {
             <h1 className="text-xl font-bold tracking-tight">{title}</h1>
         </div>
         <div className="ml-auto flex items-center gap-4">
-          <span className="text-sm text-muted-foreground hidden sm:inline-block">
+          <Badge variant="outline" className="border-primary text-primary font-semibold hidden sm:inline-block">
             {profile?.first_name} {profile?.last_name}
-          </span>
+          </Badge>
           <LanguageSwitcher />
           <ThemeToggle />
           <Button variant="outline" size="icon" onClick={handleLogout}>
