@@ -54,6 +54,7 @@
     "statusLabel": "Status",
     "statusPending": "Pending",
     "statusCompleted": "Completed",
+    "statusNotCompleted": "Not Completed",
     "noAssignedTasks": "No tasks have been assigned to this student yet.",
     "close": "Close",
     "selectTopic": "1. Select Subject and Topic",
@@ -91,9 +92,10 @@
     "allAssignedTasks": "All Assigned Tasks",
     "noTasksForChart": "No question-solving tasks have been assigned yet to create a chart.",
     "taskCompletion": {
-      "title": "Confirm Task",
-      "description": "Are you sure you want to mark this task as 'Completed'? This action cannot be undone.",
-      "confirm": "Yes, Mark as Completed",
+      "title": "Update Task Status",
+      "description": "Are you sure you want to update this task's status to 'Completed' or 'Not Completed'?",
+      "confirm": "Completed",
+      "notCompleted": "Not Completed",
       "cancel": "Cancel"
     }
   },

@@ -144,20 +144,21 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     }
   };
 
-  const handleConfirmCompletion = async () => {
+  const handleConfirmStatusUpdate = async (newStatus: 'completed' | 'not_completed') => {
     if (!taskToUpdate) return;
     const { error } = await supabase
       .from('tasks')
-      .update({ status: 'completed' })
+      .update({ status: newStatus })
       .eq('id', taskToUpdate.id);
 
     if (error) {
       showError('Görev güncellenirken bir hata oluştu.');
     } else {
-      showSuccess('Görev tamamlandı olarak işaretlendi.');
+      showSuccess('Görev durumu güncellendi.');
       fetchTasks();
     }
     setTaskToUpdate(null);
+    setConfirmDialogOpen(false);
   };
 
   const formatTaskTitle = (task: Task) => {
@@ -170,7 +171,14 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     return title;
   };
 
-  const assignedTopics = useMemo(() => new Set(tasks.map(task => task.topic)), [tasks]);
+  const topicAssignmentCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    tasks.forEach(task => {
+        counts.set(task.topic, (counts.get(task.topic) || 0) + 1);
+    });
+    return counts;
+  }, [tasks]);
+
   const isSubmitDisabled = !selectedTopic || (taskType === 'soru_cozumu' && (questionCount === '' || Number(questionCount) <= 0));
 
   const groupedTasks = useMemo(() => {
@@ -190,9 +198,23 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
         return 'bg-green-100 dark:bg-green-900/30';
       case 'pending':
         return 'bg-yellow-100 dark:bg-yellow-900/30';
+      case 'not_completed':
+        return 'bg-red-100 dark:bg-red-900/30';
       default:
         return 'bg-secondary';
     }
+  };
+
+  const getStatusBadgeClass = (status: string) => {
+    if (status === 'completed') return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800';
+    if (status === 'not_completed') return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800';
+    return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800';
+  };
+
+  const getStatusTranslationKey = (status: string) => {
+    if (status === 'completed') return 'coach.statusCompleted';
+    if (status === 'not_completed') return 'coach.statusNotCompleted';
+    return 'coach.statusPending';
   };
 
   if (!student) return null;
@@ -238,7 +260,11 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                                               <SelectItem key={topic} value={topic}>
                                                   <div className="flex items-center justify-between w-full">
                                                       <span>{topic}</span>
-                                                      {assignedTopics.has(topic) && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                                                      <div className="flex items-center gap-1">
+                                                          {Array.from({ length: topicAssignmentCounts.get(topic) || 0 }).map((_, i) => (
+                                                              <CheckCircle2 key={i} className="h-4 w-4 text-green-500" />
+                                                          ))}
+                                                      </div>
                                                   </div>
                                               </SelectItem>
                                           ))}
@@ -288,7 +314,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                           <div key={task.id} onClick={() => handleTaskClick(task)} className={`p-3 rounded-md ${getStatusClass(task.status)} ${task.status === 'pending' ? 'cursor-pointer hover:opacity-80' : ''}`}>
                               <p className="font-bold">{`${task.subject}: ${task.topic}`}</p>
                               {task.description && <p className="text-sm text-muted-foreground italic">"{task.description}"</p>}
-                              <p className="text-xs font-semibold mt-1 capitalize">{t('coach.statusLabel')}: {task.status === 'pending' ? t('coach.statusPending') : t('coach.statusCompleted')}</p>
+                              <p className="text-xs font-semibold mt-1 capitalize">{t('coach.statusLabel')}: {t(getStatusTranslationKey(task.status))}</p>
                           </div>
                           ))
                       ) : (
@@ -313,8 +339,8 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                                           <p className="font-semibold">{formatTaskTitle(task)}</p>
                                           {task.description && <p className="text-xs text-muted-foreground italic mt-1">"{task.description}"</p>}
                                           <div className="flex items-center justify-between mt-2 pt-2 border-t">
-                                              <Badge variant={task.status === 'completed' ? 'default' : 'secondary'} className={task.status === 'completed' ? 'bg-green-200 text-green-800 dark:bg-green-800/30 dark:text-green-200' : 'bg-yellow-200 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-200'}>
-                                                  {t(task.status === 'completed' ? 'coach.statusCompleted' : 'coach.statusPending')}
+                                              <Badge variant="outline" className={getStatusBadgeClass(task.status)}>
+                                                  {t(getStatusTranslationKey(task.status))}
                                               </Badge>
                                               <span className="text-xs text-muted-foreground">
                                                   {new Date(task.created_at).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
@@ -353,8 +379,11 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('coach.taskCompletion.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmCompletion}>{t('coach.taskCompletion.confirm')}</AlertDialogAction>
+            <AlertDialogCancel onClick={() => setTaskToUpdate(null)}>{t('coach.taskCompletion.cancel')}</AlertDialogCancel>
+            <Button variant="destructive" onClick={() => handleConfirmStatusUpdate('not_completed')}>
+              {t('coach.taskCompletion.notCompleted')}
+            </Button>
+            <AlertDialogAction onClick={() => handleConfirmStatusUpdate('completed')}>{t('coach.taskCompletion.confirm')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

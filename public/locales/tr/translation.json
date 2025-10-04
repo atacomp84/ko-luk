@@ -54,6 +54,7 @@
     "statusLabel": "Durum",
     "statusPending": "Bekliyor",
     "statusCompleted": "Tamamlandı",
+    "statusNotCompleted": "Tamamlanmadı",
     "noAssignedTasks": "Bu öğrenciye henüz bir görev atanmamış.",
     "close": "Kapat",
     "selectTopic": "1. Ders ve Konu Seçin",
@@ -91,9 +92,10 @@
     "allAssignedTasks": "Atanmış Tüm Görevler",
     "noTasksForChart": "Grafik oluşturmak için henüz soru çözümü görevi atanmamış.",
     "taskCompletion": {
-      "title": "Görevi Onayla",
-      "description": "Bu görevi 'Tamamlandı' olarak işaretlemek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
-      "confirm": "Evet, Tamamlandı",
+      "title": "Görevin Durumunu Güncelle",
+      "description": "Bu görevin durumunu 'Tamamlandı' veya 'Tamamlanmadı' olarak güncellemek istediğinizden emin misiniz?",
+      "confirm": "Tamamlandı",
+      "notCompleted": "Tamamlanmadı",
       "cancel": "İptal"
     }
   },
