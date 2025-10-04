@@ -90,6 +90,14 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     }
   }, [selectedSubject]);
 
+  useEffect(() => {
+    if (taskType === 'soru_cozumu') {
+      setQuestionCount(20);
+    } else {
+      setQuestionCount('');
+    }
+  }, [taskType]);
+
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!student || !selectedSubject || !selectedTopic) return;
@@ -145,7 +153,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
         </DialogHeader>
         <div className="grid md:grid-cols-2 gap-6 py-4 flex-1 overflow-hidden">
             <form onSubmit={handleAddTask} className="flex flex-col h-full">
-                <div className="flex-1 space-y-6 overflow-y-auto pr-4">
+                <div className="flex-1 space-y-6 overflow-y-auto pr-4 pb-4">
                     <div className="space-y-2">
                         <h3 className="font-semibold">{t('coach.selectTopic')}</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -208,7 +216,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                 </div>
 
                 {selectedTopic && (
-                    <div className="pt-6 border-t mt-4">
+                    <div className="pt-4 border-t mt-auto">
                         <Button type="submit" className="w-full" disabled={isSubmitDisabled}>
                             {t('coach.addTaskButton')}
                         </Button>

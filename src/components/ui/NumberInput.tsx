@@ -41,22 +41,22 @@ export const NumberInput = ({ value, onChange, min = 1, max, step = 1, required 
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <Button type="button" variant="outline" size="icon" onClick={handleDecrement} disabled={value === min}>
+    <div className="flex items-center gap-1 w-32">
+      <Button type="button" variant="outline" size="icon" className="h-9 w-9" onClick={handleDecrement} disabled={value === '' || value <= min}>
         <Minus className="h-4 w-4" />
       </Button>
       <Input 
         type="number" 
         value={value} 
         onChange={handleChange} 
-        className="text-center" 
+        className="text-center h-9" 
         min={min} 
         max={max} 
         step={step}
         required={required}
         placeholder="0"
       />
-      <Button type="button" variant="outline" size="icon" onClick={handleIncrement} disabled={max !== undefined && value === max}>
+      <Button type="button" variant="outline" size="icon" className="h-9 w-9" onClick={handleIncrement} disabled={max !== undefined && (value === '' || value >= max)}>
         <Plus className="h-4 w-4" />
       </Button>
     </div>
