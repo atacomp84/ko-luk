@@ -84,7 +84,12 @@
       },
       "success": "Öğrenci başarıyla silindi.",
       "error": "Öğrenci silinirken bir hata oluştu."
-    }
+    },
+    "addNewTaskTab": "Yeni Görev Ata",
+    "taskHistory": "Görev Geçmişi",
+    "totalQuestionsByTopic": "Konulara Göre Toplam Soru Sayısı",
+    "allAssignedTasks": "Atanmış Tüm Görevler",
+    "noTasksForChart": "Grafik oluşturmak için henüz soru çözümü görevi atanmamış."
   },
   "student": {
     "dashboardTitle": "Öğrenci Paneli",

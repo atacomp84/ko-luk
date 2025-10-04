@@ -84,7 +84,12 @@
       },
       "success": "Student removed successfully.",
       "error": "An error occurred while removing the student."
-    }
+    },
+    "addNewTaskTab": "Add New Task",
+    "taskHistory": "Task History",
+    "totalQuestionsByTopic": "Total Questions by Topic",
+    "allAssignedTasks": "All Assigned Tasks",
+    "noTasksForChart": "No question-solving tasks have been assigned yet to create a chart."
   },
   "student": {
     "dashboardTitle": "Student Dashboard",
