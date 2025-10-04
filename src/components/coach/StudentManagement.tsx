@@ -41,19 +41,23 @@ const StudentManagement = () => {
   const { t } = useTranslation();
 
   const fetchStudents = useCallback(async () => {
+    console.log("[StudentManagement] Starting to fetch students.");
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
+      console.warn("[StudentManagement] No user found. Aborting fetch.");
       setLoading(false);
       return;
     }
 
+    console.log(`[StudentManagement] Fetching student pairs for coach ID: ${user.id}`);
     const { data: pairs, error: pairsError } = await supabase
       .from('coach_student_pairs')
       .select('student_id')
       .eq('coach_id', user.id);
 
     if (pairsError) {
+      console.error("[StudentManagement] Error fetching student pairs:", pairsError.message);
       showError('Öğrenci listesi getirilirken bir hata oluştu.');
       setStudents([]);
       setLoading(false);
@@ -61,6 +65,7 @@ const StudentManagement = () => {
     }
 
     const studentIds = pairs.map(p => p.student_id);
+    console.log(`[StudentManagement] Found ${studentIds.length} student pairs. Fetching profiles.`);
 
     if (studentIds.length > 0) {
       const { data: profiles, error: profilesError } = await supabase
@@ -69,15 +74,19 @@ const StudentManagement = () => {
         .in('id', studentIds);
 
       if (profilesError) {
+        console.error("[StudentManagement] Error fetching student profiles:", profilesError.message);
         showError('Öğrenci profilleri getirilirken bir hata oluştu.');
         setStudents([]);
       } else {
+        console.log("[StudentManagement] Student profiles fetched successfully:", profiles);
         setStudents(profiles as Student[]);
       }
     } else {
+      console.log("[StudentManagement] No student IDs to fetch profiles for.");
       setStudents([]);
     }
 
+    console.log("[StudentManagement] Finished fetching students.");
     setLoading(false);
   }, []);
 

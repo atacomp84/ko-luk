@@ -8,16 +8,22 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log(`[ProtectedRoute] Checking access for roles: [${allowedRoles.join(', ')}]. Auth Loading: ${loading}`);
     if (!loading) {
       if (!session || !profile) {
+        console.log("[ProtectedRoute] No session or profile. Redirecting to /auth.");
         navigate('/auth');
       } else if (!allowedRoles.includes(profile.role)) {
+        console.log(`[ProtectedRoute] Role mismatch. User role: '${profile.role}'. Allowed: [${allowedRoles.join(', ')}]. Redirecting to /.`);
         navigate('/');
+      } else {
+        console.log("[ProtectedRoute] Access granted.");
       }
     }
   }, [loading, session, profile, navigate, allowedRoles]);
 
   if (loading) {
+    console.log("[ProtectedRoute] Auth is loading, showing skeleton.");
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="p-8 space-y-4 w-full max-w-md">
