@@ -63,6 +63,53 @@ const getSubjectIcon = (subject: string): ReactNode => {
     }
 };
 
+const CustomizedAxisTick = (props: any) => {
+    const { x, y, payload } = props;
+    const value = payload.value as string;
+    
+    if (value.length > 18) {
+        const middle = Math.floor(value.length / 2);
+        let breakPoint = value.lastIndexOf(' ', middle);
+        if (breakPoint === -1) breakPoint = middle;
+        const line1 = value.substring(0, breakPoint);
+        const line2 = value.substring(breakPoint + 1);
+        return (
+            <g transform={`translate(${x},${y})`}>
+                <text x={0} y={0} dy={16} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize={12}>
+                    <tspan x="0" dy="0">{line1}</tspan>
+                    <tspan x="0" dy="15">{line2}</tspan>
+                </text>
+            </g>
+        );
+    }
+
+    return (
+        <g transform={`translate(${x},${y})`}>
+            <text x={0} y={0} dy={16} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize={12}>
+                {value}
+            </text>
+        </g>
+    );
+};
+
+const renderCenteredLabel = (props: any) => {
+    const { x, y, width, height, value } = props;
+    if (height < 20) return null;
+    return (
+        <text
+            x={x + width / 2}
+            y={y + height / 2}
+            fill="#fff"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fontWeight="bold"
+            fontSize={14}
+        >
+            {`Net: ${Number(value).toFixed(2)}`}
+        </text>
+    );
+};
+
 export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagementDialogProps) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -449,17 +496,17 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                     <Card key={subject}>
                       <CardHeader><CardTitle>{subject}</CardTitle></CardHeader>
                       <CardContent>
-                        <ResponsiveContainer width="100%" height={300}>
-                          <BarChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                        <ResponsiveContainer width="100%" height={350}>
+                          <BarChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 40 }}>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="topic" angle={-45} textAnchor="end" height={100} interval={0} tick={{ fontSize: 12 }} />
+                            <XAxis dataKey="topic" height={60} interval={0} tick={<CustomizedAxisTick />} axisLine={false} tickLine={false} />
                             <YAxis />
                             <Tooltip />
                             <Bar dataKey="correct" stackId="a" fill="#22c55e" name={t('coach.scoreEntry.correct')} />
                             <Bar dataKey="wrong" stackId="a" fill="#ef4444" name={t('coach.scoreEntry.wrong')} />
                             <Bar dataKey="empty" stackId="a" fill="#3b82f6" name={t('coach.scoreEntry.empty')} />
-                            <Bar dataKey="total" stackId="b" fill="transparent">
-                                <LabelList dataKey="net" position="center" fill="#ffffff" fontWeight="bold" formatter={(value: number) => `Net: ${value}`} />
+                            <Bar dataKey="total" stackId="b" fill="transparent" isAnimationActive={false}>
+                                <LabelList dataKey="net" content={renderCenteredLabel} />
                             </Bar>
                           </BarChart>
                         </ResponsiveContainer>
