@@ -7,6 +7,7 @@ import { AddStudentDialog } from './AddStudentDialog';
 import { TaskManagementDialog } from './TaskManagementDialog';
 import { RewardManagementDialog } from './RewardManagementDialog';
 import { showError } from '@/utils/toast';
+import { useTranslation } from 'react-i18next';
 
 interface Student {
   id: string;
@@ -21,6 +22,7 @@ const StudentManagement = () => {
   const [isTaskManagementOpen, setTaskManagementOpen] = useState(false);
   const [isRewardManagementOpen, setRewardManagementOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const { t } = useTranslation();
 
   const fetchStudents = useCallback(async () => {
     setLoading(true);
@@ -30,7 +32,6 @@ const StudentManagement = () => {
       return;
     }
 
-    // Adım 1: Koçun öğrenci ID'lerini al
     const { data: pairs, error: pairsError } = await supabase
       .from('coach_student_pairs')
       .select('student_id')
@@ -38,7 +39,6 @@ const StudentManagement = () => {
 
     if (pairsError) {
       showError('Öğrenci listesi getirilirken bir hata oluştu.');
-      console.error('Error fetching student pairs:', pairsError);
       setStudents([]);
       setLoading(false);
       return;
@@ -47,7 +47,6 @@ const StudentManagement = () => {
     const studentIds = pairs.map(p => p.student_id);
 
     if (studentIds.length > 0) {
-      // Adım 2: ID'leri kullanarak profil bilgilerini al
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, first_name, last_name')
@@ -55,7 +54,6 @@ const StudentManagement = () => {
 
       if (profilesError) {
         showError('Öğrenci profilleri getirilirken bir hata oluştu.');
-        console.error('Error fetching profiles:', profilesError);
         setStudents([]);
       } else {
         setStudents(profiles as Student[]);
@@ -86,10 +84,10 @@ const StudentManagement = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Öğrencilerim</CardTitle>
-            <CardDescription>Size kayıtlı olan öğrencileri burada görebilirsiniz.</CardDescription>
+            <CardTitle>{t('coach.myStudents')}</CardTitle>
+            <CardDescription>{t('coach.myStudentsDescription')}</CardDescription>
           </div>
-          <Button onClick={() => setAddStudentOpen(true)}>Öğrenci Ekle</Button>
+          <Button onClick={() => setAddStudentOpen(true)}>{t('coach.addStudent')}</Button>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -101,21 +99,21 @@ const StudentManagement = () => {
           ) : students.length > 0 ? (
             <ul className="space-y-2">
               {students.map((student) => (
-                <li key={student.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                <li key={student.id} className="flex items-center justify-between p-3 bg-secondary rounded-md">
                   <span>{student.first_name} {student.last_name}</span>
                   <div className="space-x-2">
                     <Button variant="outline" size="sm" onClick={() => handleOpenTaskManagement(student)}>
-                      Görevleri Yönet
+                      {t('coach.manageTasks')}
                     </Button>
                     <Button variant="secondary" size="sm" onClick={() => handleOpenRewardManagement(student)}>
-                      Ödül Gönder
+                      {t('coach.sendReward')}
                     </Button>
                   </div>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-center text-gray-500 py-4">Henüz size kayıtlı bir öğrenci yok.</p>
+            <p className="text-center text-muted-foreground py-4">{t('coach.noStudents')}</p>
           )}
         </CardContent>
       </Card>

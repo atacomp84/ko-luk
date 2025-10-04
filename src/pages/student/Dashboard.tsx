@@ -1,65 +1,49 @@
-import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { Copy } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
 import StudentTasks from "@/components/student/StudentTasks";
 import StudentRewards from "@/components/student/StudentRewards";
-
-interface Profile {
-    first_name: string;
-}
+import Layout from "@/components/Layout";
+import { useAuth } from "@/contexts/AuthContext";
 
 const StudentDashboard = () => {
-  const navigate = useNavigate();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { profile } = useAuth();
   const [userId, setUserId] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchUser = async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
             setUserId(user.id);
-            const { data } = await supabase.from('profiles').select('first_name').eq('id', user.id).single();
-            setProfile(data);
         }
     };
-    fetchProfile();
+    fetchUser();
   }, []);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/auth');
-  };
 
   const handleCopyId = () => {
     if (userId) {
       navigator.clipboard.writeText(userId);
-      showSuccess("Kullanıcı ID'si panoya kopyalandı!");
+      showSuccess(t('student.userIdCopied'));
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">Öğrenci Paneli</h1>
-          <Button onClick={handleLogout} variant="outline">Çıkış Yap</Button>
-        </div>
-      </header>
-      <main>
-        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 space-y-6">
-          <div className="p-8 bg-white rounded-lg shadow">
-            <h2 className="text-xl font-semibold">Hoş Geldin, {profile?.first_name}!</h2>
+    <Layout title={t('student.dashboardTitle')}>
+        <div className="space-y-6">
+          <div className="p-8 bg-card rounded-lg border">
+            <h2 className="text-xl font-semibold">{t('student.welcome', { firstName: profile?.first_name })}</h2>
           </div>
 
           <Tabs defaultValue="tasks" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="tasks">Görevlerim</TabsTrigger>
-              <TabsTrigger value="rewards">Ödüllerim</TabsTrigger>
+              <TabsTrigger value="tasks">{t('student.myTasks')}</TabsTrigger>
+              <TabsTrigger value="rewards">{t('student.myRewards')}</TabsTrigger>
             </TabsList>
             <TabsContent value="tasks">
               <StudentTasks />
@@ -71,25 +55,24 @@ const StudentDashboard = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Kullanıcı ID'niz</CardTitle>
+              <CardTitle>{t('student.yourUserId')}</CardTitle>
               <CardDescription>
-                Bu ID, sistemdeki benzersiz kimliğinizdir.
+                {t('student.yourUserIdDescription')}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between p-3 bg-gray-100 rounded-md">
+              <div className="flex items-center justify-between p-3 bg-secondary rounded-md">
                 <pre className="text-sm font-mono overflow-x-auto">
-                  <code>{userId || 'Yükleniyor...'}</code>
+                  <code>{userId || '...'}</code>
                 </pre>
-                <Button variant="ghost" size="icon" onClick={handleCopyId} disabled={!userId} aria-label="Kullanıcı ID'sini kopyala">
+                <Button variant="ghost" size="icon" onClick={handleCopyId} disabled={!userId} aria-label={t('student.copyUserId')}>
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+    </Layout>
   );
 };
 

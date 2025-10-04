@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { showError, showSuccess } from '@/utils/toast';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 interface Student {
   id: string;
@@ -36,6 +37,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const { t } = useTranslation();
 
   const fetchTasks = async () => {
     if (!student) return;
@@ -48,7 +50,6 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     
     if (error) {
       showError('Görevler getirilirken hata oluştu.');
-      console.error(error);
     } else {
       setTasks(data);
     }
@@ -78,13 +79,12 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
 
     if (error) {
       showError('Görev eklenirken bir hata oluştu.');
-      console.error(error);
     } else {
       showSuccess('Görev başarıyla eklendi.');
       setTitle('');
       setDescription('');
       setDueDate('');
-      fetchTasks(); // Listeyi yenile
+      fetchTasks();
     }
   };
 
@@ -94,53 +94,51 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{student.first_name} {student.last_name} - Görev Yönetimi</DialogTitle>
-          <DialogDescription>Bu öğrenciye yeni görevler atayın ve mevcut görevlerini görüntüleyin.</DialogDescription>
+          <DialogTitle>{t('coach.taskManagementTitle', { firstName: student.first_name, lastName: student.last_name })}</DialogTitle>
+          <DialogDescription>{t('coach.taskManagementDescription')}</DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-6 py-4">
-            {/* Yeni Görev Formu */}
             <div className="space-y-4">
-                <h3 className="font-semibold">Yeni Görev Ekle</h3>
+                <h3 className="font-semibold">{t('coach.addNewTask')}</h3>
                 <form onSubmit={handleAddTask} className="space-y-4">
                     <div>
-                        <Label htmlFor="title">Başlık</Label>
+                        <Label htmlFor="title">{t('coach.taskTitleLabel')}</Label>
                         <Input id="title" value={title} onChange={e => setTitle(e.target.value)} required />
                     </div>
                     <div>
-                        <Label htmlFor="description">Açıklama</Label>
+                        <Label htmlFor="description">{t('coach.taskDescriptionLabel')}</Label>
                         <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} />
                     </div>
                     <div>
-                        <Label htmlFor="due-date">Bitiş Tarihi</Label>
+                        <Label htmlFor="due-date">{t('coach.taskDueDateLabel')}</Label>
                         <Input id="due-date" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
                     </div>
-                    <Button type="submit">Görevi Ekle</Button>
+                    <Button type="submit">{t('coach.addTaskButton')}</Button>
                 </form>
             </div>
-            {/* Görev Listesi */}
             <div className="space-y-4">
-                <h3 className="font-semibold">Atanmış Görevler</h3>
+                <h3 className="font-semibold">{t('coach.assignedTasks')}</h3>
                 <div className="max-h-80 overflow-y-auto space-y-2 pr-2">
                 {loading ? (
                     <Skeleton className="h-20 w-full" />
                 ) : tasks.length > 0 ? (
                     tasks.map(task => (
-                    <div key={task.id} className={`p-3 rounded-md ${task.status === 'completed' ? 'bg-green-50' : 'bg-gray-50'}`}>
+                    <div key={task.id} className={`p-3 rounded-md ${task.status === 'completed' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-secondary'}`}>
                         <p className="font-bold">{task.title}</p>
-                        <p className="text-sm text-gray-600">{task.description}</p>
-                        {task.due_date && <p className="text-xs text-gray-500 mt-1">Bitiş: {format(new Date(task.due_date), 'dd/MM/yyyy')}</p>}
-                        <p className="text-xs font-semibold mt-1 capitalize">Durum: {task.status === 'pending' ? 'Bekliyor' : 'Tamamlandı'}</p>
+                        <p className="text-sm text-muted-foreground">{task.description}</p>
+                        {task.due_date && <p className="text-xs text-muted-foreground mt-1">Bitiş: {format(new Date(task.due_date), 'dd/MM/yyyy')}</p>}
+                        <p className="text-xs font-semibold mt-1 capitalize">{t('coach.statusLabel')}: {task.status === 'pending' ? t('coach.statusPending') : t('coach.statusCompleted')}</p>
                     </div>
                     ))
                 ) : (
-                    <p className="text-center text-gray-500 py-4">Henüz atanmış bir görev yok.</p>
+                    <p className="text-center text-muted-foreground py-4">{t('coach.noAssignedTasks')}</p>
                 )}
                 </div>
             </div>
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline">Kapat</Button>
+            <Button variant="outline">{t('coach.close')}</Button>
           </DialogClose>
         </DialogFooter>
       </DialogContent>

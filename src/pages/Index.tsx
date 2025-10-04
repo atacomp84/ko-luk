@@ -4,30 +4,29 @@ import { Button } from '@/components/ui/button';
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { LanguageSwitcher } from '@/components/language-switcher';
+import { useTranslation } from 'react-i18next';
+import { Rocket } from 'lucide-react';
 
 const Index = () => {
   const { loading, profile } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   useEffect(() => {
-    console.log(`[IndexPage] useEffect tetiklendi. Durum: loading=${loading}, profile=${JSON.stringify(profile)}`);
     if (!loading && profile) {
       if (profile.role === 'coach') {
-        console.log('[IndexPage] Profil bir koç. /coach/dashboard adresine yönlendiriliyor.');
         navigate('/coach/dashboard');
       } else if (profile.role === 'student') {
-        console.log('[IndexPage] Profil bir öğrenci. /student/dashboard adresine yönlendiriliyor.');
         navigate('/student/dashboard');
       }
-    } else if (!loading && !profile) {
-        console.log('[IndexPage] Yükleme bitti ama profil yok. Karşılama ekranı gösterilecek.');
     }
   }, [loading, profile, navigate]);
 
   if (loading) {
-    console.log('[IndexPage] Auth durumu yükleniyor. Skeleton gösteriliyor.');
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
         <div className="text-center p-8 space-y-4">
           <Skeleton className="h-10 w-96" />
           <Skeleton className="h-6 w-80" />
@@ -37,15 +36,19 @@ const Index = () => {
     );
   }
 
-  // Yükleme bitti ve profil yoksa (kullanıcı giriş yapmamışsa) bu sayfa gösterilir.
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 relative">
+       <div className="absolute top-4 right-4 flex items-center gap-2">
+          <LanguageSwitcher />
+          <ThemeToggle />
+        </div>
       <div className="text-center p-8">
-        <h1 className="text-4xl font-bold mb-4">LGS Koçluk Platformuna Hoş Geldiniz</h1>
-        <p className="text-xl text-gray-600 mb-6">
-          Devam etmek için lütfen giriş yapın veya kayıt olun.
+        <Rocket className="h-16 w-16 text-primary mx-auto mb-6" />
+        <h1 className="text-4xl font-bold mb-4">{t('index.welcomeTitle')}</h1>
+        <p className="text-xl text-muted-foreground mb-6">
+          {t('index.welcomeDescription')}
         </p>
-        <Button onClick={() => navigate('/auth')}>Giriş Yap / Kayıt Ol</Button>
+        <Button onClick={() => navigate('/auth')} size="lg">{t('index.ctaButton')}</Button>
       </div>
       <div className="absolute bottom-4">
         <MadeWithDyad />
