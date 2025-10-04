@@ -97,7 +97,10 @@ const StudentManagement = () => {
     if (!studentToDelete) return;
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      handleCloseDeleteDialog();
+      return;
+    }
 
     const { error } = await supabase
       .from('coach_student_pairs')
@@ -109,9 +112,12 @@ const StudentManagement = () => {
       showError(t('coach.deleteStudent.error'));
     } else {
       showSuccess(t('coach.deleteStudent.success'));
-      // Arayüzü anında güncellemek için öğrenciyi yerel state'den kaldır
+      // Düzeltme: Arayüzü anında güncellemek için öğrenciyi yerel state'den kaldır.
       setStudents(prevStudents => prevStudents.filter(student => student.id !== studentToDelete.id));
     }
+    
+    // Düzeltme: Tüm işlemler bittikten sonra diyalogu kapat ve state'i sıfırla.
+    handleCloseDeleteDialog();
   };
 
   return (

@@ -58,9 +58,8 @@ export default function AuthPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('[AuthPage] Kayıt işlemi başlatıldı.');
     setLoading(true);
-    setError(null); // Önceki giriş hatalarını temizle
+    setError(null);
     const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
@@ -74,23 +73,21 @@ export default function AuthPage() {
     });
 
     if (signUpError) {
-      console.error('[AuthPage] Kayıt sırasında hata:', signUpError.message);
       setLoading(false);
-      showError(signUpError.message); // Hata durumunda popup göster
+      showError(signUpError.message);
     } else {
-      console.log('[AuthPage] Kayıt başarılı. Oturum kapatılıyor ve giriş sekmesine yönlendiriliyor.');
       await supabase.auth.signOut();
       setLoading(false);
-      showSuccess(t('auth.registerSuccess')); // Başarı durumunda popup göster
+      showSuccess(t('auth.registerSuccess'));
+      // Düzeltme: Şifreyi temizle, sekmeyi değiştir. E-posta state'i aynı kalacak.
       setPassword("");
       setActiveTab("login");
-      console.log(`[AuthPage] Giriş sekmesine geçildi. E-posta alanı "${email}" olarak kalacak.`);
     }
   };
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
-    setError(null); // Sekme değiştirildiğinde hata mesajını temizle
+    setError(null);
   };
 
   if (authLoading || session) {
