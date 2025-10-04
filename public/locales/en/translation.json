@@ -89,7 +89,13 @@
     "taskHistory": "Task History",
     "totalQuestionsByTopic": "Total Questions by Topic",
     "allAssignedTasks": "All Assigned Tasks",
-    "noTasksForChart": "No question-solving tasks have been assigned yet to create a chart."
+    "noTasksForChart": "No question-solving tasks have been assigned yet to create a chart.",
+    "taskCompletion": {
+      "title": "Confirm Task",
+      "description": "Are you sure you want to mark this task as 'Completed'? This action cannot be undone.",
+      "confirm": "Yes, Mark as Completed",
+      "cancel": "Cancel"
+    }
   },
   "student": {
     "dashboardTitle": "Student Dashboard",

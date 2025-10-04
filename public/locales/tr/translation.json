@@ -89,7 +89,13 @@
     "taskHistory": "Görev Geçmişi",
     "totalQuestionsByTopic": "Konulara Göre Toplam Soru Sayısı",
     "allAssignedTasks": "Atanmış Tüm Görevler",
-    "noTasksForChart": "Grafik oluşturmak için henüz soru çözümü görevi atanmamış."
+    "noTasksForChart": "Grafik oluşturmak için henüz soru çözümü görevi atanmamış.",
+    "taskCompletion": {
+      "title": "Görevi Onayla",
+      "description": "Bu görevi 'Tamamlandı' olarak işaretlemek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+      "confirm": "Evet, Tamamlandı",
+      "cancel": "İptal"
+    }
   },
   "student": {
     "dashboardTitle": "Öğrenci Paneli",
