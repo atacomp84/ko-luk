@@ -55,6 +55,7 @@
     "statusPending": "Pending",
     "statusCompleted": "Completed",
     "statusNotCompleted": "Not Completed",
+    "statusPendingApproval": "Pending Approval",
     "noAssignedTasks": "No tasks have been assigned to this student yet.",
     "close": "Close",
     "selectTopic": "1. Select Subject and Topic",
@@ -88,8 +89,8 @@
     },
     "addNewTaskTab": "Add New Task",
     "taskHistory": "Task History",
-    "totalQuestionsByTopic": "Total Questions by Topic",
-    "allAssignedTasks": "All Assigned Tasks",
+    "analytics": "Analytics",
+    "awaitingApproval": "Awaiting Approval",
     "noTasksForChart": "No question-solving tasks have been assigned yet to create a chart.",
     "taskCompletion": {
       "title": "Update Task Status",
@@ -97,6 +98,12 @@
       "confirm": "Completed",
       "notCompleted": "Not Completed",
       "cancel": "Cancel"
+    },
+    "approval": {
+      "title": "Review Task",
+      "description": "Do you approve this task completed by the student?",
+      "approve": "Approve",
+      "reject": "Reject"
     }
   },
   "student": {
@@ -113,7 +120,11 @@
     "yourUserId": "Your User ID",
     "yourUserIdDescription": "This is your unique identifier in the system.",
     "copyUserId": "Copy User ID",
-    "userIdCopied": "User ID copied to clipboard!"
+    "userIdCopied": "User ID copied to clipboard!",
+    "statusCompleted": "Status: Completed (Approved)",
+    "statusPendingApproval": "Status: Awaiting Coach Approval",
+    "statusNotCompleted": "Status: Not Completed (Rejected)",
+    "awaitingApproval": "Awaiting Approval"
   },
   "logout": "Logout"
 }

@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Clock } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
 import { useTranslation } from 'react-i18next';
 
@@ -44,13 +44,13 @@ const StudentTasks = () => {
   const handleCompleteTask = async (taskId: string) => {
     const { error } = await supabase
       .from('tasks')
-      .update({ status: 'completed' })
+      .update({ status: 'pending_approval' })
       .eq('id', taskId);
 
     if (error) {
       showError('Görev güncellenirken bir hata oluştu.');
     } else {
-      showSuccess('Görev tamamlandı olarak işaretlendi!');
+      showSuccess('Göreviniz koç onayına gönderildi!');
       fetchTasks();
     }
   };
@@ -63,6 +63,19 @@ const StudentTasks = () => {
       title += ` (${t('coach.topicExplanation')})`;
     }
     return title;
+  };
+
+  const getStatusInfo = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return { className: 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800', text: t('student.statusCompleted') };
+      case 'pending_approval':
+        return { className: 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800', text: t('student.statusPendingApproval') };
+      case 'not_completed':
+        return { className: 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800', text: t('student.statusNotCompleted') };
+      default:
+        return { className: 'bg-background', text: '' };
+    }
   };
 
   return (
@@ -79,22 +92,33 @@ const StudentTasks = () => {
           </div>
         ) : tasks.length > 0 ? (
           <div className="space-y-4">
-            {tasks.map(task => (
-              <div key={task.id} className={`p-4 rounded-lg border ${task.status === 'completed' ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-background'}`}>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className={`font-bold ${task.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>{formatTaskTitle(task)}</h3>
-                    {task.description && <p className="text-sm text-muted-foreground mt-1 italic">"{task.description}"</p>}
+            {tasks.map(task => {
+              const statusInfo = getStatusInfo(task.status);
+              const isLineThrough = task.status === 'completed' || task.status === 'not_completed';
+              return (
+                <div key={task.id} className={`p-4 rounded-lg border ${statusInfo.className}`}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className={`font-bold ${isLineThrough ? 'line-through text-muted-foreground' : ''}`}>{formatTaskTitle(task)}</h3>
+                      {task.description && <p className="text-sm text-muted-foreground mt-1 italic">"{task.description}"</p>}
+                      {task.status !== 'pending' && <p className="text-xs font-semibold mt-2">{statusInfo.text}</p>}
+                    </div>
+                    {task.status === 'pending' && (
+                      <Button size="sm" onClick={() => handleCompleteTask(task.id)}>
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        {t('student.markAsCompleted')}
+                      </Button>
+                    )}
+                    {task.status === 'pending_approval' && (
+                      <Button size="sm" variant="outline" disabled>
+                        <Clock className="h-4 w-4 mr-2" />
+                        {t('student.awaitingApproval')}
+                      </Button>
+                    )}
                   </div>
-                  {task.status === 'pending' && (
-                    <Button size="sm" onClick={() => handleCompleteTask(task.id)}>
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      {t('student.markAsCompleted')}
-                    </Button>
-                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <p className="text-center text-muted-foreground py-6">{t('student.noTasks')}</p>

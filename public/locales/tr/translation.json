@@ -55,6 +55,7 @@
     "statusPending": "Bekliyor",
     "statusCompleted": "Tamamlandı",
     "statusNotCompleted": "Tamamlanmadı",
+    "statusPendingApproval": "Onay Bekliyor",
     "noAssignedTasks": "Bu öğrenciye henüz bir görev atanmamış.",
     "close": "Kapat",
     "selectTopic": "1. Ders ve Konu Seçin",
@@ -88,8 +89,8 @@
     },
     "addNewTaskTab": "Yeni Görev Ata",
     "taskHistory": "Görev Geçmişi",
-    "totalQuestionsByTopic": "Konulara Göre Toplam Soru Sayısı",
-    "allAssignedTasks": "Atanmış Tüm Görevler",
+    "analytics": "Analitik",
+    "awaitingApproval": "Onay Bekleyenler",
     "noTasksForChart": "Grafik oluşturmak için henüz soru çözümü görevi atanmamış.",
     "taskCompletion": {
       "title": "Görevin Durumunu Güncelle",
@@ -97,6 +98,12 @@
       "confirm": "Tamamlandı",
       "notCompleted": "Tamamlanmadı",
       "cancel": "İptal"
+    },
+    "approval": {
+      "title": "Görevi Değerlendir",
+      "description": "Öğrencinin tamamladığı bu görevi onaylıyor musunuz?",
+      "approve": "Onayla",
+      "reject": "Reddet"
     }
   },
   "student": {
@@ -113,7 +120,11 @@
     "yourUserId": "Kullanıcı ID'niz",
     "yourUserIdDescription": "Bu ID, sistemdeki benzersiz kimliğinizdir.",
     "copyUserId": "Kullanıcı ID'sini kopyala",
-    "userIdCopied": "Kullanıcı ID'si panoya kopyalandı!"
+    "userIdCopied": "Kullanıcı ID'si panoya kopyalandı!",
+    "statusCompleted": "Durum: Tamamlandı (Onaylandı)",
+    "statusPendingApproval": "Durum: Koç Onayı Bekliyor",
+    "statusNotCompleted": "Durum: Tamamlanmadı (Reddedildi)",
+    "awaitingApproval": "Onay Bekleniyor"
   },
   "logout": "Çıkış Yap"
 }

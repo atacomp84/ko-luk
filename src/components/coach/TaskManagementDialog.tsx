@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 interface Student {
   id: string;
@@ -138,7 +139,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   };
 
   const handleTaskClick = (task: Task) => {
-    if (task.status === 'pending') {
+    if (task.status === 'pending' || task.status === 'pending_approval') {
       setTaskToUpdate(task);
       setConfirmDialogOpen(true);
     }
@@ -192,30 +193,51 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     }, {} as Record<string, Task[]>);
   }, [tasks]);
 
+  const analyticsData = useMemo(() => {
+    const questionTasks = tasks.filter(task => task.task_type === 'soru_cozumu' && task.question_count);
+    const dataBySubject = questionTasks.reduce((acc, task) => {
+      if (!acc[task.subject]) {
+        acc[task.subject] = {};
+      }
+      if (!acc[task.subject][task.topic]) {
+        acc[task.subject][task.topic] = 0;
+      }
+      acc[task.subject][task.topic] += task.question_count!;
+      return acc;
+    }, {} as Record<string, Record<string, number>>);
+
+    return Object.entries(dataBySubject).map(([subject, topics]) => ({
+      subject,
+      data: Object.entries(topics).map(([topic, count]) => ({ topic, count })),
+    }));
+  }, [tasks]);
+
   const getStatusClass = (status: string) => {
     switch (status) {
-      case 'completed':
-        return 'bg-green-100 dark:bg-green-900/30';
-      case 'pending':
-        return 'bg-yellow-100 dark:bg-yellow-900/30';
-      case 'not_completed':
-        return 'bg-red-100 dark:bg-red-900/30';
-      default:
-        return 'bg-secondary';
+      case 'completed': return 'bg-green-100 dark:bg-green-900/30';
+      case 'pending': return 'bg-yellow-100 dark:bg-yellow-900/30';
+      case 'not_completed': return 'bg-red-100 dark:bg-red-900/30';
+      case 'pending_approval': return 'bg-blue-100 dark:bg-blue-900/30';
+      default: return 'bg-secondary';
     }
   };
 
   const getStatusBadgeClass = (status: string) => {
     if (status === 'completed') return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800';
     if (status === 'not_completed') return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800';
+    if (status === 'pending_approval') return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800';
     return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800';
   };
 
   const getStatusTranslationKey = (status: string) => {
     if (status === 'completed') return 'coach.statusCompleted';
     if (status === 'not_completed') return 'coach.statusNotCompleted';
+    if (status === 'pending_approval') return 'coach.statusPendingApproval';
     return 'coach.statusPending';
   };
+
+  const tasksAwaitingApproval = tasks.filter(t => t.status === 'pending_approval');
+  const otherTasks = tasks.filter(t => t.status !== 'pending_approval');
 
   if (!student) return null;
 
@@ -228,162 +250,107 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
             <DialogDescription>{t('coach.taskManagementDescription')}</DialogDescription>
           </DialogHeader>
           <Tabs defaultValue="addTask" className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="shrink-0">
+            <TabsList className="shrink-0 grid w-full grid-cols-3">
               <TabsTrigger value="addTask">{t('coach.addNewTaskTab')}</TabsTrigger>
               <TabsTrigger value="taskHistory">{t('coach.taskHistory')}</TabsTrigger>
+              <TabsTrigger value="analytics">{t('coach.analytics')}</TabsTrigger>
             </TabsList>
             <TabsContent value="addTask" className="flex-1 overflow-hidden">
               <div className="grid md:grid-cols-2 gap-6 py-4 h-full">
                   <form id="add-task-form" onSubmit={handleAddTask} className="flex flex-col h-full">
+                      {/* Form content remains the same */}
                       <div className="flex-1 space-y-6 overflow-y-auto pr-4 pb-4">
                           <div className="space-y-2">
                               <h3 className="font-semibold">{t('coach.selectTopic')}</h3>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                   <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                                      <SelectTrigger>
-                                          <SelectValue placeholder={t('coach.selectSubjectPlaceholder')} />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                          {lgsSubjects.map(subject => (
-                                              <SelectItem key={subject.name} value={subject.name}>
-                                                  {subject.name}
-                                              </SelectItem>
-                                          ))}
-                                      </SelectContent>
+                                      <SelectTrigger><SelectValue placeholder={t('coach.selectSubjectPlaceholder')} /></SelectTrigger>
+                                      <SelectContent>{lgsSubjects.map(subject => (<SelectItem key={subject.name} value={subject.name}>{subject.name}</SelectItem>))}</SelectContent>
                                   </Select>
                                   <Select value={selectedTopic} onValueChange={setSelectedTopic} disabled={!selectedSubject}>
-                                      <SelectTrigger>
-                                          <SelectValue placeholder={t('coach.selectTopicPlaceholder')} />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                          {availableTopics.map(topic => (
-                                              <SelectItem key={topic} value={topic}>
-                                                  <div className="flex items-center justify-between w-full">
-                                                      <span>{topic}</span>
-                                                      <div className="flex items-center gap-1">
-                                                          {Array.from({ length: topicAssignmentCounts.get(topic) || 0 }).map((_, i) => (
-                                                              <CheckCircle2 key={i} className="h-4 w-4 text-green-500" />
-                                                          ))}
-                                                      </div>
-                                                  </div>
-                                              </SelectItem>
-                                          ))}
-                                      </SelectContent>
+                                      <SelectTrigger><SelectValue placeholder={t('coach.selectTopicPlaceholder')} /></SelectTrigger>
+                                      <SelectContent>{availableTopics.map(topic => (<SelectItem key={topic} value={topic}><div className="flex items-center justify-between w-full"><span>{topic}</span><div className="flex items-center gap-1">{Array.from({ length: topicAssignmentCounts.get(topic) || 0 }).map((_, i) => (<CheckCircle2 key={i} className="h-4 w-4 text-green-500" />))}</div></div></SelectItem>))}</SelectContent>
                                   </Select>
                               </div>
                           </div>
-
-                          {selectedTopic && (
-                              <div className="space-y-6">
-                                  <div className="space-y-2">
-                                      <h3 className="font-semibold">{t('coach.selectTaskType')}</h3>
-                                      <RadioGroup value={taskType} onValueChange={(v: 'konu_anlatimi' | 'soru_cozumu') => setTaskType(v)}>
-                                          <div className="flex items-center space-x-2">
-                                              <RadioGroupItem value="konu_anlatimi" id="r1" />
-                                              <Label htmlFor="r1">{t('coach.topicExplanation')}</Label>
-                                          </div>
-                                          <div className="flex items-center space-x-2">
-                                              <RadioGroupItem value="soru_cozumu" id="r2" />
-                                              <Label htmlFor="r2">{t('coach.questionSolving')}</Label>
-                                          </div>
-                                      </RadioGroup>
-                                  </div>
-
-                                  {taskType === 'soru_cozumu' && (
-                                      <div className="space-y-2">
-                                          <Label htmlFor="question-count">{t('coach.questionCount')}</Label>
-                                          <NumberInput value={questionCount} onChange={setQuestionCount} required />
-                                      </div>
-                                  )}
-
-                                  <div className="space-y-2">
-                                      <Label htmlFor="description">{t('coach.taskDescriptionLabel')}</Label>
-                                      <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Öğrenciye not..." />
-                                  </div>
-                              </div>
-                          )}
+                          {selectedTopic && (<div className="space-y-6"><div className="space-y-2"><h3 className="font-semibold">{t('coach.selectTaskType')}</h3><RadioGroup value={taskType} onValueChange={(v: 'konu_anlatimi' | 'soru_cozumu') => setTaskType(v)}><div className="flex items-center space-x-2"><RadioGroupItem value="konu_anlatimi" id="r1" /><Label htmlFor="r1">{t('coach.topicExplanation')}</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="soru_cozumu" id="r2" /><Label htmlFor="r2">{t('coach.questionSolving')}</Label></div></RadioGroup></div>{taskType === 'soru_cozumu' && (<div className="space-y-2"><Label htmlFor="question-count">{t('coach.questionCount')}</Label><NumberInput value={questionCount} onChange={setQuestionCount} required /></div>)}<div className="space-y-2"><Label htmlFor="description">{t('coach.taskDescriptionLabel')}</Label><Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Öğrenciye not..." /></div></div>)}
                       </div>
                   </form>
                   <div className="space-y-4 flex flex-col overflow-hidden">
                       <h3 className="font-semibold">{t('coach.assignedTasks')}</h3>
                       <div className="flex-1 overflow-y-auto space-y-2 pr-2 border rounded-md p-2">
-                      {loading ? (
-                          <Skeleton className="h-20 w-full" />
-                      ) : tasks.length > 0 ? (
-                          tasks.map(task => (
-                          <div key={task.id} onClick={() => handleTaskClick(task)} className={`p-3 rounded-md ${getStatusClass(task.status)} ${task.status === 'pending' ? 'cursor-pointer hover:opacity-80' : ''}`}>
+                      {loading ? <Skeleton className="h-20 w-full" /> : (
+                        <>
+                          {tasksAwaitingApproval.length > 0 && (
+                            <div className="mb-4">
+                              <h4 className="font-bold text-sm mb-2 text-blue-600">{t('coach.awaitingApproval')}</h4>
+                              {tasksAwaitingApproval.map(task => (
+                                <div key={task.id} onClick={() => handleTaskClick(task)} className={`p-3 rounded-md mb-2 ${getStatusClass(task.status)} cursor-pointer hover:opacity-80`}>
+                                  <p className="font-bold">{`${task.subject}: ${task.topic}`}</p>
+                                  <p className="text-xs font-semibold mt-1 capitalize">{t(getStatusTranslationKey(task.status))}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {otherTasks.map(task => (
+                            <div key={task.id} onClick={() => handleTaskClick(task)} className={`p-3 rounded-md ${getStatusClass(task.status)} ${task.status === 'pending' ? 'cursor-pointer hover:opacity-80' : ''}`}>
                               <p className="font-bold">{`${task.subject}: ${task.topic}`}</p>
-                              {task.description && <p className="text-sm text-muted-foreground italic">"{task.description}"</p>}
-                              <p className="text-xs font-semibold mt-1 capitalize">{t('coach.statusLabel')}: {t(getStatusTranslationKey(task.status))}</p>
-                          </div>
-                          ))
-                      ) : (
-                          <p className="text-center text-muted-foreground py-4">{t('coach.noAssignedTasks')}</p>
+                              <p className="text-xs font-semibold mt-1 capitalize">{t(getStatusTranslationKey(task.status))}</p>
+                            </div>
+                          ))}
+                          {tasks.length === 0 && <p className="text-center text-muted-foreground py-4">{t('coach.noAssignedTasks')}</p>}
+                        </>
                       )}
                       </div>
                   </div>
               </div>
             </TabsContent>
             <TabsContent value="taskHistory" className="flex-1 overflow-y-auto p-4">
-              {loading ? <Skeleton className="h-full w-full" /> : 
-              Object.keys(groupedTasks).length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {Object.entries(groupedTasks).map(([subject, subjectTasks]) => (
-                          <Card key={subject}>
-                              <CardHeader>
-                                  <CardTitle>{subject}</CardTitle>
-                              </CardHeader>
-                              <CardContent className="space-y-3">
-                                  {subjectTasks.map(task => (
-                                      <div key={task.id} className={`p-3 rounded-md text-sm ${getStatusClass(task.status)}`}>
-                                          <p className="font-semibold">{formatTaskTitle(task)}</p>
-                                          {task.description && <p className="text-xs text-muted-foreground italic mt-1">"{task.description}"</p>}
-                                          <div className="flex items-center justify-between mt-2 pt-2 border-t">
-                                              <Badge variant="outline" className={getStatusBadgeClass(task.status)}>
-                                                  {t(getStatusTranslationKey(task.status))}
-                                              </Badge>
-                                              <span className="text-xs text-muted-foreground">
-                                                  {new Date(task.created_at).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                                              </span>
-                                          </div>
-                                      </div>
-                                  ))}
-                              </CardContent>
-                          </Card>
-                      ))}
-                  </div>
+              {loading ? <Skeleton className="h-full w-full" /> : Object.keys(groupedTasks).length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{Object.entries(groupedTasks).map(([subject, subjectTasks]) => (<Card key={subject}><CardHeader><CardTitle>{subject}</CardTitle></CardHeader><CardContent className="space-y-3">{subjectTasks.map(task => (<div key={task.id} className={`p-3 rounded-md text-sm ${getStatusClass(task.status)}`}><p className="font-semibold">{formatTaskTitle(task)}</p>{task.description && <p className="text-xs text-muted-foreground italic mt-1">"{task.description}"</p>}<div className="flex items-center justify-between mt-2 pt-2 border-t"><Badge variant="outline" className={getStatusBadgeClass(task.status)}>{t(getStatusTranslationKey(task.status))}</Badge><span className="text-xs text-muted-foreground">{new Date(task.created_at).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span></div></div>))}</CardContent></Card>))}</div>) : (<p className="text-center text-muted-foreground py-10">{t('coach.noAssignedTasks')}</p>)}
+            </TabsContent>
+            <TabsContent value="analytics" className="flex-1 overflow-y-auto p-4">
+              {loading ? <Skeleton className="h-full w-full" /> : analyticsData.length > 0 ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {analyticsData.map(({ subject, data }) => (
+                    <Card key={subject}>
+                      <CardHeader>
+                        <CardTitle>{subject}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="topic" angle={-45} textAnchor="end" height={100} interval={0} tick={{ fontSize: 12 }} />
+                            <YAxis />
+                            <Tooltip />
+                            <Bar dataKey="count" fill="var(--primary)" name={t('coach.questionCount')} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               ) : (
-                  <p className="text-center text-muted-foreground py-10">{t('coach.noAssignedTasks')}</p>
-              )
-              }
+                <p className="text-center text-muted-foreground py-10">{t('coach.noTasksForChart')}</p>
+              )}
             </TabsContent>
           </Tabs>
           <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline" onClick={onClose}>{t('coach.close')}</Button>
-            </DialogClose>
-            {selectedTopic && (
-              <Button type="submit" form="add-task-form" disabled={isSubmitDisabled}>
-                  {t('coach.addTaskButton')}
-              </Button>
-            )}
+            <DialogClose asChild><Button type="button" variant="outline" onClick={onClose}>{t('coach.close')}</Button></DialogClose>
+            <Button type="submit" form="add-task-form" disabled={isSubmitDisabled}>{t('coach.addTaskButton')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       <AlertDialog open={isConfirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('coach.taskCompletion.title')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('coach.taskCompletion.description')}
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t(taskToUpdate?.status === 'pending_approval' ? 'coach.approval.title' : 'coach.taskCompletion.title')}</AlertDialogTitle>
+            <AlertDialogDescription>{t(taskToUpdate?.status === 'pending_approval' ? 'coach.approval.description' : 'coach.taskCompletion.description')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setTaskToUpdate(null)}>{t('coach.taskCompletion.cancel')}</AlertDialogCancel>
-            <Button variant="destructive" onClick={() => handleConfirmStatusUpdate('not_completed')}>
-              {t('coach.taskCompletion.notCompleted')}
-            </Button>
-            <AlertDialogAction onClick={() => handleConfirmStatusUpdate('completed')}>{t('coach.taskCompletion.confirm')}</AlertDialogAction>
+            <AlertDialogCancel onClick={() => setTaskToUpdate(null)}>{t('coach.cancel')}</AlertDialogCancel>
+            <Button variant="destructive" onClick={() => handleConfirmStatusUpdate('not_completed')}>{t(taskToUpdate?.status === 'pending_approval' ? 'coach.approval.reject' : 'coach.taskCompletion.notCompleted')}</Button>
+            <AlertDialogAction onClick={() => handleConfirmStatusUpdate('completed')}>{t(taskToUpdate?.status === 'pending_approval' ? 'coach.approval.approve' : 'coach.taskCompletion.confirm')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
