@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Clock } from 'lucide-react';
+import { CheckCircle2, Clock, Youtube } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
 import { useTranslation } from 'react-i18next';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -80,6 +80,12 @@ const StudentTasks = () => {
     }
   };
 
+  const isYoutubeLink = (url: string | null): boolean => {
+    if (!url) return false;
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$/;
+    return youtubeRegex.test(url);
+  };
+
   const groupedTasks = useMemo(() => {
     return tasks.reduce((acc, task) => {
       const { subject } = task;
@@ -124,7 +130,16 @@ const StudentTasks = () => {
                           <div className="flex justify-between items-start">
                             <div>
                               <h3 className={`font-bold ${isLineThrough ? 'line-through text-muted-foreground' : ''}`}>{formatTaskTitle(task)}</h3>
-                              {task.description && <p className="text-sm text-muted-foreground mt-1 italic">"{task.description}"</p>}
+                              {isYoutubeLink(task.description) ? (
+                                <Button asChild size="sm" className="mt-2">
+                                  <a href={task.description!} target="_blank" rel="noopener noreferrer">
+                                    <Youtube className="h-4 w-4 mr-2" />
+                                    Ders Videosunu İzle
+                                  </a>
+                                </Button>
+                              ) : task.description && (
+                                <p className="text-sm text-muted-foreground mt-1 italic">"{task.description}"</p>
+                              )}
                               {task.status !== 'pending' && <p className="text-xs font-semibold mt-2">{statusInfo.text}</p>}
                             </div>
                             {task.status === 'pending' && (
