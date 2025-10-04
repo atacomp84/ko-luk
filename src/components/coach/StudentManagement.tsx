@@ -29,12 +29,15 @@ const StudentManagement = () => {
   const { t } = useTranslation();
 
   const fetchStudents = useCallback(async () => {
+    console.log("[fetchStudents] Adım 1: Öğrenci listesi çekme işlemi başladı.");
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
+      console.warn("[fetchStudents] Adım 1.1: Kullanıcı bulunamadı. İşlem durduruldu.");
       setLoading(false);
       return;
     }
+    console.log(`[fetchStudents] Adım 2: Mevcut koç kullanıcısı bulundu: ${user.id}`);
 
     const { data: pairs, error: pairsError } = await supabase
       .from('coach_student_pairs')
@@ -42,13 +45,16 @@ const StudentManagement = () => {
       .eq('coach_id', user.id);
 
     if (pairsError) {
+      console.error("[fetchStudents] Adım 2.1 HATA: Öğrenci-koç eşleşmeleri çekilirken hata oluştu.", pairsError);
       showError('Öğrenci listesi getirilirken bir hata oluştu.');
       setStudents([]);
       setLoading(false);
       return;
     }
+    console.log("[fetchStudents] Adım 3: Öğrenci-koç eşleşmeleri başarıyla çekildi.", pairs);
 
     const studentIds = pairs.map(p => p.student_id);
+    console.log(`[fetchStudents] Adım 4: Eşleşen öğrenci ID'leri:`, studentIds);
 
     if (studentIds.length > 0) {
       const { data: profiles, error: profilesError } = await supabase
@@ -57,15 +63,19 @@ const StudentManagement = () => {
         .in('id', studentIds);
 
       if (profilesError) {
+        console.error("[fetchStudents] Adım 4.1 HATA: Öğrenci profilleri çekilirken hata oluştu.", profilesError);
         showError('Öğrenci profilleri getirilirken bir hata oluştu.');
         setStudents([]);
       } else {
+        console.log("[fetchStudents] Adım 5: Öğrenci profilleri başarıyla çekildi.", profiles);
         setStudents(profiles as Student[]);
       }
     } else {
+      console.log("[fetchStudents] Adım 4.1: Koça atanmış öğrenci bulunamadı.");
       setStudents([]);
     }
 
+    console.log("[fetchStudents] Adım 6: Öğrenci listesi çekme işlemi tamamlandı.");
     setLoading(false);
   }, []);
 
@@ -74,48 +84,60 @@ const StudentManagement = () => {
   }, [fetchStudents]);
 
   const handleOpenTaskManagement = (student: Student) => {
+    console.log(`[handleOpenTaskManagement] Görev yönetimi penceresi açılıyor: ${student.first_name} ${student.last_name} (ID: ${student.id})`);
     setSelectedStudent(student);
     setTaskManagementOpen(true);
   };
 
   const handleOpenRewardManagement = (student: Student) => {
+    console.log(`[handleOpenRewardManagement] Ödül yönetimi penceresi açılıyor: ${student.first_name} ${student.last_name} (ID: ${student.id})`);
     setSelectedStudent(student);
     setRewardManagementOpen(true);
   };
 
   const handleOpenDeleteDialog = (student: Student) => {
+    console.log(`[handleOpenDeleteDialog] Öğrenci silme onayı isteniyor: ${student.first_name} ${student.last_name} (ID: ${student.id})`);
     setStudentToDelete(student);
     setDeleteDialogOpen(true);
   };
 
   const handleCloseDeleteDialog = () => {
+    console.log("[handleCloseDeleteDialog] Öğrenci silme penceresi kapatıldı.");
     setDeleteDialogOpen(false);
     setStudentToDelete(null);
   };
 
   const handleConfirmDelete = async () => {
-    if (!studentToDelete) return;
+    console.log("[handleConfirmDelete] Adım 1: Öğrenci silme işlemi onaylandı.");
+    if (!studentToDelete) {
+      console.error("[handleConfirmDelete] HATA: Silinecek öğrenci bulunamadı.");
+      return;
+    }
+    console.log(`[handleConfirmDelete] Adım 2: Silinecek öğrenci: ${studentToDelete.first_name} ${studentToDelete.last_name} (ID: ${studentToDelete.id})`);
   
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
+      console.error("[handleConfirmDelete] HATA: Koç kullanıcısı bulunamadı. İşlem iptal edildi.");
       handleCloseDeleteDialog();
       return;
     }
+    console.log(`[handleConfirmDelete] Adım 3: Mevcut koç kullanıcısı: ${user.id}`);
   
-    // Onay diyaloğunu hemen kapat
     handleCloseDeleteDialog();
   
+    console.log(`[handleConfirmDelete] Adım 4: Veritabanından silme isteği gönderiliyor... coach_id: ${user.id}, student_id: ${studentToDelete.id}`);
     const { error } = await supabase
       .from('coach_student_pairs')
       .delete()
       .match({ coach_id: user.id, student_id: studentToDelete.id });
   
     if (error) {
-      console.error("Öğrenci-koç eşleşmesi silinirken hata:", error);
+      console.error("[handleConfirmDelete] Adım 4.1 HATA: Öğrenci-koç eşleşmesi silinirken hata oluştu:", error);
       showError(t('coach.deleteStudent.error'));
     } else {
+      console.log("[handleConfirmDelete] Adım 5: Öğrenci-koç eşleşmesi veritabanından başarıyla silindi.");
       showSuccess(t('coach.deleteStudent.success'));
-      // Arayüzün veritabanı ile senkronize olmasını sağlamak için öğrenci listesini yeniden çek
+      console.log("[handleConfirmDelete] Adım 6: Arayüzü güncellemek için öğrenci listesi yeniden çekiliyor.");
       fetchStudents();
     }
   };
@@ -128,7 +150,10 @@ const StudentManagement = () => {
             <CardTitle>{t('coach.myStudents')}</CardTitle>
             <CardDescription>{t('coach.myStudentsDescription')}</CardDescription>
           </div>
-          <Button onClick={() => setAddStudentOpen(true)}>{t('coach.addStudent')}</Button>
+          <Button onClick={() => {
+            console.log("[AddStudent] Öğrenci ekleme penceresi açılıyor.");
+            setAddStudentOpen(true);
+          }}>{t('coach.addStudent')}</Button>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -163,18 +188,27 @@ const StudentManagement = () => {
       </Card>
       <AddStudentDialog 
         isOpen={isAddStudentOpen}
-        onClose={() => setAddStudentOpen(false)}
+        onClose={() => {
+          console.log("[AddStudent] Öğrenci ekleme penceresi kapatıldı.");
+          setAddStudentOpen(false);
+        }}
         onStudentAdded={fetchStudents}
       />
       <TaskManagementDialog
         student={selectedStudent}
         isOpen={isTaskManagementOpen}
-        onClose={() => setTaskManagementOpen(false)}
+        onClose={() => {
+          console.log("[TaskManagement] Görev yönetimi penceresi kapatıldı.");
+          setTaskManagementOpen(false);
+        }}
       />
       <RewardManagementDialog
         student={selectedStudent}
         isOpen={isRewardManagementOpen}
-        onClose={() => setRewardManagementOpen(false)}
+        onClose={() => {
+          console.log("[RewardManagement] Ödül yönetimi penceresi kapatıldı.");
+          setRewardManagementOpen(false);
+        }}
       />
       <DeleteStudentDialog
         isOpen={isDeleteDialogOpen}
