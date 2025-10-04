@@ -14,7 +14,7 @@ import { NumberInput } from '../ui/NumberInput';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Book, Calculator, FlaskConical, Globe, Palette, MessageSquare, History, Youtube } from 'lucide-react';
+import { Trash2, Book, Calculator, FlaskConical, Globe, Palette, MessageSquare, History, Youtube, ChevronsDownUp } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -51,15 +51,27 @@ interface TaskManagementDialogProps {
   onClose: () => void;
 }
 
-const getSubjectIcon = (subject: string): ReactNode => {
+const getSubjectIconComponent = (subject: string): React.ElementType => {
     switch (subject) {
-        case "Türkçe": return <Book className="h-6 w-6 text-blue-500" />;
-        case "Matematik": return <Calculator className="h-6 w-6 text-green-500" />;
-        case "Fen Bilimleri": return <FlaskConical className="h-6 w-6 text-purple-500" />;
-        case "T.C. İnkılap Tarihi ve Atatürkçülük": return <History className="h-6 w-6 text-red-500" />;
-        case "Din Kültürü ve Ahlak Bilgisi": return <MessageSquare className="h-6 w-6 text-yellow-500" />;
-        case "İngilizce": return <Globe className="h-6 w-6 text-indigo-500" />;
-        default: return <Palette className="h-6 w-6 text-gray-500" />;
+        case "Türkçe": return Book;
+        case "Matematik": return Calculator;
+        case "Fen Bilimleri": return FlaskConical;
+        case "T.C. İnkılap Tarihi ve Atatürkçülük": return History;
+        case "Din Kültürü ve Ahlak Bilgisi": return MessageSquare;
+        case "İngilizce": return Globe;
+        default: return Palette;
+    }
+};
+
+const getSubjectColorClass = (subject: string): string => {
+    switch (subject) {
+        case "Türkçe": return "text-blue-500";
+        case "Matematik": return "text-green-500";
+        case "Fen Bilimleri": return "text-purple-500";
+        case "T.C. İnkılap Tarihi ve Atatürkçülük": return "text-red-500";
+        case "Din Kültürü ve Ahlak Bilgisi": return "text-yellow-500";
+        case "İngilizce": return "text-indigo-500";
+        default: return "text-gray-500";
     }
 };
 
@@ -73,24 +85,6 @@ const CustomizedAxisTick = (props: any) => {
                 {value}
             </text>
         </g>
-    );
-};
-
-const renderCenteredLabel = (props: any) => {
-    const { x, y, width, height, value } = props;
-    if (height < 20) return null;
-    return (
-        <text
-            x={x + width / 2}
-            y={y + height / 2}
-            fill="#fff"
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fontWeight="bold"
-            fontSize={14}
-        >
-            {`Net: ${Number(value).toFixed(2)}`}
-        </text>
     );
 };
 
@@ -112,6 +106,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   const [isScoreEntryOpen, setScoreEntryOpen] = useState(false);
   const [isSimpleApprovalOpen, setSimpleApprovalOpen] = useState(false);
   const [scoreData, setScoreData] = useState<ScoreData>({ correct: 0, empty: 0, wrong: 0 });
+  const [openCollapsibles, setOpenCollapsibles] = useState<string[]>([]);
 
   const { t } = useTranslation();
 
@@ -140,6 +135,21 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     }
     setLoading(false);
   }, [student]);
+
+  const groupedTasks = useMemo(() => {
+    return tasks.reduce((acc, task) => {
+      const { subject } = task;
+      if (!acc[subject]) {
+        acc[subject] = [];
+      }
+      acc[subject].push(task);
+      return acc;
+    }, {} as Record<string, Task[]>);
+  }, [tasks]);
+
+  useEffect(() => {
+    setOpenCollapsibles(Object.keys(groupedTasks));
+  }, [groupedTasks]);
 
   useEffect(() => {
     if (isOpen && student) {
@@ -334,17 +344,6 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
 
   const isSubmitDisabled = !selectedTopic || (taskType === 'soru_cozumu' && (questionCount === '' || Number(questionCount) <= 0));
 
-  const groupedTasks = useMemo(() => {
-    return tasks.reduce((acc, task) => {
-      const { subject } = task;
-      if (!acc[subject]) {
-        acc[subject] = [];
-      }
-      acc[subject].push(task);
-      return acc;
-    }, {} as Record<string, Task[]>);
-  }, [tasks]);
-
   const analyticsData = useMemo(() => {
     const questionTasks = tasks.filter(task => 
       task.task_type === 'soru_cozumu' && 
@@ -373,7 +372,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
           topic,
           ...counts,
           total,
-          net: (counts.correct - counts.wrong / 3).toFixed(2),
+          net: (counts.correct - counts.wrong / 3),
         };
       }),
     }));
@@ -426,7 +425,19 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                           <div className="space-y-2">
                               <h3 className="font-semibold">{t('coach.selectTopic')}</h3>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                  <Select value={selectedSubject} onValueChange={setSelectedSubject}><SelectTrigger><SelectValue placeholder={t('coach.selectSubjectPlaceholder')} /></SelectTrigger><SelectContent>{lgsSubjects.map(subject => (<SelectItem key={subject.name} value={subject.name}>{subject.name}</SelectItem>))}</SelectContent></Select>
+                                  <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                                    <SelectTrigger><SelectValue placeholder={t('coach.selectSubjectPlaceholder')} /></SelectTrigger>
+                                    <SelectContent>{lgsSubjects.map(subject => {
+                                        const Icon = getSubjectIconComponent(subject.name);
+                                        const colorClass = getSubjectColorClass(subject.name);
+                                        return (<SelectItem key={subject.name} value={subject.name}>
+                                            <div className="flex items-center gap-2">
+                                                <Icon className={`h-5 w-5 ${colorClass}`} />
+                                                <span className={colorClass}>{subject.name}</span>
+                                            </div>
+                                        </SelectItem>)
+                                    })}</SelectContent>
+                                  </Select>
                                   <Select value={selectedTopic} onValueChange={setSelectedTopic} disabled={!selectedSubject}><SelectTrigger><SelectValue placeholder={t('coach.selectTopicPlaceholder')}>{selectedTopic || null}</SelectValue></SelectTrigger><SelectContent>{availableTopics.map(topic => (<SelectItem key={topic} value={topic}><div className="flex items-center justify-between w-full"><span>{topic}</span><div className="flex items-center gap-1.5">{topicAssignmentStats[topic]?.explanations > 0 && <Badge variant="outline" className="bg-blue-100 text-blue-700">{topicAssignmentStats[topic].explanations} Anlatım</Badge>}{topicAssignmentStats[topic]?.questions > 0 && <Badge variant="outline" className="bg-purple-100 text-purple-700">{topicAssignmentStats[topic].questions} Soru</Badge>}</div></div></SelectItem>))}</SelectContent></Select>
                               </div>
                           </div>
@@ -434,28 +445,42 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                       </div>
                   </form>
                   <div className="space-y-4 flex flex-col overflow-hidden">
-                      <h3 className="font-semibold">{t('coach.assignedTasks')}</h3>
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold">{t('coach.assignedTasks')}</h3>
+                        <Button variant="ghost" size="icon" onClick={() => setOpenCollapsibles([])}>
+                            <ChevronsDownUp className="h-4 w-4" />
+                        </Button>
+                      </div>
                       <div className="flex-1 overflow-y-auto space-y-2 pr-2">
                       {loading ? <Skeleton className="h-24 w-full" /> : Object.keys(groupedTasks).length > 0 ? (
                         Object.entries(groupedTasks).map(([subject, subjectTasks]) => {
                           const pendingCount = subjectTasks.filter(t => t.status === 'pending' || t.status === 'pending_approval').length;
                           const completedCount = subjectTasks.filter(t => t.status === 'completed').length;
                           const notCompletedCount = subjectTasks.filter(t => t.status === 'not_completed').length;
+                          const Icon = getSubjectIconComponent(subject);
+                          const colorClass = getSubjectColorClass(subject);
                           return (
-                            <Collapsible key={subject} defaultOpen className="space-y-2">
+                            <Collapsible key={subject} open={openCollapsibles.includes(subject)} onOpenChange={(isOpen) => setOpenCollapsibles(prev => isOpen ? [...prev, subject] : prev.filter(s => s !== subject))} className="space-y-2">
                               <CollapsibleTrigger className="flex justify-between items-center w-full p-2 bg-muted rounded-md">
-                                <span className="font-bold">{subject}</span>
+                                <div className="flex items-center gap-2">
+                                    <Icon className={`h-5 w-5 ${colorClass}`} />
+                                    <span className="font-bold">{subject}</span>
+                                </div>
                                 <div className="flex items-center gap-1.5 font-mono text-xs">
                                     {notCompletedCount > 0 && <Badge className="bg-red-500 text-white hover:bg-red-500">{notCompletedCount}</Badge>}
                                     {pendingCount > 0 && <Badge className="bg-yellow-500 text-white hover:bg-yellow-500">{pendingCount}</Badge>}
                                     {completedCount > 0 && <Badge className="bg-green-500 text-white hover:bg-green-500">{completedCount}</Badge>}
                                 </div>
                               </CollapsibleTrigger>
-                              <CollapsibleContent className="space-y-2 pl-4">
-                                {subjectTasks.map(task => (
+                              <CollapsibleContent className="space-y-2 pl-4 pt-2">
+                                {subjectTasks.map(task => {
+                                  const TaskIcon = getSubjectIconComponent(task.subject);
+                                  return (
                                   <Card key={task.id} className={`cursor-pointer hover:shadow-md transition-shadow ${getStatusBorderClass(task.status)}`} onClick={() => handleTaskClick(task)}>
                                     <CardContent className="p-3 flex items-center gap-4">
-                                      <div className="flex-shrink-0">{getSubjectIcon(task.subject)}</div>
+                                      <div className="flex-shrink-0">
+                                        <TaskIcon className={`h-6 w-6 ${getSubjectColorClass(task.subject)}`} />
+                                      </div>
                                       <div className="flex-grow">
                                         <p className="font-bold">{formatTaskTitle(task)}</p>
                                         <Badge variant="outline" className={`mt-1 ${getStatusBadgeClass(task.status)}`}>{t(getStatusTranslationKey(task.status))}</Badge>
@@ -463,7 +488,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                                       <Button variant="ghost" size="icon" className="ml-2 shrink-0" onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(task); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                     </CardContent>
                                   </Card>
-                                ))}
+                                )})}
                               </CollapsibleContent>
                             </Collapsible>
                           )
@@ -476,27 +501,34 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
             <TabsContent value="analytics" className="flex-1 overflow-y-auto p-4">
               {loading ? <Skeleton className="h-full w-full" /> : analyticsData.length > 0 ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {analyticsData.map(({ subject, data }) => (
+                  {analyticsData.map(({ subject, data }) => {
+                    const Icon = getSubjectIconComponent(subject);
+                    const colorClass = getSubjectColorClass(subject);
+                    return (
                     <Card key={subject}>
-                      <CardHeader><CardTitle>{subject}</CardTitle></CardHeader>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Icon className={`h-6 w-6 ${colorClass}`} />
+                            {subject}
+                        </CardTitle>
+                      </CardHeader>
                       <CardContent>
                         <ResponsiveContainer width="100%" height={400}>
-                          <BarChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 80 }}>
+                          <BarChart data={data} margin={{ top: 20, right: 20, left: -10, bottom: 80 }}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="topic" height={100} interval={0} tick={<CustomizedAxisTick />} axisLine={false} tickLine={false} />
                             <YAxis />
                             <Tooltip />
                             <Bar dataKey="correct" stackId="a" fill="#22c55e" name={t('coach.scoreEntry.correct')} />
                             <Bar dataKey="wrong" stackId="a" fill="#ef4444" name={t('coach.scoreEntry.wrong')} />
-                            <Bar dataKey="empty" stackId="a" fill="#3b82f6" name={t('coach.scoreEntry.empty')} />
-                            <Bar dataKey="total" stackId="b" fill="transparent" isAnimationActive={false}>
-                                <LabelList dataKey="net" content={renderCenteredLabel} />
+                            <Bar dataKey="empty" stackId="a" fill="#3b82f6" name={t('coach.scoreEntry.empty')}>
+                                <LabelList dataKey="net" position="top" offset={5} fill="hsl(var(--foreground))" fontSize={12} fontWeight="bold" formatter={(value: number) => `Net: ${value.toFixed(2)}`} />
                             </Bar>
                           </BarChart>
                         </ResponsiveContainer>
                       </CardContent>
                     </Card>
-                  ))}
+                  )})}
                 </div>
               ) : (<p className="text-center text-muted-foreground py-10">{t('coach.noTasksForChart')}</p>)}
             </TabsContent>
