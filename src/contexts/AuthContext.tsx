@@ -25,64 +25,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const initializeSession = async () => {
-      try {
-        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-
-        setSession(initialSession);
-        setUser(initialSession?.user ?? null);
-
-        if (initialSession?.user) {
-          const { data: userProfile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', initialSession.user.id)
-            .single();
-          
-          if (profileError) {
-            console.warn("[AuthContext] Başlangıç profili çekilirken hata (yeni kullanıcı olabilir):", profileError.message);
-            setProfile(null);
-          } else {
-            setProfile(userProfile);
-          }
-        } else {
-          setProfile(null);
-        }
-      } catch (e) {
-        console.error("[AuthContext] Başlangıç oturum kontrolü sırasında hata:", e);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeSession();
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      try {
-        setSession(session);
-        setUser(session?.user ?? null);
+      setSession(session);
+      setUser(session?.user ?? null);
 
-        if (session?.user) {
-          const { data: userProfile, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          
-          if (error) {
-              console.warn("[AuthContext] Profil güncellenirken hata (yeni kullanıcı olabilir):", error.message);
-              setProfile(null);
-          } else {
-              setProfile(userProfile);
-          }
+      if (session?.user) {
+        const { data: userProfile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (error) {
+            // This can happen if the profile is not created yet for a new user.
+            console.warn("[AuthContext] Could not fetch user profile:", error.message);
+            setProfile(null);
         } else {
-          setProfile(null);
+            setProfile(userProfile);
         }
-      } catch (e) {
-        console.error("[AuthContext] onAuthStateChange içinde beklenmedik hata:", e);
+      } else {
         setProfile(null);
       }
+      // The first event from onAuthStateChange signifies that the initial session has been loaded.
+      setLoading(false);
     });
 
     return () => {
