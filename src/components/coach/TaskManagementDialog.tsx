@@ -14,7 +14,7 @@ import { NumberInput } from '../ui/NumberInput';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Trash2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
@@ -52,6 +52,8 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   const [description, setDescription] = useState('');
   const [isConfirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [taskToUpdate, setTaskToUpdate] = useState<Task | null>(null);
+  const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const { t } = useTranslation();
 
   const resetForm = useCallback(() => {
@@ -162,6 +164,28 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     setConfirmDialogOpen(false);
   };
 
+  const handleOpenDeleteDialog = (task: Task) => {
+    setTaskToDelete(task);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!taskToDelete) return;
+    const { error } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', taskToDelete.id);
+
+    if (error) {
+      showError(t('coach.deleteTask.error'));
+    } else {
+      showSuccess(t('coach.deleteTask.success'));
+      fetchTasks();
+    }
+    setTaskToDelete(null);
+    setDeleteDialogOpen(false);
+  };
+
   const formatTaskTitle = (task: Task) => {
     let title = `${task.topic}`;
     if (task.task_type === 'soru_cozumu' && task.question_count) {
@@ -194,7 +218,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   }, [tasks]);
 
   const analyticsData = useMemo(() => {
-    const questionTasks = tasks.filter(task => task.task_type === 'soru_cozumu' && task.question_count);
+    const questionTasks = tasks.filter(task => task.task_type === 'soru_cozumu' && task.question_count && task.status === 'completed');
     const dataBySubject = questionTasks.reduce((acc, task) => {
       if (!acc[task.subject]) {
         acc[task.subject] = {};
@@ -258,19 +282,12 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
             <TabsContent value="addTask" className="flex-1 overflow-hidden">
               <div className="grid md:grid-cols-2 gap-6 py-4 h-full">
                   <form id="add-task-form" onSubmit={handleAddTask} className="flex flex-col h-full">
-                      {/* Form content remains the same */}
                       <div className="flex-1 space-y-6 overflow-y-auto pr-4 pb-4">
                           <div className="space-y-2">
                               <h3 className="font-semibold">{t('coach.selectTopic')}</h3>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                  <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                                      <SelectTrigger><SelectValue placeholder={t('coach.selectSubjectPlaceholder')} /></SelectTrigger>
-                                      <SelectContent>{lgsSubjects.map(subject => (<SelectItem key={subject.name} value={subject.name}>{subject.name}</SelectItem>))}</SelectContent>
-                                  </Select>
-                                  <Select value={selectedTopic} onValueChange={setSelectedTopic} disabled={!selectedSubject}>
-                                      <SelectTrigger><SelectValue placeholder={t('coach.selectTopicPlaceholder')} /></SelectTrigger>
-                                      <SelectContent>{availableTopics.map(topic => (<SelectItem key={topic} value={topic}><div className="flex items-center justify-between w-full"><span>{topic}</span><div className="flex items-center gap-1">{Array.from({ length: topicAssignmentCounts.get(topic) || 0 }).map((_, i) => (<CheckCircle2 key={i} className="h-4 w-4 text-green-500" />))}</div></div></SelectItem>))}</SelectContent>
-                                  </Select>
+                                  <Select value={selectedSubject} onValueChange={setSelectedSubject}><SelectTrigger><SelectValue placeholder={t('coach.selectSubjectPlaceholder')} /></SelectTrigger><SelectContent>{lgsSubjects.map(subject => (<SelectItem key={subject.name} value={subject.name}>{subject.name}</SelectItem>))}</SelectContent></Select>
+                                  <Select value={selectedTopic} onValueChange={setSelectedTopic} disabled={!selectedSubject}><SelectTrigger><SelectValue placeholder={t('coach.selectTopicPlaceholder')} /></SelectTrigger><SelectContent>{availableTopics.map(topic => (<SelectItem key={topic} value={topic}><div className="flex items-center justify-between w-full"><span>{topic}</span><div className="flex items-center gap-1">{Array.from({ length: topicAssignmentCounts.get(topic) || 0 }).map((_, i) => (<CheckCircle2 key={i} className="h-4 w-4 text-green-500" />))}</div></div></SelectItem>))}</SelectContent></Select>
                               </div>
                           </div>
                           {selectedTopic && (<div className="space-y-6"><div className="space-y-2"><h3 className="font-semibold">{t('coach.selectTaskType')}</h3><RadioGroup value={taskType} onValueChange={(v: 'konu_anlatimi' | 'soru_cozumu') => setTaskType(v)}><div className="flex items-center space-x-2"><RadioGroupItem value="konu_anlatimi" id="r1" /><Label htmlFor="r1">{t('coach.topicExplanation')}</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="soru_cozumu" id="r2" /><Label htmlFor="r2">{t('coach.questionSolving')}</Label></div></RadioGroup></div>{taskType === 'soru_cozumu' && (<div className="space-y-2"><Label htmlFor="question-count">{t('coach.questionCount')}</Label><NumberInput value={questionCount} onChange={setQuestionCount} required /></div>)}<div className="space-y-2"><Label htmlFor="description">{t('coach.taskDescriptionLabel')}</Label><Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Öğrenciye not..." /></div></div>)}
@@ -285,17 +302,23 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                             <div className="mb-4">
                               <h4 className="font-bold text-sm mb-2 text-blue-600">{t('coach.awaitingApproval')}</h4>
                               {tasksAwaitingApproval.map(task => (
-                                <div key={task.id} onClick={() => handleTaskClick(task)} className={`p-3 rounded-md mb-2 ${getStatusClass(task.status)} cursor-pointer hover:opacity-80`}>
-                                  <p className="font-bold">{`${task.subject}: ${task.topic}`}</p>
-                                  <p className="text-xs font-semibold mt-1 capitalize">{t(getStatusTranslationKey(task.status))}</p>
+                                <div key={task.id} className="flex items-center justify-between p-3 rounded-md mb-2 bg-blue-100 dark:bg-blue-900/30">
+                                  <div onClick={() => handleTaskClick(task)} className="flex-grow cursor-pointer hover:opacity-80">
+                                    <p className="font-bold">{`${task.subject}: ${task.topic}`}</p>
+                                    <p className="text-xs font-semibold mt-1 capitalize">{t(getStatusTranslationKey(task.status))}</p>
+                                  </div>
+                                  <Button variant="ghost" size="icon" className="ml-2 shrink-0" onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(task); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                 </div>
                               ))}
                             </div>
                           )}
                           {otherTasks.map(task => (
-                            <div key={task.id} onClick={() => handleTaskClick(task)} className={`p-3 rounded-md ${getStatusClass(task.status)} ${task.status === 'pending' ? 'cursor-pointer hover:opacity-80' : ''}`}>
-                              <p className="font-bold">{`${task.subject}: ${task.topic}`}</p>
-                              <p className="text-xs font-semibold mt-1 capitalize">{t(getStatusTranslationKey(task.status))}</p>
+                            <div key={task.id} className={`flex items-center justify-between p-3 rounded-md ${getStatusClass(task.status)}`}>
+                              <div onClick={() => handleTaskClick(task)} className={`flex-grow ${task.status === 'pending' ? 'cursor-pointer hover:opacity-80' : ''}`}>
+                                <p className="font-bold">{`${task.subject}: ${task.topic}`}</p>
+                                <p className="text-xs font-semibold mt-1 capitalize">{t(getStatusTranslationKey(task.status))}</p>
+                              </div>
+                              <Button variant="ghost" size="icon" className="ml-2 shrink-0" onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(task); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                             </div>
                           ))}
                           {tasks.length === 0 && <p className="text-center text-muted-foreground py-4">{t('coach.noAssignedTasks')}</p>}
@@ -313,9 +336,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {analyticsData.map(({ subject, data }) => (
                     <Card key={subject}>
-                      <CardHeader>
-                        <CardTitle>{subject}</CardTitle>
-                      </CardHeader>
+                      <CardHeader><CardTitle>{subject}</CardTitle></CardHeader>
                       <CardContent>
                         <ResponsiveContainer width="100%" height={300}>
                           <BarChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
@@ -330,9 +351,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                     </Card>
                   ))}
                 </div>
-              ) : (
-                <p className="text-center text-muted-foreground py-10">{t('coach.noTasksForChart')}</p>
-              )}
+              ) : (<p className="text-center text-muted-foreground py-10">{t('coach.noTasksForChart')}</p>)}
             </TabsContent>
           </Tabs>
           <DialogFooter>
@@ -351,6 +370,18 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
             <AlertDialogCancel onClick={() => setTaskToUpdate(null)}>{t('coach.cancel')}</AlertDialogCancel>
             <Button variant="destructive" onClick={() => handleConfirmStatusUpdate('not_completed')}>{t(taskToUpdate?.status === 'pending_approval' ? 'coach.approval.reject' : 'coach.taskCompletion.notCompleted')}</Button>
             <AlertDialogAction onClick={() => handleConfirmStatusUpdate('completed')}>{t(taskToUpdate?.status === 'pending_approval' ? 'coach.approval.approve' : 'coach.taskCompletion.confirm')}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('coach.deleteTask.title')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('coach.deleteTask.description')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setTaskToDelete(null)}>{t('coach.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t('coach.deleteTask.confirm')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -87,6 +87,13 @@
       "success": "Öğrenci başarıyla silindi.",
       "error": "Öğrenci silinirken bir hata oluştu."
     },
+    "deleteTask": {
+      "title": "Görevi Sil",
+      "description": "Bu görevi kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+      "confirm": "Sil",
+      "success": "Görev başarıyla silindi.",
+      "error": "Görev silinirken bir hata oluştu."
+    },
     "addNewTaskTab": "Yeni Görev Ata",
     "taskHistory": "Görev Geçmişi",
     "analytics": "Analitik",
@@ -117,10 +124,6 @@
     "rewardsDescription": "Koçun tarafından sana gönderilen ödülleri burada bulabilirsin.",
     "claimReward": "Ödülü Kullan",
     "noRewards": "Henüz sana gönderilmiş bir ödül yok.",
-    "yourUserId": "Kullanıcı ID'niz",
-    "yourUserIdDescription": "Bu ID, sistemdeki benzersiz kimliğinizdir.",
-    "copyUserId": "Kullanıcı ID'sini kopyala",
-    "userIdCopied": "Kullanıcı ID'si panoya kopyalandı!",
     "statusCompleted": "Durum: Tamamlandı (Onaylandı)",
     "statusPendingApproval": "Durum: Koç Onayı Bekliyor",
     "statusNotCompleted": "Durum: Tamamlanmadı (Reddedildi)",

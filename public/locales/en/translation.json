@@ -87,6 +87,13 @@
       "success": "Student removed successfully.",
       "error": "An error occurred while removing the student."
     },
+    "deleteTask": {
+      "title": "Delete Task",
+      "description": "Are you sure you want to permanently delete this task? This action cannot be undone.",
+      "confirm": "Delete",
+      "success": "Task deleted successfully.",
+      "error": "An error occurred while deleting the task."
+    },
     "addNewTaskTab": "Add New Task",
     "taskHistory": "Task History",
     "analytics": "Analytics",
@@ -117,10 +124,6 @@
     "rewardsDescription": "You can find the rewards sent to you by your coach here.",
     "claimReward": "Claim Reward",
     "noRewards": "You haven't received any rewards yet.",
-    "yourUserId": "Your User ID",
-    "yourUserIdDescription": "This is your unique identifier in the system.",
-    "copyUserId": "Copy User ID",
-    "userIdCopied": "User ID copied to clipboard!",
     "statusCompleted": "Status: Completed (Approved)",
     "statusPendingApproval": "Status: Awaiting Coach Approval",
     "statusNotCompleted": "Status: Not Completed (Rejected)",
