@@ -171,8 +171,8 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   };
 
   const handleTaskClick = (task: Task) => {
-    console.log(`[TaskManagement] Onay bekleyen göreve tıklandı:`, task);
-    if (task.status === 'pending_approval') {
+    console.log(`[TaskManagement] Göreve tıklandı:`, task);
+    if (task.status === 'pending_approval' || task.status === 'pending') {
       setTaskToUpdate(task);
       if (task.task_type === 'soru_cozumu') {
         console.log("[TaskManagement] Görev türü 'Soru Çözümü'. Puan giriş ekranı açılıyor.");
@@ -424,32 +424,27 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                       <div className="flex-1 overflow-y-auto space-y-2 pr-2 border rounded-md p-2">
                       {loading ? <Skeleton className="h-20 w-full" /> : (
                         <>
-                          {tasksAwaitingApproval.length > 0 && (
-                            <div className="mb-4">
-                              <h4 className="font-bold text-sm mb-2 text-blue-600">{t('coach.awaitingApproval')}</h4>
-                              {tasksAwaitingApproval.map(task => (
-                                <div key={task.id} className="flex items-center justify-between p-3 rounded-md mb-2 bg-blue-100 dark:bg-blue-900/30">
-                                  <div onClick={() => handleTaskClick(task)} className="flex-grow cursor-pointer hover:opacity-80 flex items-center gap-2">
-                                    <CheckCircle2 className="h-5 w-5 text-blue-600 shrink-0" />
-                                    <div>
-                                      <p className="font-bold">{`${task.subject}: ${task.topic}`}</p>
-                                      <p className="text-xs font-semibold mt-1 capitalize">{t(getStatusTranslationKey(task.status))}</p>
-                                    </div>
+                          {tasks.map(task => {
+                            const isAwaitingApproval = task.status === 'pending_approval';
+                            const isPending = task.status === 'pending';
+                            const isClickable = isAwaitingApproval || isPending;
+
+                            return (
+                              <div key={task.id} className={`flex items-center justify-between p-3 rounded-md ${getStatusClass(task.status)}`}>
+                                <div 
+                                  onClick={() => isClickable && handleTaskClick(task)} 
+                                  className={`flex-grow flex items-center gap-2 ${isClickable ? 'cursor-pointer hover:opacity-80' : ''}`}
+                                >
+                                  {isAwaitingApproval && <CheckCircle2 className="h-5 w-5 text-blue-600 shrink-0" />}
+                                  <div>
+                                    <p className="font-bold">{`${task.subject}: ${task.topic}`}</p>
+                                    <p className="text-xs font-semibold mt-1 capitalize">{t(getStatusTranslationKey(task.status))}</p>
                                   </div>
-                                  <Button variant="ghost" size="icon" className="ml-2 shrink-0" onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(task); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                 </div>
-                              ))}
-                            </div>
-                          )}
-                          {otherTasks.map(task => (
-                            <div key={task.id} className={`flex items-center justify-between p-3 rounded-md ${getStatusClass(task.status)}`}>
-                              <div className="flex-grow">
-                                <p className="font-bold">{`${task.subject}: ${task.topic}`}</p>
-                                <p className="text-xs font-semibold mt-1 capitalize">{t(getStatusTranslationKey(task.status))}</p>
+                                <Button variant="ghost" size="icon" className="ml-2 shrink-0" onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(task); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                               </div>
-                              <Button variant="ghost" size="icon" className="ml-2 shrink-0" onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(task); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                            </div>
-                          ))}
+                            );
+                          })}
                           {tasks.length === 0 && <p className="text-center text-muted-foreground py-4">{t('coach.noAssignedTasks')}</p>}
                         </>
                       )}
