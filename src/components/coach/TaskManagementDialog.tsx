@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
@@ -14,7 +14,7 @@ import { NumberInput } from '../ui/NumberInput';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, Trash2 } from 'lucide-react';
+import { CheckCircle2, Trash2, Book, Calculator, FlaskConical, Globe, Palette, MessageSquare, History } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 
@@ -50,6 +50,18 @@ interface TaskManagementDialogProps {
   onClose: () => void;
 }
 
+const getSubjectIcon = (subject: string): ReactNode => {
+    switch (subject) {
+        case "Türkçe": return <Book className="h-6 w-6 text-blue-500" />;
+        case "Matematik": return <Calculator className="h-6 w-6 text-green-500" />;
+        case "Fen Bilimleri": return <FlaskConical className="h-6 w-6 text-purple-500" />;
+        case "T.C. İnkılap Tarihi ve Atatürkçülük": return <History className="h-6 w-6 text-red-500" />;
+        case "Din Kültürü ve Ahlak Bilgisi": return <MessageSquare className="h-6 w-6 text-yellow-500" />;
+        case "İngilizce": return <Globe className="h-6 w-6 text-indigo-500" />;
+        default: return <Palette className="h-6 w-6 text-gray-500" />;
+    }
+};
+
 export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagementDialogProps) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,7 +83,6 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   const { t } = useTranslation();
 
   const resetForm = useCallback(() => {
-    console.log("[TaskManagement] Form sıfırlanıyor.");
     setSelectedSubject('');
     setSelectedTopic('');
     setAvailableTopics([]);
@@ -82,7 +93,6 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
 
   const fetchTasks = useCallback(async () => {
     if (!student) return;
-    console.log(`[TaskManagement] Adım 1: Görevler çekiliyor... Öğrenci ID: ${student.id}`);
     setLoading(true);
     const { data, error } = await supabase
       .from('tasks')
@@ -91,10 +101,8 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       .order('created_at', { ascending: false });
     
     if (error) {
-      console.error("[TaskManagement] HATA: Görevler çekilirken hata oluştu.", error);
       showError('Görevler getirilirken hata oluştu.');
     } else {
-      console.log("[TaskManagement] Adım 2: Görevler başarıyla çekildi.", data);
       setTasks(data as Task[]);
     }
     setLoading(false);
@@ -128,22 +136,14 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("[TaskManagement] Adım 1: Yeni görev ekleme işlemi başlatıldı.");
-    if (!student || !selectedSubject || !selectedTopic) {
-      console.warn("[TaskManagement] Uyarı: Gerekli alanlar (öğrenci, ders, konu) doldurulmadığı için görev eklenemedi.");
-      return;
-    }
+    if (!student || !selectedSubject || !selectedTopic) return;
     if (taskType === 'soru_cozumu' && (questionCount === '' || Number(questionCount) <= 0)) {
         showError('Lütfen geçerli bir soru adedi girin.');
-        console.warn("[TaskManagement] Uyarı: Geçersiz soru adedi girildi.");
         return;
     }
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error("[TaskManagement] HATA: Görev eklemek için kullanıcı oturumu bulunamadı.");
-      return;
-    }
+    if (!user) return;
 
     const taskData = {
       coach_id: user.id,
@@ -155,15 +155,12 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       question_count: taskType === 'soru_cozumu' ? Number(questionCount) : null,
       status: 'pending',
     };
-    console.log("[TaskManagement] Adım 2: Veritabanına gönderilecek görev verisi:", taskData);
 
     const { error } = await supabase.from('tasks').insert(taskData);
 
     if (error) {
-      console.error("[TaskManagement] HATA: Görev veritabanına eklenirken hata oluştu.", error);
       showError('Görev eklenirken bir hata oluştu.');
     } else {
-      console.log("[TaskManagement] Adım 3: Görev başarıyla eklendi. Form sıfırlanıyor ve görev listesi yenileniyor.");
       showSuccess('Görev başarıyla eklendi.');
       resetForm();
       fetchTasks();
@@ -171,35 +168,29 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   };
 
   const handleTaskClick = (task: Task) => {
-    console.log(`[TaskManagement] Göreve tıklandı:`, task);
-    if (task.status === 'pending_approval' || task.status === 'pending') {
-      setTaskToUpdate(task);
-      if (task.task_type === 'soru_cozumu') {
-        console.log("[TaskManagement] Görev türü 'Soru Çözümü'. Puan giriş ekranı açılıyor.");
-        setScoreData({ correct: '', empty: '', wrong: '' });
-        setScoreEntryOpen(true);
-      } else {
-        console.log("[TaskManagement] Görev türü 'Konu Anlatımı'. Basit onay/red ekranı açılıyor.");
-        setSimpleApprovalOpen(true);
-      }
+    setTaskToUpdate(task);
+    if (task.task_type === 'soru_cozumu') {
+      setScoreData({ 
+        correct: task.correct_count ?? '', 
+        empty: task.empty_count ?? '', 
+        wrong: task.wrong_count ?? '' 
+      });
+      setScoreEntryOpen(true);
     } else {
-      console.log(`[TaskManagement] Tıklanan görevin durumu '${task.status}', işlem yapılmadı.`);
+      setSimpleApprovalOpen(true);
     }
   };
 
   const handleSimpleApproval = async (newStatus: 'completed' | 'not_completed') => {
     if (!taskToUpdate) return;
-    console.log(`[TaskManagement] Basit onay işlemi: Görev ID ${taskToUpdate.id}, Yeni Durum: ${newStatus}`);
     const { error } = await supabase
       .from('tasks')
       .update({ status: newStatus })
       .eq('id', taskToUpdate.id);
 
     if (error) {
-      console.error("[TaskManagement] HATA: Basit onay/red işlemi sırasında veritabanı hatası.", error);
       showError('Görev güncellenirken bir hata oluştu.');
     } else {
-      console.log("[TaskManagement] Başarılı: Görev durumu güncellendi. Liste yenileniyor.");
       showSuccess(newStatus === 'completed' ? 'Görev onaylandı.' : 'Görev reddedildi.');
       fetchTasks();
     }
@@ -210,20 +201,16 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   const handleScoreSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!taskToUpdate || !taskToUpdate.question_count) return;
-    console.log("[TaskManagement] Adım 1: Puan giriş formu gönderildi. Görev:", taskToUpdate);
 
     const correct = Number(scoreData.correct) || 0;
     const empty = Number(scoreData.empty) || 0;
     const wrong = Number(scoreData.wrong) || 0;
     const total = correct + empty + wrong;
-    console.log(`[TaskManagement] Adım 2: Girilen değerler - Doğru: ${correct}, Yanlış: ${wrong}, Boş: ${empty}, Toplam: ${total}`);
 
     if (total > taskToUpdate.question_count) {
-      console.warn(`[TaskManagement] UYARI: Doğrulama hatası. Toplam (${total}) > Soru Sayısı (${taskToUpdate.question_count})`);
       showError(t('coach.scoreEntry.validationError', { count: taskToUpdate.question_count }));
       return;
     }
-    console.log("[TaskManagement] Adım 3: Doğrulama başarılı.");
 
     const updateData = { 
       status: 'completed',
@@ -231,7 +218,6 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       empty_count: empty,
       wrong_count: wrong,
     };
-    console.log("[TaskManagement] Adım 4: Veritabanına gönderilecek güncelleme verisi:", updateData);
 
     const { error } = await supabase
       .from('tasks')
@@ -239,10 +225,8 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       .eq('id', taskToUpdate.id);
 
     if (error) {
-      console.error("[TaskManagement] HATA: Puanlar kaydedilirken veritabanı hatası.", error);
       showError('Görev güncellenirken bir hata oluştu.');
     } else {
-      console.log("[TaskManagement] Adım 5: Puanlar başarıyla kaydedildi ve görev onaylandı. Liste yenileniyor.");
       showSuccess('Görev onaylandı ve puanlar kaydedildi.');
       fetchTasks();
     }
@@ -252,17 +236,14 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   
   const handleRejectTaskFromScoreDialog = async () => {
     if (!taskToUpdate) return;
-    console.log(`[TaskManagement] Puan giriş ekranından görev reddedildi. Görev ID: ${taskToUpdate.id}`);
     const { error } = await supabase
       .from('tasks')
-      .update({ status: 'not_completed' })
+      .update({ status: 'not_completed', correct_count: null, empty_count: null, wrong_count: null })
       .eq('id', taskToUpdate.id);
 
     if (error) {
-      console.error("[TaskManagement] HATA: Puan ekranından reddetme işlemi sırasında veritabanı hatası.", error);
       showError('Görev güncellenirken bir hata oluştu.');
     } else {
-      console.log("[TaskManagement] Başarılı: Görev reddedildi. Liste yenileniyor.");
       showSuccess('Görev reddedildi.');
       fetchTasks();
     }
@@ -271,24 +252,20 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   };
 
   const handleOpenDeleteDialog = (task: Task) => {
-    console.log("[TaskManagement] Görev silme onayı isteniyor. Görev:", task);
     setTaskToDelete(task);
     setDeleteDialogOpen(true);
   };
 
   const handleConfirmDelete = async () => {
     if (!taskToDelete) return;
-    console.log("[TaskManagement] Adım 1: Görev silme onaylandı. Silinecek Görev ID:", taskToDelete.id);
     const { error } = await supabase
       .from('tasks')
       .delete()
       .eq('id', taskToDelete.id);
 
     if (error) {
-      console.error("[TaskManagement] HATA: Görev silinirken veritabanı hatası.", error);
       showError(t('coach.deleteTask.error'));
     } else {
-      console.log("[TaskManagement] Adım 2: Görev başarıyla silindi. Liste yenileniyor.");
       showSuccess(t('coach.deleteTask.success'));
       fetchTasks();
     }
@@ -328,7 +305,6 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   }, [tasks]);
 
   const analyticsData = useMemo(() => {
-    console.log("[Analytics] Adım 1: Analitik verileri yeniden hesaplanıyor.");
     const questionTasks = tasks.filter(task => 
       task.task_type === 'soru_cozumu' && 
       task.status === 'completed' &&
@@ -336,7 +312,6 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       task.empty_count != null &&
       task.wrong_count != null
     );
-    console.log("[Analytics] Adım 2: Grafik için filtrelenmiş görevler:", questionTasks);
 
     const dataBySubject = questionTasks.reduce((acc, task) => {
       if (!acc[task.subject]) acc[task.subject] = {};
@@ -348,7 +323,6 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       acc[task.subject][task.topic].wrong += task.wrong_count!;
       return acc;
     }, {} as Record<string, Record<string, { correct: number; empty: number; wrong: number }>>);
-    console.log("[Analytics] Adım 3: Konulara göre gruplanmış ham veriler:", dataBySubject);
 
     const finalData = Object.entries(dataBySubject).map(([subject, topics]) => ({
       subject,
@@ -358,17 +332,16 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
         net: (counts.correct - counts.wrong / 3).toFixed(2),
       })),
     }));
-    console.log("[Analytics] Adım 4: Grafik için işlenmiş nihai veri:", finalData);
     return finalData;
   }, [tasks]);
 
-  const getStatusClass = (status: string) => {
+  const getStatusBorderClass = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-green-100 dark:bg-green-900/30';
-      case 'pending': return 'bg-yellow-100 dark:bg-yellow-900/30';
-      case 'not_completed': return 'bg-red-100 dark:bg-red-900/30';
-      case 'pending_approval': return 'bg-blue-100 dark:bg-blue-900/30';
-      default: return 'bg-secondary';
+      case 'completed': return 'border-l-4 border-green-500';
+      case 'pending': return 'border-l-4 border-yellow-500';
+      case 'not_completed': return 'border-l-4 border-red-500';
+      case 'pending_approval': return 'border-l-4 border-blue-500';
+      default: return '';
     }
   };
 
@@ -385,9 +358,6 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     if (status === 'pending_approval') return 'coach.statusPendingApproval';
     return 'coach.statusPending';
   };
-
-  const tasksAwaitingApproval = tasks.filter(t => t.status === 'pending_approval');
-  const otherTasks = tasks.filter(t => t.status !== 'pending_approval');
 
   if (!student) return null;
 
@@ -421,39 +391,27 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                   </form>
                   <div className="space-y-4 flex flex-col overflow-hidden">
                       <h3 className="font-semibold">{t('coach.assignedTasks')}</h3>
-                      <div className="flex-1 overflow-y-auto space-y-2 pr-2 border rounded-md p-2">
-                      {loading ? <Skeleton className="h-20 w-full" /> : (
-                        <>
-                          {tasks.map(task => {
-                            const isAwaitingApproval = task.status === 'pending_approval';
-                            const isPending = task.status === 'pending';
-                            const isClickable = isAwaitingApproval || isPending;
-
-                            return (
-                              <div key={task.id} className={`flex items-center justify-between p-3 rounded-md ${getStatusClass(task.status)}`}>
-                                <div 
-                                  onClick={() => isClickable && handleTaskClick(task)} 
-                                  className={`flex-grow flex items-center gap-2 ${isClickable ? 'cursor-pointer hover:opacity-80' : ''}`}
-                                >
-                                  {isAwaitingApproval && <CheckCircle2 className="h-5 w-5 text-blue-600 shrink-0" />}
-                                  <div>
-                                    <p className="font-bold">{`${task.subject}: ${task.topic}`}</p>
-                                    <p className="text-xs font-semibold mt-1 capitalize">{t(getStatusTranslationKey(task.status))}</p>
-                                  </div>
-                                </div>
-                                <Button variant="ghost" size="icon" className="ml-2 shrink-0" onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(task); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+                      {loading ? <Skeleton className="h-24 w-full" /> : tasks.length > 0 ? (
+                        tasks.map(task => (
+                          <Card key={task.id} className={`cursor-pointer hover:shadow-md transition-shadow ${getStatusBorderClass(task.status)}`} onClick={() => handleTaskClick(task)}>
+                            <CardContent className="p-3 flex items-center gap-4">
+                              <div className="flex-shrink-0">{getSubjectIcon(task.subject)}</div>
+                              <div className="flex-grow">
+                                <p className="font-bold">{formatTaskTitle(task)}</p>
+                                <Badge variant="outline" className={`mt-1 ${getStatusBadgeClass(task.status)}`}>{t(getStatusTranslationKey(task.status))}</Badge>
                               </div>
-                            );
-                          })}
-                          {tasks.length === 0 && <p className="text-center text-muted-foreground py-4">{t('coach.noAssignedTasks')}</p>}
-                        </>
-                      )}
+                              <Button variant="ghost" size="icon" className="ml-2 shrink-0" onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(task); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                            </CardContent>
+                          </Card>
+                        ))
+                      ) : (<p className="text-center text-muted-foreground py-4">{t('coach.noAssignedTasks')}</p>)}
                       </div>
                   </div>
               </div>
             </TabsContent>
             <TabsContent value="taskHistory" className="flex-1 overflow-y-auto p-4">
-              {loading ? <Skeleton className="h-full w-full" /> : Object.keys(groupedTasks).length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{Object.entries(groupedTasks).map(([subject, subjectTasks]) => (<Card key={subject}><CardHeader><CardTitle>{subject}</CardTitle></CardHeader><CardContent className="space-y-3">{subjectTasks.map(task => (<div key={task.id} className={`p-3 rounded-md text-sm ${getStatusClass(task.status)}`}><p className="font-semibold">{formatTaskTitle(task)}</p>{task.description && <p className="text-xs text-muted-foreground italic mt-1">"{task.description}"</p>}<div className="flex items-center justify-between mt-2 pt-2 border-t"><Badge variant="outline" className={getStatusBadgeClass(task.status)}>{t(getStatusTranslationKey(task.status))}</Badge><span className="text-xs text-muted-foreground">{new Date(task.created_at).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span></div></div>))}</CardContent></Card>))}</div>) : (<p className="text-center text-muted-foreground py-10">{t('coach.noAssignedTasks')}</p>)}
+              {loading ? <Skeleton className="h-full w-full" /> : Object.keys(groupedTasks).length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{Object.entries(groupedTasks).map(([subject, subjectTasks]) => (<Card key={subject}><CardHeader><CardTitle>{subject}</CardTitle></CardHeader><CardContent className="space-y-3">{subjectTasks.map(task => (<div key={task.id} className={`p-3 rounded-md text-sm ${getStatusBorderClass(task.status)} bg-muted/50`}><p className="font-semibold">{formatTaskTitle(task)}</p>{task.description && <p className="text-xs text-muted-foreground italic mt-1">"{task.description}"</p>}<div className="flex items-center justify-between mt-2 pt-2 border-t"><Badge variant="outline" className={getStatusBadgeClass(task.status)}>{t(getStatusTranslationKey(task.status))}</Badge><span className="text-xs text-muted-foreground">{new Date(task.created_at).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span></div></div>))}</CardContent></Card>))}</div>) : (<p className="text-center text-muted-foreground py-10">{t('coach.noAssignedTasks')}</p>)}
             </TabsContent>
             <TabsContent value="analytics" className="flex-1 overflow-y-auto p-4">
               {loading ? <Skeleton className="h-full w-full" /> : analyticsData.length > 0 ? (
@@ -531,6 +489,9 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                 </div>
             </form>
             <DialogFooter>
+                <DialogClose asChild>
+                    <Button type="button" variant="outline">{t('coach.cancel')}</Button>
+                </DialogClose>
                 <Button variant="destructive" onClick={handleRejectTaskFromScoreDialog}>{t('coach.approval.reject')}</Button>
                 <Button type="submit" form="score-form">{t('coach.scoreEntry.saveAndApprove')}</Button>
             </DialogFooter>
