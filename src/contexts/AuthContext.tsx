@@ -24,26 +24,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  console.log("[AuthContext] Provider mounted. Initializing...");
-
   useEffect(() => {
     const fetchSessionAndProfile = async () => {
-      console.log("[AuthContext] Attempting to fetch initial session.");
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError) {
-        console.error("[AuthContext] Error fetching initial session:", sessionError.message);
         setLoading(false);
         return;
       }
 
-      console.log("[AuthContext] Initial session fetched:", session ? "Exists" : "Does not exist");
       setSession(session);
       const currentUser = session?.user ?? null;
       setUser(currentUser);
 
       if (currentUser) {
-        console.log(`[AuthContext] User found (ID: ${currentUser.id}). Fetching profile.`);
         const { data: userProfile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
@@ -51,32 +45,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .single();
         
         if (profileError) {
-          console.warn("[AuthContext] Could not fetch user profile:", profileError.message);
           setProfile(null);
         } else {
-          console.log("[AuthContext] Profile fetched successfully:", userProfile);
           setProfile(userProfile);
         }
       } else {
-        console.log("[AuthContext] No active user. Clearing profile.");
         setProfile(null);
       }
       
-      console.log("[AuthContext] Initial loading complete.");
       setLoading(false);
     };
 
     fetchSessionAndProfile();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log(`[AuthContext] Auth state changed. Event: ${_event}`);
       setSession(session);
       const currentUser = session?.user ?? null;
       setUser(currentUser);
 
       if (currentUser) {
         if (profile?.id !== currentUser.id) { // Fetch profile only if it's a different user
-          console.log(`[AuthContext] New or different user (ID: ${currentUser.id}). Fetching profile.`);
           const { data: userProfile, error } = await supabase
             .from('profiles')
             .select('*')
@@ -84,21 +72,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .single();
           
           if (error) {
-            console.warn("[AuthContext] Could not fetch profile on auth change:", error.message);
             setProfile(null);
           } else {
-            console.log("[AuthContext] Profile fetched successfully on auth change:", userProfile);
             setProfile(userProfile);
           }
         }
       } else {
-        console.log("[AuthContext] User signed out. Clearing profile.");
         setProfile(null);
       }
     });
 
     return () => {
-      console.log("[AuthContext] Unsubscribing from auth state changes.");
       subscription.unsubscribe();
     };
   }, []);
