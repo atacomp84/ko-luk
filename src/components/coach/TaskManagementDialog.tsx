@@ -2,15 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { showError, showSuccess } from '@/utils/toast';
 import { useTranslation } from 'react-i18next';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { lgsSubjects } from '@/data/lgsSubjects';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { NumberInput } from '../ui/NumberInput';
 
 interface Student {
   id: string;
@@ -38,20 +38,22 @@ interface TaskManagementDialogProps {
 export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagementDialogProps) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
-  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState('');
+  const [selectedTopic, setSelectedTopic] = useState('');
+  const [availableTopics, setAvailableTopics] = useState<string[]>([]);
   const [taskType, setTaskType] = useState<'konu_anlatimi' | 'soru_cozumu'>('konu_anlatimi');
   const [questionCount, setQuestionCount] = useState<number | ''>('');
   const [description, setDescription] = useState('');
   const { t } = useTranslation();
 
-  const resetForm = () => {
-    setSelectedSubject(null);
-    setSelectedTopic(null);
+  const resetForm = useCallback(() => {
+    setSelectedSubject('');
+    setSelectedTopic('');
+    setAvailableTopics([]);
     setTaskType('konu_anlatimi');
     setQuestionCount('');
     setDescription('');
-  };
+  }, []);
 
   const fetchTasks = useCallback(async () => {
     if (!student) return;
@@ -76,11 +78,25 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     } else {
       resetForm();
     }
-  }, [isOpen, student, fetchTasks]);
+  }, [isOpen, student, fetchTasks, resetForm]);
+
+  useEffect(() => {
+    if (selectedSubject) {
+      const subjectData = lgsSubjects.find(s => s.name === selectedSubject);
+      setAvailableTopics(subjectData ? subjectData.topics : []);
+      setSelectedTopic('');
+    } else {
+      setAvailableTopics([]);
+    }
+  }, [selectedSubject]);
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!student || !selectedSubject || !selectedTopic) return;
+    if (taskType === 'soru_cozumu' && (questionCount === '' || Number(questionCount) <= 0)) {
+        showError('Lütfen geçerli bir soru adedi girin.');
+        return;
+    }
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -125,65 +141,69 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
           <DialogTitle>{t('coach.taskManagementTitle', { firstName: student.first_name, lastName: student.last_name })}</DialogTitle>
           <DialogDescription>{t('coach.taskManagementDescription')}</DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-6 py-4 flex-1 overflow-hidden">
+        <div className="grid md:grid-cols-2 gap-6 py-4 flex-1 overflow-hidden">
             <form onSubmit={handleAddTask} className="space-y-6 flex flex-col">
                 <div className="space-y-2">
                     <h3 className="font-semibold">{t('coach.selectTopic')}</h3>
-                    <div className="border rounded-md max-h-64 overflow-y-auto">
-                        <Accordion type="single" collapsible className="w-full">
-                            {lgsSubjects.map(subject => (
-                                <AccordionItem value={subject.name} key={subject.name}>
-                                    <AccordionTrigger className="px-4">{subject.name}</AccordionTrigger>
-                                    <AccordionContent>
-                                        <div className="flex flex-col items-start">
-                                            {subject.topics.map(topic => (
-                                                <button
-                                                    type="button"
-                                                    key={topic}
-                                                    onClick={() => {
-                                                        setSelectedSubject(subject.name);
-                                                        setSelectedTopic(topic);
-                                                    }}
-                                                    className={`w-full text-left p-2 px-8 hover:bg-accent ${selectedTopic === topic && selectedSubject === subject.name ? 'bg-primary/20' : ''}`}
-                                                >
-                                                    {topic}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </AccordionContent>
-                                </AccordionItem>
-                            ))}
-                        </Accordion>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('coach.selectSubjectPlaceholder')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {lgsSubjects.map(subject => (
+                                    <SelectItem key={subject.name} value={subject.name}>
+                                        {subject.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Select value={selectedTopic} onValueChange={setSelectedTopic} disabled={!selectedSubject}>
+                            <SelectTrigger>
+                                <SelectValue placeholder={t('coach.selectTopicPlaceholder')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {availableTopics.map(topic => (
+                                    <SelectItem key={topic} value={topic}>
+                                        {topic}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
 
-                <div className="space-y-2">
-                    <h3 className="font-semibold">{t('coach.selectTaskType')}</h3>
-                    <RadioGroup value={taskType} onValueChange={(v: 'konu_anlatimi' | 'soru_cozumu') => setTaskType(v)}>
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="konu_anlatimi" id="r1" />
-                            <Label htmlFor="r1">{t('coach.topicExplanation')}</Label>
+                {selectedTopic && (
+                    <>
+                        <div className="space-y-2">
+                            <h3 className="font-semibold">{t('coach.selectTaskType')}</h3>
+                            <RadioGroup value={taskType} onValueChange={(v: 'konu_anlatimi' | 'soru_cozumu') => setTaskType(v)}>
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="konu_anlatimi" id="r1" />
+                                    <Label htmlFor="r1">{t('coach.topicExplanation')}</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="soru_cozumu" id="r2" />
+                                    <Label htmlFor="r2">{t('coach.questionSolving')}</Label>
+                                </div>
+                            </RadioGroup>
                         </div>
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="soru_cozumu" id="r2" />
-                            <Label htmlFor="r2">{t('coach.questionSolving')}</Label>
-                        </div>
-                    </RadioGroup>
-                </div>
 
-                {taskType === 'soru_cozumu' && (
-                    <div className="space-y-2">
-                        <Label htmlFor="question-count">{t('coach.questionCount')}</Label>
-                        <Input id="question-count" type="number" value={questionCount} onChange={e => setQuestionCount(e.target.value === '' ? '' : Number(e.target.value))} required min="1" />
-                    </div>
+                        {taskType === 'soru_cozumu' && (
+                            <div className="space-y-2">
+                                <Label htmlFor="question-count">{t('coach.questionCount')}</Label>
+                                <NumberInput value={questionCount} onChange={setQuestionCount} required />
+                            </div>
+                        )}
+
+                        <div className="space-y-2">
+                            <Label htmlFor="description">{t('coach.taskDescriptionLabel')}</Label>
+                            <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Öğrenciye not..." />
+                        </div>
+                        
+                        <Button type="submit" className="mt-auto">{t('coach.addTaskButton')}</Button>
+                    </>
                 )}
-
-                <div className="space-y-2">
-                    <Label htmlFor="description">{t('coach.taskDescriptionLabel')}</Label>
-                    <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Öğrenciye not..." />
-                </div>
-                
-                <Button type="submit" disabled={!selectedTopic}>{t('coach.addTaskButton')}</Button>
             </form>
             <div className="space-y-4 flex flex-col overflow-hidden">
                 <h3 className="font-semibold">{t('coach.assignedTasks')}</h3>

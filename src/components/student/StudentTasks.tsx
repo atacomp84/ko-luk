@@ -5,14 +5,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2 } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
-import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 
 interface Task {
     id: string;
-    title: string;
-    description: string;
-    due_date: string;
+    subject: string;
+    topic: string;
+    task_type: string;
+    question_count: number | null;
+    description: string | null;
     status: string;
 }
 
@@ -31,7 +32,7 @@ const StudentTasks = () => {
     if (error) {
       showError('Görevler getirilirken bir hata oluştu.');
     } else {
-      setTasks(data);
+      setTasks(data as Task[]);
     }
     setLoading(false);
   }, []);
@@ -54,6 +55,16 @@ const StudentTasks = () => {
     }
   };
 
+  const formatTaskTitle = (task: Task) => {
+    let title = `${task.subject}: ${task.topic}`;
+    if (task.task_type === 'soru_cozumu' && task.question_count) {
+      title += ` (${task.question_count} ${t('coach.questionSolving')})`;
+    } else {
+      title += ` (${t('coach.topicExplanation')})`;
+    }
+    return title;
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -72,9 +83,8 @@ const StudentTasks = () => {
               <div key={task.id} className={`p-4 rounded-lg border ${task.status === 'completed' ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-background'}`}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className={`font-bold ${task.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>{task.title}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
-                    {task.due_date && <p className="text-xs text-muted-foreground mt-2">Bitiş Tarihi: {format(new Date(task.due_date), 'dd/MM/yyyy')}</p>}
+                    <h3 className={`font-bold ${task.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>{formatTaskTitle(task)}</h3>
+                    {task.description && <p className="text-sm text-muted-foreground mt-1 italic">"{task.description}"</p>}
                   </div>
                   {task.status === 'pending' && (
                     <Button size="sm" onClick={() => handleCompleteTask(task.id)}>
