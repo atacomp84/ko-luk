@@ -152,7 +152,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
           <DialogDescription>{t('coach.taskManagementDescription')}</DialogDescription>
         </DialogHeader>
         <div className="grid md:grid-cols-2 gap-6 py-4 flex-1 overflow-hidden">
-            <form onSubmit={handleAddTask} className="flex flex-col h-full">
+            <form id="add-task-form" onSubmit={handleAddTask} className="flex flex-col h-full">
                 <div className="flex-1 space-y-6 overflow-y-auto pr-4 pb-4">
                     <div className="space-y-2">
                         <h3 className="font-semibold">{t('coach.selectTopic')}</h3>
@@ -214,14 +214,6 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                         </div>
                     )}
                 </div>
-
-                {selectedTopic && (
-                    <div className="pt-4 border-t mt-auto">
-                        <Button type="submit" className="w-full" disabled={isSubmitDisabled}>
-                            {t('coach.addTaskButton')}
-                        </Button>
-                    </div>
-                )}
             </form>
             <div className="space-y-4 flex flex-col overflow-hidden">
                 <h3 className="font-semibold">{t('coach.assignedTasks')}</h3>
@@ -242,10 +234,15 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                 </div>
             </div>
         </div>
-        <DialogFooter className="sm:justify-start">
+        <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="outline" onClick={onClose}>{t('coach.close')}</Button>
           </DialogClose>
+          {selectedTopic && (
+            <Button type="submit" form="add-task-form" disabled={isSubmitDisabled}>
+                {t('coach.addTaskButton')}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
