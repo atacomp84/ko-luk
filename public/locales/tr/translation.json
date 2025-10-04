@@ -54,7 +54,7 @@
     "statusLabel": "Durum",
     "statusPending": "Bekliyor",
     "statusCompleted": "Tamamlandı",
-    "noAssignedTasks": "Henüz atanmış bir görev yok.",
+    "noAssignedTasks": "Bu öğrenciye henüz bir görev atanmamış.",
     "close": "Kapat",
     "selectTopic": "1. Ders ve Konu Seçin",
     "selectSubjectPlaceholder": "Ders Seçin",

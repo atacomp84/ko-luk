@@ -54,7 +54,7 @@
     "statusLabel": "Status",
     "statusPending": "Pending",
     "statusCompleted": "Completed",
-    "noAssignedTasks": "No tasks have been assigned yet.",
+    "noAssignedTasks": "No tasks have been assigned to this student yet.",
     "close": "Close",
     "selectTopic": "1. Select Subject and Topic",
     "selectSubjectPlaceholder": "Select Subject",

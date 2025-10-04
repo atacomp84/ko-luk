@@ -88,6 +88,11 @@ const StudentManagement = () => {
     setDeleteDialogOpen(true);
   };
 
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setStudentToDelete(null);
+  };
+
   const handleConfirmDelete = async () => {
     if (!studentToDelete) return;
 
@@ -100,12 +105,13 @@ const StudentManagement = () => {
       .match({ coach_id: user.id, student_id: studentToDelete.id });
 
     if (error) {
+      console.error("Öğrenci-koç eşleşmesi silinirken hata:", error);
       showError(t('coach.deleteStudent.error'));
     } else {
       showSuccess(t('coach.deleteStudent.success'));
-      fetchStudents();
+      // Arayüzü anında güncellemek için öğrenciyi yerel state'den kaldır
+      setStudents(prevStudents => prevStudents.filter(student => student.id !== studentToDelete.id));
     }
-    setStudentToDelete(null);
   };
 
   return (
@@ -166,7 +172,7 @@ const StudentManagement = () => {
       />
       <DeleteStudentDialog
         isOpen={isDeleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
+        onClose={handleCloseDeleteDialog}
         onConfirm={handleConfirmDelete}
         student={studentToDelete}
       />
