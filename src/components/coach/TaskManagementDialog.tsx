@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, Trash2, Book, Calculator, FlaskConical, Globe, Palette, MessageSquare, History } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface Student {
   id: string;
@@ -78,7 +79,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   
   const [isScoreEntryOpen, setScoreEntryOpen] = useState(false);
   const [isSimpleApprovalOpen, setSimpleApprovalOpen] = useState(false);
-  const [scoreData, setScoreData] = useState<ScoreData>({ correct: '', empty: '', wrong: '' });
+  const [scoreData, setScoreData] = useState<ScoreData>({ correct: 0, empty: 0, wrong: 0 });
 
   const { t } = useTranslation();
 
@@ -171,9 +172,9 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     setTaskToUpdate(task);
     if (task.task_type === 'soru_cozumu') {
       setScoreData({ 
-        correct: task.correct_count ?? '', 
-        empty: task.empty_count ?? '', 
-        wrong: task.wrong_count ?? '' 
+        correct: task.correct_count ?? 0, 
+        empty: task.empty_count ?? 0, 
+        wrong: task.wrong_count ?? 0 
       });
       setScoreEntryOpen(true);
     } else {
@@ -370,9 +371,8 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
             <DialogDescription>{t('coach.taskManagementDescription')}</DialogDescription>
           </DialogHeader>
           <Tabs defaultValue="addTask" className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="shrink-0 grid w-full grid-cols-3">
+            <TabsList className="shrink-0 grid w-full grid-cols-2">
               <TabsTrigger value="addTask">{t('coach.addNewTaskTab')}</TabsTrigger>
-              <TabsTrigger value="taskHistory">{t('coach.taskHistory')}</TabsTrigger>
               <TabsTrigger value="analytics">{t('coach.analytics')}</TabsTrigger>
             </TabsList>
             <TabsContent value="addTask" className="flex-1 overflow-hidden">
@@ -391,27 +391,37 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                   </form>
                   <div className="space-y-4 flex flex-col overflow-hidden">
                       <h3 className="font-semibold">{t('coach.assignedTasks')}</h3>
-                      <div className="flex-1 overflow-y-auto space-y-3 pr-2">
-                      {loading ? <Skeleton className="h-24 w-full" /> : tasks.length > 0 ? (
-                        tasks.map(task => (
-                          <Card key={task.id} className={`cursor-pointer hover:shadow-md transition-shadow ${getStatusBorderClass(task.status)}`} onClick={() => handleTaskClick(task)}>
-                            <CardContent className="p-3 flex items-center gap-4">
-                              <div className="flex-shrink-0">{getSubjectIcon(task.subject)}</div>
-                              <div className="flex-grow">
-                                <p className="font-bold">{formatTaskTitle(task)}</p>
-                                <Badge variant="outline" className={`mt-1 ${getStatusBadgeClass(task.status)}`}>{t(getStatusTranslationKey(task.status))}</Badge>
-                              </div>
-                              <Button variant="ghost" size="icon" className="ml-2 shrink-0" onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(task); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                            </CardContent>
-                          </Card>
-                        ))
+                      <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+                      {loading ? <Skeleton className="h-24 w-full" /> : Object.keys(groupedTasks).length > 0 ? (
+                        Object.entries(groupedTasks).map(([subject, subjectTasks]) => {
+                          const pendingCount = subjectTasks.filter(t => t.status === 'pending' || t.status === 'pending_approval').length;
+                          return (
+                            <Collapsible key={subject} defaultOpen className="space-y-2">
+                              <CollapsibleTrigger className="flex justify-between items-center w-full p-2 bg-muted rounded-md">
+                                <span className="font-bold">{subject}</span>
+                                {pendingCount > 0 && <Badge variant="secondary">{pendingCount}</Badge>}
+                              </CollapsibleTrigger>
+                              <CollapsibleContent className="space-y-2 pl-4">
+                                {subjectTasks.map(task => (
+                                  <Card key={task.id} className={`cursor-pointer hover:shadow-md transition-shadow ${getStatusBorderClass(task.status)}`} onClick={() => handleTaskClick(task)}>
+                                    <CardContent className="p-3 flex items-center gap-4">
+                                      <div className="flex-shrink-0">{getSubjectIcon(task.subject)}</div>
+                                      <div className="flex-grow">
+                                        <p className="font-bold">{formatTaskTitle(task)}</p>
+                                        <Badge variant="outline" className={`mt-1 ${getStatusBadgeClass(task.status)}`}>{t(getStatusTranslationKey(task.status))}</Badge>
+                                      </div>
+                                      <Button variant="ghost" size="icon" className="ml-2 shrink-0" onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(task); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </CollapsibleContent>
+                            </Collapsible>
+                          )
+                        })
                       ) : (<p className="text-center text-muted-foreground py-4">{t('coach.noAssignedTasks')}</p>)}
                       </div>
                   </div>
               </div>
-            </TabsContent>
-            <TabsContent value="taskHistory" className="flex-1 overflow-y-auto p-4">
-              {loading ? <Skeleton className="h-full w-full" /> : Object.keys(groupedTasks).length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{Object.entries(groupedTasks).map(([subject, subjectTasks]) => (<Card key={subject}><CardHeader><CardTitle>{subject}</CardTitle></CardHeader><CardContent className="space-y-3">{subjectTasks.map(task => (<div key={task.id} className={`p-3 rounded-md text-sm ${getStatusBorderClass(task.status)} bg-muted/50`}><p className="font-semibold">{formatTaskTitle(task)}</p>{task.description && <p className="text-xs text-muted-foreground italic mt-1">"{task.description}"</p>}<div className="flex items-center justify-between mt-2 pt-2 border-t"><Badge variant="outline" className={getStatusBadgeClass(task.status)}>{t(getStatusTranslationKey(task.status))}</Badge><span className="text-xs text-muted-foreground">{new Date(task.created_at).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span></div></div>))}</CardContent></Card>))}</div>) : (<p className="text-center text-muted-foreground py-10">{t('coach.noAssignedTasks')}</p>)}
             </TabsContent>
             <TabsContent value="analytics" className="flex-1 overflow-y-auto p-4">
               {loading ? <Skeleton className="h-full w-full" /> : analyticsData.length > 0 ? (

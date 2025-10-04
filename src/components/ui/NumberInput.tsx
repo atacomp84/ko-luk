@@ -1,64 +1,35 @@
-import { Button } from "@/components/ui/button";
+import * as React from "react";
 import { Input } from "@/components/ui/input";
-import { Minus, Plus } from "lucide-react";
 
-interface NumberInputProps {
+interface NumberInputProps extends Omit<React.ComponentPropsWithoutRef<typeof Input>, 'onChange' | 'value'> {
   value: number | '';
   onChange: (value: number | '') => void;
-  min?: number;
-  max?: number;
-  step?: number;
-  required?: boolean;
 }
 
-export const NumberInput = ({ value, onChange, min = 1, max, step = 1, required = false }: NumberInputProps) => {
-  const handleIncrement = () => {
-    const currentValue = value === '' ? 0 : Number(value);
-    const newValue = currentValue + step;
-    if (max === undefined || newValue <= max) {
-      onChange(newValue);
-    }
-  };
-
-  const handleDecrement = () => {
-    const currentValue = value === '' ? 0 : Number(value);
-    const newValue = currentValue - step;
-    if (min === undefined || newValue >= min) {
-      onChange(newValue);
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value;
-    if (rawValue === '') {
+export const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
+  ({ value, onChange, ...props }, ref) => {
+    
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = e.target.value;
+      if (val === '') {
         onChange('');
-    } else {
-        const numValue = parseInt(rawValue, 10);
-        if (!isNaN(numValue)) {
-            onChange(numValue);
+      } else {
+        const num = parseInt(val, 10);
+        if (!isNaN(num)) {
+          onChange(num);
         }
-    }
-  };
+      }
+    };
 
-  return (
-    <div className="flex items-center gap-1 w-32">
-      <Button type="button" variant="outline" size="icon" className="h-9 w-9" onClick={handleDecrement} disabled={value === '' || value <= min}>
-        <Minus className="h-4 w-4" />
-      </Button>
-      <Input 
-        type="number" 
-        value={value} 
-        onChange={handleChange} 
-        className="text-center h-9" 
-        min={min} 
-        max={max} 
-        step={step}
-        required={required}
-        placeholder="0"
+    return (
+      <Input
+        type="number"
+        value={value}
+        onChange={handleChange}
+        ref={ref}
+        {...props}
       />
-      <Button type="button" variant="outline" size="icon" className="h-9 w-9" onClick={handleIncrement} disabled={max !== undefined && (value === '' || value >= max)}>
-        <Plus className="h-4 w-4" />
-      </Button>
-    </div>
-  );
-};
+    );
+  }
+);
+NumberInput.displayName = "NumberInput";
