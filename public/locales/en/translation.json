@@ -124,6 +124,7 @@
       "validationError": "The total number of answers (correct + wrong + empty) must equal the question count ({{count}})."
     },
     "timeFilters": {
+      "daily": "Daily",
       "weekly": "Weekly",
       "monthly": "Monthly",
       "all": "All Time"

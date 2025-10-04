@@ -22,6 +22,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { startOfWeek, format, isWithinInterval, subDays, subMonths } from 'date-fns';
 import { tr, enUS } from 'date-fns/locale';
 import { generateWordReport } from '@/lib/reportGenerator';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface Student {
   id: string;
@@ -55,7 +56,7 @@ interface TaskManagementDialogProps {
   onClose: () => void;
 }
 
-type TimePeriod = 'weekly' | 'monthly' | 'all';
+type TimePeriod = 'daily' | 'weekly' | 'monthly' | 'all';
 
 const getSubjectIconComponent = (subject: string): React.ElementType => {
     switch (subject) {
@@ -387,6 +388,10 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
 
   const filteredTasks = useMemo(() => {
     const now = new Date();
+    if (timePeriod === 'daily') {
+      const yesterday = subDays(now, 1);
+      return tasks.filter(task => isWithinInterval(new Date(task.created_at), { start: yesterday, end: now }));
+    }
     if (timePeriod === 'weekly') {
       const lastWeek = subDays(now, 7);
       return tasks.filter(task => isWithinInterval(new Date(task.created_at), { start: lastWeek, end: now }));
@@ -438,22 +443,25 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       task.status === 'completed'
     );
 
+    const weekStarts = [...new Set(readingTasks.map(t => startOfWeek(new Date(t.created_at), { locale: dateLocale }).getTime()))].sort();
+    const weekMap = new Map(weekStarts.map((ws, i) => [ws, `${i + 1}. ${t('student.week', 'Hafta')}`]));
+
     const dataByWeek = readingTasks.reduce((acc, task) => {
-      const weekStart = format(startOfWeek(new Date(task.created_at), { locale: dateLocale }), 'dd MMM', { locale: dateLocale });
+      const weekStartTimestamp = startOfWeek(new Date(task.created_at), { locale: dateLocale }).getTime();
+      const weekLabel = weekMap.get(weekStartTimestamp) || '';
       const pages = parseInt(task.topic, 10) || 0;
       
-      if (!acc[weekStart]) {
-        acc[weekStart] = 0;
+      if (!acc[weekLabel]) {
+        acc[weekLabel] = 0;
       }
-      acc[weekStart] += pages;
+      acc[weekLabel] += pages;
       
       return acc;
     }, {} as Record<string, number>);
 
     return Object.entries(dataByWeek)
-      .map(([week, pages]) => ({ week, pages }))
-      .sort((a, b) => new Date(a.week).getTime() - new Date(b.week).getTime());
-  }, [filteredTasks, dateLocale]);
+      .map(([week, pages]) => ({ week, pages }));
+  }, [filteredTasks, dateLocale, t]);
 
   const handleGenerateReport = () => {
     if (!student) return;
@@ -649,6 +657,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
               <Tabs defaultValue="weekly" onValueChange={(value) => setTimePeriod(value as TimePeriod)}>
                 <div className="flex justify-between items-center">
                   <TabsList>
+                    <TabsTrigger value="daily">{t('coach.timeFilters.daily')}</TabsTrigger>
                     <TabsTrigger value="weekly">{t('coach.timeFilters.weekly')}</TabsTrigger>
                     <TabsTrigger value="monthly">{t('coach.timeFilters.monthly')}</TabsTrigger>
                     <TabsTrigger value="all">{t('coach.timeFilters.all')}</TabsTrigger>
@@ -660,9 +669,9 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                 </div>
                 <div className="mt-4">
                   {loading ? <Skeleton className="h-full w-full" /> : (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-6">
                       {readingAnalyticsData.length > 0 && (
-                        <Card className="lg:col-span-2">
+                        <Card>
                           <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <BookOpen className="h-6 w-6 text-orange-500" />
@@ -685,36 +694,38 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                         </Card>
                       )}
                       {analyticsData.length > 0 ? (
-                        analyticsData.map(({ subject, data }) => {
-                          const Icon = getSubjectIconComponent(subject);
-                          const colorClass = getSubjectColorClass(subject);
-                          return (
-                          <Card key={subject}>
-                            <CardHeader>
-                              <CardTitle className="flex items-center gap-2">
-                                  <Icon className={`h-6 w-6 ${colorClass}`} />
-                                  {subject}
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <ResponsiveContainer width="100%" height={400}>
-                                <BarChart data={data} margin={{ top: 20, right: 20, left: -10, bottom: 80 }}>
-                                  <CartesianGrid strokeDasharray="3 3" />
-                                  <XAxis dataKey="topic" height={100} interval={0} tick={<CustomizedAxisTick />} axisLine={false} tickLine={false} />
-                                  <YAxis />
-                                  <Tooltip />
-                                  <Bar dataKey="correct" stackId="a" fill="#22c55e" name={t('coach.scoreEntry.correct')} />
-                                  <Bar dataKey="wrong" stackId="a" fill="#ef4444" name={t('coach.scoreEntry.wrong')} />
-                                  <Bar dataKey="empty" stackId="a" fill="#3b82f6" name={t('coach.scoreEntry.empty')}>
-                                      <LabelList dataKey="net" position="top" offset={5} fill="hsl(var(--foreground))" fontSize={12} fontWeight="bold" formatter={(value: number) => `Net: ${value.toFixed(2)}`} />
-                                  </Bar>
-                                </BarChart>
-                              </ResponsiveContainer>
-                            </CardContent>
-                          </Card>
-                        )})
+                        <Accordion type="multiple" defaultValue={analyticsData.map(d => d.subject)} className="w-full space-y-2">
+                          {analyticsData.map(({ subject, data }) => {
+                            const Icon = getSubjectIconComponent(subject);
+                            const colorClass = getSubjectColorClass(subject);
+                            return (
+                            <AccordionItem value={subject} key={subject} className="border rounded-md px-4">
+                                <AccordionTrigger className="hover:no-underline">
+                                    <div className="flex items-center gap-2">
+                                        <Icon className={`h-6 w-6 ${colorClass}`} />
+                                        <span className="font-bold text-lg">{subject}</span>
+                                    </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                    <ResponsiveContainer width="100%" height={400}>
+                                        <BarChart data={data} margin={{ top: 20, right: 20, left: -10, bottom: 80 }}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="topic" height={100} interval={0} tick={<CustomizedAxisTick />} axisLine={false} tickLine={false} />
+                                        <YAxis />
+                                        <Tooltip />
+                                        <Bar dataKey="correct" stackId="a" fill="#22c55e" name={t('coach.scoreEntry.correct')} />
+                                        <Bar dataKey="wrong" stackId="a" fill="#ef4444" name={t('coach.scoreEntry.wrong')} />
+                                        <Bar dataKey="empty" stackId="a" fill="#3b82f6" name={t('coach.scoreEntry.empty')}>
+                                            <LabelList dataKey="net" position="top" offset={5} fill="hsl(var(--foreground))" fontSize={12} fontWeight="bold" formatter={(value: number) => `Net: ${value.toFixed(2)}`} />
+                                        </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </AccordionContent>
+                            </AccordionItem>
+                          )})}
+                        </Accordion>
                       ) : readingAnalyticsData.length === 0 ? (
-                        <p className="text-center text-muted-foreground py-10 lg:col-span-2">{t('coach.noTasksForChart')}</p>
+                        <p className="text-center text-muted-foreground py-10">{t('coach.noTasksForChart')}</p>
                       ) : null}
                     </div>
                   )}
