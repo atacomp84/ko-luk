@@ -132,77 +132,87 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     return title;
   };
 
+  const isSubmitDisabled = !selectedTopic || (taskType === 'soru_cozumu' && (questionCount === '' || Number(questionCount) <= 0));
+
   if (!student) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[90vh]">
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{t('coach.taskManagementTitle', { firstName: student.first_name, lastName: student.last_name })}</DialogTitle>
           <DialogDescription>{t('coach.taskManagementDescription')}</DialogDescription>
         </DialogHeader>
         <div className="grid md:grid-cols-2 gap-6 py-4 flex-1 overflow-hidden">
-            <form onSubmit={handleAddTask} className="space-y-6 flex flex-col">
-                <div className="space-y-2">
-                    <h3 className="font-semibold">{t('coach.selectTopic')}</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                            <SelectTrigger>
-                                <SelectValue placeholder={t('coach.selectSubjectPlaceholder')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {lgsSubjects.map(subject => (
-                                    <SelectItem key={subject.name} value={subject.name}>
-                                        {subject.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <Select value={selectedTopic} onValueChange={setSelectedTopic} disabled={!selectedSubject}>
-                            <SelectTrigger>
-                                <SelectValue placeholder={t('coach.selectTopicPlaceholder')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {availableTopics.map(topic => (
-                                    <SelectItem key={topic} value={topic}>
-                                        {topic}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+            <form onSubmit={handleAddTask} className="flex flex-col h-full">
+                <div className="flex-1 space-y-6 overflow-y-auto pr-4">
+                    <div className="space-y-2">
+                        <h3 className="font-semibold">{t('coach.selectTopic')}</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('coach.selectSubjectPlaceholder')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {lgsSubjects.map(subject => (
+                                        <SelectItem key={subject.name} value={subject.name}>
+                                            {subject.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select value={selectedTopic} onValueChange={setSelectedTopic} disabled={!selectedSubject}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('coach.selectTopicPlaceholder')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableTopics.map(topic => (
+                                        <SelectItem key={topic} value={topic}>
+                                            {topic}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
+
+                    {selectedTopic && (
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <h3 className="font-semibold">{t('coach.selectTaskType')}</h3>
+                                <RadioGroup value={taskType} onValueChange={(v: 'konu_anlatimi' | 'soru_cozumu') => setTaskType(v)}>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="konu_anlatimi" id="r1" />
+                                        <Label htmlFor="r1">{t('coach.topicExplanation')}</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="soru_cozumu" id="r2" />
+                                        <Label htmlFor="r2">{t('coach.questionSolving')}</Label>
+                                    </div>
+                                </RadioGroup>
+                            </div>
+
+                            {taskType === 'soru_cozumu' && (
+                                <div className="space-y-2">
+                                    <Label htmlFor="question-count">{t('coach.questionCount')}</Label>
+                                    <NumberInput value={questionCount} onChange={setQuestionCount} required />
+                                </div>
+                            )}
+
+                            <div className="space-y-2">
+                                <Label htmlFor="description">{t('coach.taskDescriptionLabel')}</Label>
+                                <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Öğrenciye not..." />
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {selectedTopic && (
-                    <>
-                        <div className="space-y-2">
-                            <h3 className="font-semibold">{t('coach.selectTaskType')}</h3>
-                            <RadioGroup value={taskType} onValueChange={(v: 'konu_anlatimi' | 'soru_cozumu') => setTaskType(v)}>
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="konu_anlatimi" id="r1" />
-                                    <Label htmlFor="r1">{t('coach.topicExplanation')}</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="soru_cozumu" id="r2" />
-                                    <Label htmlFor="r2">{t('coach.questionSolving')}</Label>
-                                </div>
-                            </RadioGroup>
-                        </div>
-
-                        {taskType === 'soru_cozumu' && (
-                            <div className="space-y-2">
-                                <Label htmlFor="question-count">{t('coach.questionCount')}</Label>
-                                <NumberInput value={questionCount} onChange={setQuestionCount} required />
-                            </div>
-                        )}
-
-                        <div className="space-y-2">
-                            <Label htmlFor="description">{t('coach.taskDescriptionLabel')}</Label>
-                            <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Öğrenciye not..." />
-                        </div>
-                        
-                        <Button type="submit" className="mt-auto">{t('coach.addTaskButton')}</Button>
-                    </>
+                    <div className="pt-6 border-t mt-4">
+                        <Button type="submit" className="w-full" disabled={isSubmitDisabled}>
+                            {t('coach.addTaskButton')}
+                        </Button>
+                    </div>
                 )}
             </form>
             <div className="space-y-4 flex flex-col overflow-hidden">
@@ -219,14 +229,14 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                     </div>
                     ))
                 ) : (
-                    <p className="text-center text-muted-foreground py-4">{t('coach.noAssignedTasks')}</p>
+                    <p className="text-center text-muted-foreground py-4">{t('coach.noAssessedTasks')}</p>
                 )}
                 </div>
             </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="sm:justify-start">
           <DialogClose asChild>
-            <Button variant="outline" onClick={onClose}>{t('coach.close')}</Button>
+            <Button type="button" variant="outline" onClick={onClose}>{t('coach.close')}</Button>
           </DialogClose>
         </DialogFooter>
       </DialogContent>
