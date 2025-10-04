@@ -133,6 +133,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   const [scoreData, setScoreData] = useState<ScoreData>({ correct: 0, empty: 0, wrong: 0 });
   const [openCollapsibles, setOpenCollapsibles] = useState<string[]>([]);
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('weekly');
+  const [openAccordions, setOpenAccordions] = useState<string[]>([]);
 
   const { t, i18n } = useTranslation();
   const dateLocale = i18n.language === 'tr' ? tr : enUS;
@@ -463,6 +464,14 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       .map(([week, pages]) => ({ week, pages }));
   }, [filteredTasks, dateLocale, t]);
 
+  useEffect(() => {
+    const defaultOpen = analyticsData.map(d => d.subject);
+    if (readingAnalyticsData.length > 0) {
+        defaultOpen.push('kitap-okuma');
+    }
+    setOpenAccordions(defaultOpen);
+  }, [analyticsData, readingAnalyticsData]);
+
   const handleGenerateReport = () => {
     if (!student) return;
     const timePeriodText = t(`coach.timeFilters.${timePeriod}`);
@@ -662,40 +671,44 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                     <TabsTrigger value="monthly">{t('coach.timeFilters.monthly')}</TabsTrigger>
                     <TabsTrigger value="all">{t('coach.timeFilters.all')}</TabsTrigger>
                   </TabsList>
-                  <Button onClick={handleGenerateReport}>
-                    <Download className="mr-2 h-4 w-4" />
-                    {t('coach.getReport')}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button onClick={handleGenerateReport}>
+                      <Download className="mr-2 h-4 w-4" />
+                      {t('coach.getReport')}
+                    </Button>
+                    <Button variant="outline" size="icon" onClick={() => setOpenAccordions([])}>
+                        <ChevronsDownUp className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="mt-4">
                   {loading ? <Skeleton className="h-full w-full" /> : (
-                    <div className="space-y-6">
+                    <Accordion type="multiple" value={openAccordions} onValueChange={setOpenAccordions} className="w-full space-y-2">
                       {readingAnalyticsData.length > 0 && (
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <BookOpen className="h-6 w-6 text-orange-500" />
-                                Kitap Okuma Performansı (Haftalık Sayfa Sayısı)
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <ResponsiveContainer width="100%" height={300}>
-                              <BarChart data={readingAnalyticsData} margin={{ top: 20, right: 20, left: -10, bottom: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="week" />
-                                <YAxis />
-                                <Tooltip />
-                                <Bar dataKey="pages" fill="#f97316" name="Okunan Sayfa">
-                                    <LabelList dataKey="pages" position="top" />
-                                </Bar>
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </CardContent>
-                        </Card>
+                        <AccordionItem value="kitap-okuma" className="border rounded-md px-4">
+                            <AccordionTrigger className="hover:no-underline">
+                                <div className="flex items-center gap-2">
+                                    <BookOpen className="h-6 w-6 text-orange-500" />
+                                    <span className="font-bold text-lg">Kitap Okuma Performansı</span>
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                                <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={readingAnalyticsData} margin={{ top: 20, right: 20, left: -10, bottom: 20 }}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="week" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Bar dataKey="pages" fill="#f97316" name="Okunan Sayfa">
+                                        <LabelList dataKey="pages" position="top" />
+                                    </Bar>
+                                </BarChart>
+                                </ResponsiveContainer>
+                            </AccordionContent>
+                        </AccordionItem>
                       )}
                       {analyticsData.length > 0 ? (
-                        <Accordion type="multiple" defaultValue={analyticsData.map(d => d.subject)} className="w-full space-y-2">
-                          {analyticsData.map(({ subject, data }) => {
+                          analyticsData.map(({ subject, data }) => {
                             const Icon = getSubjectIconComponent(subject);
                             const colorClass = getSubjectColorClass(subject);
                             return (
@@ -722,12 +735,11 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                                     </ResponsiveContainer>
                                 </AccordionContent>
                             </AccordionItem>
-                          )})}
-                        </Accordion>
+                          )})
                       ) : readingAnalyticsData.length === 0 ? (
-                        <p className="text-center text-muted-foreground py-10">{t('coach.noTasksForChart')}</p>
+                        <div className="text-center text-muted-foreground py-10">{t('coach.noTasksForChart')}</div>
                       ) : null}
-                    </div>
+                    </Accordion>
                   )}
                 </div>
               </Tabs>
