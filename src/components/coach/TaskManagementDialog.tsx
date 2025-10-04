@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, Trash2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 
 interface Student {
   id: string;
@@ -33,6 +33,15 @@ interface Task {
     description: string | null;
     status: string;
     created_at: string;
+    correct_count?: number | null;
+    empty_count?: number | null;
+    wrong_count?: number | null;
+}
+
+interface ScoreData {
+    correct: number | '';
+    empty: number | '';
+    wrong: number | '';
 }
 
 interface TaskManagementDialogProps {
@@ -50,10 +59,14 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   const [taskType, setTaskType] = useState<'konu_anlatimi' | 'soru_cozumu'>('konu_anlatimi');
   const [questionCount, setQuestionCount] = useState<number | ''>('');
   const [description, setDescription] = useState('');
-  const [isConfirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  
   const [taskToUpdate, setTaskToUpdate] = useState<Task | null>(null);
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  
+  const [isScoreEntryOpen, setScoreEntryOpen] = useState(false);
+  const [scoreData, setScoreData] = useState<ScoreData>({ correct: '', empty: '', wrong: '' });
+
   const { t } = useTranslation();
 
   const resetForm = useCallback(() => {
@@ -127,6 +140,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       task_type: taskType,
       description: description || null,
       question_count: taskType === 'soru_cozumu' ? Number(questionCount) : null,
+      status: 'pending',
     };
 
     const { error } = await supabase.from('tasks').insert(taskData);
@@ -141,27 +155,67 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   };
 
   const handleTaskClick = (task: Task) => {
-    if (task.status === 'pending' || task.status === 'pending_approval') {
+    if (task.status === 'pending_approval') {
       setTaskToUpdate(task);
-      setConfirmDialogOpen(true);
+      if (task.task_type === 'soru_cozumu') {
+        setScoreData({ correct: '', empty: '', wrong: '' });
+        setScoreEntryOpen(true);
+      } else {
+        // Simple approve/reject for topic explanation
+        // This can be a simple alert dialog, for now let's just handle score entry
+      }
     }
   };
 
-  const handleConfirmStatusUpdate = async (newStatus: 'completed' | 'not_completed') => {
+  const handleRejectTask = async () => {
     if (!taskToUpdate) return;
     const { error } = await supabase
       .from('tasks')
-      .update({ status: newStatus })
+      .update({ status: 'not_completed' })
       .eq('id', taskToUpdate.id);
 
     if (error) {
       showError('Görev güncellenirken bir hata oluştu.');
     } else {
-      showSuccess('Görev durumu güncellendi.');
+      showSuccess('Görev reddedildi.');
       fetchTasks();
     }
+    setScoreEntryOpen(false);
     setTaskToUpdate(null);
-    setConfirmDialogOpen(false);
+  };
+
+  const handleScoreSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskToUpdate || !taskToUpdate.question_count) return;
+
+    const correct = Number(scoreData.correct) || 0;
+    const empty = Number(scoreData.empty) || 0;
+    const wrong = Number(scoreData.wrong) || 0;
+    const total = correct + empty + wrong;
+
+    if (total > taskToUpdate.question_count) {
+      showError(t('coach.scoreEntry.validationError', { count: taskToUpdate.question_count }));
+      return;
+    }
+
+    const { error } = await supabase
+      .from('tasks')
+      .update({ 
+        status: 'completed',
+        correct_count: correct,
+        empty_count: empty,
+        wrong_count: wrong,
+      })
+      .eq('id', taskToUpdate.id);
+
+    if (error) {
+      showError('Görev güncellenirken bir hata oluştu.');
+    } else {
+      showSuccess('Görev onaylandı ve puanlar kaydedildi.');
+      fetchTasks();
+    }
+    setScoreEntryOpen(false);
+    setTaskToUpdate(null);
   };
 
   const handleOpenDeleteDialog = (task: Task) => {
@@ -218,21 +272,32 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   }, [tasks]);
 
   const analyticsData = useMemo(() => {
-    const questionTasks = tasks.filter(task => task.task_type === 'soru_cozumu' && task.question_count && task.status === 'completed');
+    const questionTasks = tasks.filter(task => 
+      task.task_type === 'soru_cozumu' && 
+      task.status === 'completed' &&
+      task.correct_count != null &&
+      task.empty_count != null &&
+      task.wrong_count != null
+    );
+
     const dataBySubject = questionTasks.reduce((acc, task) => {
-      if (!acc[task.subject]) {
-        acc[task.subject] = {};
-      }
+      if (!acc[task.subject]) acc[task.subject] = {};
       if (!acc[task.subject][task.topic]) {
-        acc[task.subject][task.topic] = 0;
+        acc[task.subject][task.topic] = { correct: 0, empty: 0, wrong: 0 };
       }
-      acc[task.subject][task.topic] += task.question_count!;
+      acc[task.subject][task.topic].correct += task.correct_count!;
+      acc[task.subject][task.topic].empty += task.empty_count!;
+      acc[task.subject][task.topic].wrong += task.wrong_count!;
       return acc;
-    }, {} as Record<string, Record<string, number>>);
+    }, {} as Record<string, Record<string, { correct: number; empty: number; wrong: number }>>);
 
     return Object.entries(dataBySubject).map(([subject, topics]) => ({
       subject,
-      data: Object.entries(topics).map(([topic, count]) => ({ topic, count })),
+      data: Object.entries(topics).map(([topic, counts]) => ({
+        topic,
+        ...counts,
+        net: (counts.correct - counts.wrong / 3).toFixed(2),
+      })),
     }));
   }, [tasks]);
 
@@ -314,7 +379,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                           )}
                           {otherTasks.map(task => (
                             <div key={task.id} className={`flex items-center justify-between p-3 rounded-md ${getStatusClass(task.status)}`}>
-                              <div onClick={() => handleTaskClick(task)} className={`flex-grow ${task.status === 'pending' ? 'cursor-pointer hover:opacity-80' : ''}`}>
+                              <div className="flex-grow">
                                 <p className="font-bold">{`${task.subject}: ${task.topic}`}</p>
                                 <p className="text-xs font-semibold mt-1 capitalize">{t(getStatusTranslationKey(task.status))}</p>
                               </div>
@@ -344,7 +409,11 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                             <XAxis dataKey="topic" angle={-45} textAnchor="end" height={100} interval={0} tick={{ fontSize: 12 }} />
                             <YAxis />
                             <Tooltip />
-                            <Bar dataKey="count" fill="var(--primary)" name={t('coach.questionCount')} />
+                            <Bar dataKey="correct" stackId="a" fill="#22c55e" name={t('coach.scoreEntry.correct')} />
+                            <Bar dataKey="wrong" stackId="a" fill="#ef4444" name={t('coach.scoreEntry.wrong')} />
+                            <Bar dataKey="empty" stackId="a" fill="#3b82f6" name={t('coach.scoreEntry.empty')}>
+                                <LabelList dataKey="net" position="center" fill="#ffffff" fontWeight="bold" formatter={(value: number) => `Net: ${value}`} />
+                            </Bar>
                           </BarChart>
                         </ResponsiveContainer>
                       </CardContent>
@@ -360,19 +429,41 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <AlertDialog open={isConfirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t(taskToUpdate?.status === 'pending_approval' ? 'coach.approval.title' : 'coach.taskCompletion.title')}</AlertDialogTitle>
-            <AlertDialogDescription>{t(taskToUpdate?.status === 'pending_approval' ? 'coach.approval.description' : 'coach.taskCompletion.description')}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setTaskToUpdate(null)}>{t('coach.cancel')}</AlertDialogCancel>
-            <Button variant="destructive" onClick={() => handleConfirmStatusUpdate('not_completed')}>{t(taskToUpdate?.status === 'pending_approval' ? 'coach.approval.reject' : 'coach.taskCompletion.notCompleted')}</Button>
-            <AlertDialogAction onClick={() => handleConfirmStatusUpdate('completed')}>{t(taskToUpdate?.status === 'pending_approval' ? 'coach.approval.approve' : 'coach.taskCompletion.confirm')}</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      
+      <Dialog open={isScoreEntryOpen} onOpenChange={setScoreEntryOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>{t('coach.scoreEntry.title')}</DialogTitle>
+                <DialogDescription>
+                    {t('coach.scoreEntry.description', { 
+                        topic: taskToUpdate?.topic, 
+                        count: taskToUpdate?.question_count 
+                    })}
+                </DialogDescription>
+            </DialogHeader>
+            <form id="score-form" onSubmit={handleScoreSubmit}>
+                <div className="grid grid-cols-3 gap-4 py-4">
+                    <div className="space-y-2">
+                        <Label>{t('coach.scoreEntry.correct')}</Label>
+                        <NumberInput value={scoreData.correct} onChange={(val) => setScoreData(s => ({...s, correct: val}))} required />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>{t('coach.scoreEntry.wrong')}</Label>
+                        <NumberInput value={scoreData.wrong} onChange={(val) => setScoreData(s => ({...s, wrong: val}))} required />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>{t('coach.scoreEntry.empty')}</Label>
+                        <NumberInput value={scoreData.empty} onChange={(val) => setScoreData(s => ({...s, empty: val}))} required />
+                    </div>
+                </div>
+            </form>
+            <DialogFooter>
+                <Button variant="destructive" onClick={handleRejectTask}>{t('coach.approval.reject')}</Button>
+                <Button type="submit" form="score-form">{t('coach.scoreEntry.saveAndApprove')}</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

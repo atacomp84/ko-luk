@@ -111,6 +111,15 @@
       "description": "Do you approve this task completed by the student?",
       "approve": "Approve",
       "reject": "Reject"
+    },
+    "scoreEntry": {
+      "title": "Score Entry",
+      "description": "Enter the results for the {{count}}-question task on '{{topic}}'.",
+      "correct": "Correct",
+      "wrong": "Wrong",
+      "empty": "Empty",
+      "saveAndApprove": "Save and Approve",
+      "validationError": "The total number of answers cannot exceed the question count ({{count}})."
     }
   },
   "student": {

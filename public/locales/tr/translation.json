@@ -111,6 +111,15 @@
       "description": "Öğrencinin tamamladığı bu görevi onaylıyor musunuz?",
       "approve": "Onayla",
       "reject": "Reddet"
+    },
+    "scoreEntry": {
+      "title": "Puan Girişi",
+      "description": "'{{topic}}' konusundaki {{count}} soruluk görevin sonuçlarını girin.",
+      "correct": "Doğru",
+      "wrong": "Yanlış",
+      "empty": "Boş",
+      "saveAndApprove": "Kaydet ve Onayla",
+      "validationError": "Toplam sayı ({{count}}) soru adedini geçemez."
     }
   },
   "student": {
