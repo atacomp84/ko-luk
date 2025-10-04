@@ -585,12 +585,11 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
             </Tabs>
           </div>
           
-          <div className="flex-1 overflow-y-auto mt-4">
-            <Tabs value={activeTab}>
-                <TabsContent value="addTask">
-                <div className="grid md:grid-cols-2 gap-6 px-6 py-4">
-                    <form id="add-task-form" onSubmit={handleAddTask}>
-                        <div className="space-y-6">
+          <div className="flex-1 overflow-hidden mt-4">
+            <Tabs value={activeTab} className="h-full">
+                <TabsContent value="addTask" className="h-full m-0">
+                    <div className="grid md:grid-cols-2 gap-6 px-6 py-4 h-full">
+                        <form id="add-task-form" onSubmit={handleAddTask} className="space-y-6">
                             <div className="space-y-2">
                                 <h3 className="font-semibold flex items-center gap-2">
                                     <BookMarked className="h-5 w-5 text-primary" />
@@ -658,144 +657,143 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                                     </div>
                                 )
                             )}
+                        </form>
+                        <div className="space-y-4 flex flex-col h-full overflow-hidden">
+                            <div className="flex items-center justify-between">
+                                <h3 className="font-semibold flex items-center gap-2">
+                                    <ClipboardList className="h-5 w-5 text-primary" />
+                                    {t('coach.assignedTasks')}
+                                </h3>
+                                <Button variant="ghost" size="icon" onClick={() => setOpenCollapsibles([])}>
+                                    <ChevronsDownUp className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+                                {loading ? <Skeleton className="h-24 w-full" /> : Object.keys(groupedTasks).length > 0 ? (
+                                    Object.entries(groupedTasks).map(([subject, subjectTasks]) => {
+                                    const pendingCount = subjectTasks.filter(t => t.status === 'pending' || t.status === 'pending_approval').length;
+                                    const completedCount = subjectTasks.filter(t => t.status === 'completed').length;
+                                    const Icon = getSubjectIconComponent(subject);
+                                    const colorClass = getSubjectColorClass(subject);
+                                    return (
+                                        <Collapsible key={subject} open={openCollapsibles.includes(subject)} onOpenChange={(isOpen) => setOpenCollapsibles(prev => isOpen ? [...prev, subject] : prev.filter(s => s !== subject))} className="space-y-2">
+                                        <CollapsibleTrigger className="flex justify-between items-center w-full p-2 bg-muted rounded-md">
+                                            <div className="flex items-center gap-2">
+                                                <Icon className={`h-5 w-5 ${colorClass}`} />
+                                                <span className="font-bold">{subject}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 font-mono text-xs">
+                                                {pendingCount > 0 && <Badge className="bg-yellow-400 text-yellow-900 hover:bg-yellow-400 rounded-full h-5 w-5 flex items-center justify-center p-0">{pendingCount}</Badge>}
+                                                {completedCount > 0 && <Badge className="bg-green-500 text-white hover:bg-green-500 rounded-full h-5 w-5 flex items-center justify-center p-0">{completedCount}</Badge>}
+                                            </div>
+                                        </CollapsibleTrigger>
+                                        <CollapsibleContent className="space-y-2 pl-4 pt-2">
+                                            {subjectTasks.map(task => (
+                                            <Card key={task.id} className={`cursor-pointer hover:shadow-md transition-shadow rounded-lg ${getStatusBorderClass(task.status)}`} onClick={() => handleTaskClick(task)}>
+                                                <CardContent className="p-3 flex items-center gap-4">
+                                                    {getTaskTypeIcon(task)}
+                                                    <div className="flex-grow">
+                                                        <p className="font-semibold">{formatTaskTitle(task)}</p>
+                                                        <Badge className={`mt-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border-0 ${getStatusBadgeClass(task.status)}`}>
+                                                            {t(getStatusTranslationKey(task.status))}
+                                                        </Badge>
+                                                    </div>
+                                                    <Button variant="ghost" size="icon" className="ml-2 shrink-0 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(task); }}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </CardContent>
+                                            </Card>
+                                            ))}
+                                        </CollapsibleContent>
+                                        </Collapsible>
+                                    )
+                                    })
+                                ) : (<p className="text-center text-muted-foreground py-4">{t('coach.noAssignedTasks')}</p>)}
+                            </div>
                         </div>
-                    </form>
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h3 className="font-semibold flex items-center gap-2">
-                                <ClipboardList className="h-5 w-5 text-primary" />
-                                {t('coach.assignedTasks')}
-                            </h3>
-                            <Button variant="ghost" size="icon" onClick={() => setOpenCollapsibles([])}>
+                    </div>
+                </TabsContent>
+                <TabsContent value="analytics" className="h-full overflow-y-auto p-6 space-y-4">
+                    <Tabs defaultValue="weekly" onValueChange={(value) => setTimePeriod(value as TimePeriod)}>
+                        <div className="flex justify-between items-center">
+                        <TabsList>
+                            <TabsTrigger value="daily">{t('coach.timeFilters.daily')}</TabsTrigger>
+                            <TabsTrigger value="weekly">{t('coach.timeFilters.weekly')}</TabsTrigger>
+                            <TabsTrigger value="monthly">{t('coach.timeFilters.monthly')}</TabsTrigger>
+                            <TabsTrigger value="all">{t('coach.timeFilters.all')}</TabsTrigger>
+                        </TabsList>
+                        <div className="flex items-center gap-2">
+                            <Button onClick={handleGenerateReport}>
+                            <Download className="mr-2 h-4 w-4" />
+                            {t('coach.getReport')}
+                            </Button>
+                            <Button variant="outline" size="icon" onClick={() => setOpenAccordions([])}>
                                 <ChevronsDownUp className="h-4 w-4" />
                             </Button>
                         </div>
-                        <div className="space-y-2">
-                        {loading ? <Skeleton className="h-24 w-full" /> : Object.keys(groupedTasks).length > 0 ? (
-                            Object.entries(groupedTasks).map(([subject, subjectTasks]) => {
-                            const pendingCount = subjectTasks.filter(t => t.status === 'pending' || t.status === 'pending_approval').length;
-                            const completedCount = subjectTasks.filter(t => t.status === 'completed').length;
-                            const Icon = getSubjectIconComponent(subject);
-                            const colorClass = getSubjectColorClass(subject);
-                            return (
-                                <Collapsible key={subject} open={openCollapsibles.includes(subject)} onOpenChange={(isOpen) => setOpenCollapsibles(prev => isOpen ? [...prev, subject] : prev.filter(s => s !== subject))} className="space-y-2">
-                                <CollapsibleTrigger className="flex justify-between items-center w-full p-2 bg-muted rounded-md">
-                                    <div className="flex items-center gap-2">
-                                        <Icon className={`h-5 w-5 ${colorClass}`} />
-                                        <span className="font-bold">{subject}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 font-mono text-xs">
-                                        {pendingCount > 0 && <Badge className="bg-yellow-400 text-yellow-900 hover:bg-yellow-400 rounded-full h-5 w-5 flex items-center justify-center p-0">{pendingCount}</Badge>}
-                                        {completedCount > 0 && <Badge className="bg-green-500 text-white hover:bg-green-500 rounded-full h-5 w-5 flex items-center justify-center p-0">{completedCount}</Badge>}
-                                    </div>
-                                </CollapsibleTrigger>
-                                <CollapsibleContent className="space-y-2 pl-4 pt-2">
-                                    {subjectTasks.map(task => (
-                                    <Card key={task.id} className={`cursor-pointer hover:shadow-md transition-shadow rounded-lg ${getStatusBorderClass(task.status)}`} onClick={() => handleTaskClick(task)}>
-                                        <CardContent className="p-3 flex items-center gap-4">
-                                            {getTaskTypeIcon(task)}
-                                            <div className="flex-grow">
-                                                <p className="font-semibold">{formatTaskTitle(task)}</p>
-                                                <Badge className={`mt-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border-0 ${getStatusBadgeClass(task.status)}`}>
-                                                    {t(getStatusTranslationKey(task.status))}
-                                                </Badge>
-                                            </div>
-                                            <Button variant="ghost" size="icon" className="ml-2 shrink-0 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(task); }}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </CardContent>
-                                    </Card>
-                                    ))}
-                                </CollapsibleContent>
-                                </Collapsible>
-                            )
-                            })
-                        ) : (<p className="text-center text-muted-foreground py-4">{t('coach.noAssignedTasks')}</p>)}
                         </div>
-                    </div>
-                </div>
-                </TabsContent>
-                <TabsContent value="analytics" className="p-6 space-y-4">
-                <Tabs defaultValue="weekly" onValueChange={(value) => setTimePeriod(value as TimePeriod)}>
-                    <div className="flex justify-between items-center">
-                    <TabsList>
-                        <TabsTrigger value="daily">{t('coach.timeFilters.daily')}</TabsTrigger>
-                        <TabsTrigger value="weekly">{t('coach.timeFilters.weekly')}</TabsTrigger>
-                        <TabsTrigger value="monthly">{t('coach.timeFilters.monthly')}</TabsTrigger>
-                        <TabsTrigger value="all">{t('coach.timeFilters.all')}</TabsTrigger>
-                    </TabsList>
-                    <div className="flex items-center gap-2">
-                        <Button onClick={handleGenerateReport}>
-                        <Download className="mr-2 h-4 w-4" />
-                        {t('coach.getReport')}
-                        </Button>
-                        <Button variant="outline" size="icon" onClick={() => setOpenAccordions([])}>
-                            <ChevronsDownUp className="h-4 w-4" />
-                        </Button>
-                    </div>
-                    </div>
-                    <div className="mt-4">
-                    {loading ? <Skeleton className="h-full w-full" /> : (
-                        <Accordion type="multiple" value={openAccordions} onValueChange={setOpenAccordions} className="w-full space-y-2">
-                        {readingAnalyticsData.length > 0 && (
-                            <AccordionItem value="kitap-okuma" className="border rounded-md px-4">
-                                <AccordionTrigger className="hover:no-underline">
-                                    <div className="flex items-center gap-2">
-                                        <BookOpen className="h-6 w-6 text-orange-500" />
-                                        <span className="font-bold text-lg">Kitap Okuma Performansı</span>
-                                    </div>
-                                </AccordionTrigger>
-                                <AccordionContent>
-                                    <ResponsiveContainer width="100%" height={300}>
-                                    <BarChart data={readingAnalyticsData} margin={{ top: 20, right: 20, left: -10, bottom: 20 }}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="week" />
-                                        <YAxis />
-                                        <Tooltip />
-                                        <Bar dataKey="pages" fill="#f97316" name="Okunan Sayfa">
-                                            <LabelList dataKey="pages" position="top" />
-                                        </Bar>
-                                    </BarChart>
-                                    </ResponsiveContainer>
-                                </AccordionContent>
-                            </AccordionItem>
-                        )}
-                        {analyticsData.length > 0 ? (
-                            analyticsData.map(({ subject, data }) => {
-                                const Icon = getSubjectIconComponent(subject);
-                                const colorClass = getSubjectColorClass(subject);
-                                return (
-                                <AccordionItem value={subject} key={subject} className="border rounded-md px-4">
+                        <div className="mt-4">
+                        {loading ? <Skeleton className="h-full w-full" /> : (
+                            <Accordion type="multiple" value={openAccordions} onValueChange={setOpenAccordions} className="w-full space-y-2">
+                            {readingAnalyticsData.length > 0 && (
+                                <AccordionItem value="kitap-okuma" className="border rounded-md px-4">
                                     <AccordionTrigger className="hover:no-underline">
                                         <div className="flex items-center gap-2">
-                                            <Icon className={`h-6 w-6 ${colorClass}`} />
-                                            <span className="font-bold text-lg">{subject}</span>
+                                            <BookOpen className="h-6 w-6 text-orange-500" />
+                                            <span className="font-bold text-lg">Kitap Okuma Performansı</span>
                                         </div>
                                     </AccordionTrigger>
                                     <AccordionContent>
-                                        <ResponsiveContainer width="100%" height={400}>
-                                            <BarChart data={data} margin={{ top: 20, right: 20, left: -10, bottom: 80 }}>
+                                        <ResponsiveContainer width="100%" height={300}>
+                                        <BarChart data={readingAnalyticsData} margin={{ top: 20, right: 20, left: -10, bottom: 20 }}>
                                             <CartesianGrid strokeDasharray="3 3" />
-                                            <XAxis dataKey="topic" height={100} interval={0} tick={<CustomizedAxisTick />} axisLine={false} tickLine={false} />
+                                            <XAxis dataKey="week" />
                                             <YAxis />
                                             <Tooltip />
-                                            <Bar dataKey="correct" stackId="a" fill="#22c55e" name={t('coach.scoreEntry.correct')} />
-                                            <Bar dataKey="wrong" stackId="a" fill="#ef4444" name={t('coach.scoreEntry.wrong')} />
-                                            <Bar dataKey="empty" stackId="a" fill="#3b82f6" name={t('coach.scoreEntry.empty')}>
-                                                <LabelList dataKey="net" position="top" offset={5} fill="hsl(var(--foreground))" fontSize={12} fontWeight="bold" formatter={(value: number) => `Net: ${value.toFixed(2)}`} />
+                                            <Bar dataKey="pages" fill="#f97316" name="Okunan Sayfa">
+                                                <LabelList dataKey="pages" position="top" />
                                             </Bar>
-                                            </BarChart>
+                                        </BarChart>
                                         </ResponsiveContainer>
                                     </AccordionContent>
                                 </AccordionItem>
-                            )})
-                        ) : readingAnalyticsData.length === 0 ? (
-                            <div className="text-center text-muted-foreground py-10">{t('coach.noTasksForChart')}</div>
-                        ) : null}
-                        </Accordion>
-                    )}
-                    </div>
-                </Tabs>
+                            )}
+                            {analyticsData.length > 0 ? (
+                                analyticsData.map(({ subject, data }) => {
+                                    const Icon = getSubjectIconComponent(subject);
+                                    const colorClass = getSubjectColorClass(subject);
+                                    return (
+                                    <AccordionItem value={subject} key={subject} className="border rounded-md px-4">
+                                        <AccordionTrigger className="hover:no-underline">
+                                            <div className="flex items-center gap-2">
+                                                <Icon className={`h-6 w-6 ${colorClass}`} />
+                                                <span className="font-bold text-lg">{subject}</span>
+                                            </div>
+                                        </AccordionTrigger>
+                                        <AccordionContent>
+                                            <ResponsiveContainer width="100%" height={400}>
+                                                <BarChart data={data} margin={{ top: 20, right: 20, left: -10, bottom: 80 }}>
+                                                <CartesianGrid strokeDasharray="3 3" />
+                                                <XAxis dataKey="topic" height={100} interval={0} tick={<CustomizedAxisTick />} axisLine={false} tickLine={false} />
+                                                <YAxis />
+                                                <Tooltip />
+                                                <Bar dataKey="correct" stackId="a" fill="#22c55e" name={t('coach.scoreEntry.correct')} />
+                                                <Bar dataKey="wrong" stackId="a" fill="#ef4444" name={t('coach.scoreEntry.wrong')} />
+                                                <Bar dataKey="empty" stackId="a" fill="#3b82f6" name={t('coach.scoreEntry.empty')}>
+                                                    <LabelList dataKey="net" position="top" offset={5} fill="hsl(var(--foreground))" fontSize={12} fontWeight="bold" formatter={(value: number) => `Net: ${value.toFixed(2)}`} />
+                                                </Bar>
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                )})
+                            ) : readingAnalyticsData.length === 0 ? (
+                                <div className="text-center text-muted-foreground py-10">{t('coach.noTasksForChart')}</div>
+                            ) : null}
+                            </Accordion>
+                        )}
+                        </div>
+                    </Tabs>
                 </TabsContent>
             </Tabs>
           </div>
