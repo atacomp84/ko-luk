@@ -523,7 +523,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
+        <DialogContent className="max-w-4xl p-0">
           <DialogHeader className="px-6 pt-6">
             <div className="flex items-center gap-4">
                 <Avatar className="h-12 w-12">
@@ -547,12 +547,12 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                 </TabsList>
             </Tabs>
           </div>
-          <div className="flex-1 overflow-hidden mt-4">
-            <Tabs value={activeTab} className="h-full">
-                <TabsContent value="addTask" className="h-full overflow-hidden">
-                <div className="grid md:grid-cols-2 gap-6 px-6 py-4 h-full">
-                    <form id="add-task-form" onSubmit={handleAddTask} className="flex flex-col h-full">
-                        <div className="flex-1 space-y-6 overflow-y-auto pr-4 pb-4">
+          <div className="mt-4">
+            <Tabs value={activeTab}>
+                <TabsContent value="addTask">
+                <div className="grid md:grid-cols-2 gap-6 px-6 py-4">
+                    <form id="add-task-form" onSubmit={handleAddTask}>
+                        <div className="space-y-6">
                             <div className="space-y-2">
                                 <h3 className="font-semibold flex items-center gap-2">
                                     <BookMarked className="h-5 w-5 text-primary" />
@@ -622,7 +622,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                             )}
                         </div>
                     </form>
-                    <div className="space-y-4 flex flex-col overflow-hidden">
+                    <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <h3 className="font-semibold flex items-center gap-2">
                                 <ClipboardList className="h-5 w-5 text-primary" />
@@ -632,7 +632,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                                 <ChevronsDownUp className="h-4 w-4" />
                             </Button>
                         </div>
-                        <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+                        <div className="space-y-2">
                         {loading ? <Skeleton className="h-24 w-full" /> : Object.keys(groupedTasks).length > 0 ? (
                             Object.entries(groupedTasks).map(([subject, subjectTasks]) => {
                             const pendingCount = subjectTasks.filter(t => t.status === 'pending' || t.status === 'pending_approval').length;
@@ -677,7 +677,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                     </div>
                 </div>
                 </TabsContent>
-                <TabsContent value="analytics" className="h-full overflow-y-auto p-6 space-y-4">
+                <TabsContent value="analytics" className="p-6 space-y-4">
                 <Tabs defaultValue="weekly" onValueChange={(value) => setTimePeriod(value as TimePeriod)}>
                     <div className="flex justify-between items-center">
                     <TabsList>
@@ -761,7 +761,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                 </TabsContent>
             </Tabs>
           </div>
-          <DialogFooter className="px-6 pb-6 pt-4 border-t">
+          <DialogFooter className="px-6 pb-6 pt-4 border-t sticky bottom-0 bg-background z-10">
             <DialogClose asChild><Button type="button" variant="outline" onClick={onClose}>{t('coach.close')}</Button></DialogClose>
             {activeTab === 'addTask' && (
               <Button type="submit" form="add-task-form" disabled={isSubmitDisabled}>
