@@ -29,21 +29,49 @@ export const AddStudentDialog = ({ isOpen, onClose, onStudentAdded }: AddStudent
   useEffect(() => {
     if (isOpen) {
       const fetchUnassignedStudents = async () => {
+        console.log('[AddStudentDialog] Öğrenci ekleme diyalogu açıldı. Boştaki öğrenciler çekiliyor...');
         setLoading(true);
         
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, coach_student_pairs!left(*)')
-          .eq('role', 'student')
-          .is('coach_student_pairs.id', null);
+        // Adım 1: Zaten bir koça atanmış olan tüm öğrenci ID'lerini çek.
+        console.log('[AddStudentDialog] Adım 1: Zaten bir koça atanmış olan tüm öğrenci ID\'leri çekiliyor.');
+        const { data: assignedPairs, error: pairsError } = await supabase
+          .from('coach_student_pairs')
+          .select('student_id');
 
-        if (error) {
+        if (pairsError) {
+          console.error('[AddStudentDialog] Atanmış öğrenci çiftleri çekilirken hata:', pairsError.message);
+          showError('Atanmış öğrenciler getirilirken bir hata oluştu.');
+          setLoading(false);
+          return;
+        }
+
+        const assignedStudentIds = assignedPairs.map(p => p.student_id);
+        console.log('[AddStudentDialog] Atanmış öğrenci ID\'leri:', assignedStudentIds);
+
+        // Adım 2: Atanmış öğrenci listesinde OLMAYAN tüm öğrenci profillerini çek.
+        console.log('[AddStudentDialog] Adım 2: Atanmış öğrenci listesinde OLMAYAN tüm öğrenci profilleri çekiliyor.');
+        const query = supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
+          .eq('role', 'student');
+        
+        if (assignedStudentIds.length > 0) {
+          query.not('id', 'in', `(${assignedStudentIds.join(',')})`);
+        }
+
+        const { data: unassignedStudentsData, error: studentsError } = await query;
+
+        if (studentsError) {
+          console.error('[AddStudentDialog] Boştaki öğrenciler çekilirken hata:', studentsError.message);
           showError('Boştaki öğrenciler getirilirken bir hata oluştu.');
+          setUnassignedStudents([]);
         } else {
-          setUnassignedStudents(data as Student[]);
+          console.log('[AddStudentDialog] DÜZELTME TEYİDİ: Boştaki öğrenciler başarıyla çekildi:', unassignedStudentsData);
+          setUnassignedStudents(unassignedStudentsData as Student[]);
         }
         
         setLoading(false);
+        console.log('[AddStudentDialog] Öğrenci çekme işlemi tamamlandı.');
       };
       fetchUnassignedStudents();
     }

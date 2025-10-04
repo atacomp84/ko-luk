@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Rocket } from "lucide-react";
-import { showSuccess } from "@/utils/toast";
+import { showError, showSuccess } from "@/utils/toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -58,8 +58,9 @@ export default function AuthPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[AuthPage] Kayıt işlemi başlatıldı.');
     setLoading(true);
-    setError(null);
+    setError(null); // Önceki giriş hatalarını temizle
     const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
@@ -73,15 +74,23 @@ export default function AuthPage() {
     });
 
     if (signUpError) {
+      console.error('[AuthPage] Kayıt sırasında hata:', signUpError.message);
       setLoading(false);
-      setError(signUpError.message);
+      showError(signUpError.message); // Hata durumunda popup göster
     } else {
+      console.log('[AuthPage] Kayıt başarılı. Oturum kapatılıyor ve giriş sekmesine yönlendiriliyor.');
       await supabase.auth.signOut();
       setLoading(false);
-      showSuccess(t('auth.registerSuccess'));
+      showSuccess(t('auth.registerSuccess')); // Başarı durumunda popup göster
       setPassword("");
       setActiveTab("login");
+      console.log(`[AuthPage] Giriş sekmesine geçildi. E-posta alanı "${email}" olarak kalacak.`);
     }
+  };
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setError(null); // Sekme değiştirildiğinde hata mesajını temizle
   };
 
   if (authLoading || session) {
@@ -96,7 +105,7 @@ export default function AuthPage() {
       </div>
       <div className="w-full max-w-md space-y-4 text-center">
         <Rocket className="h-12 w-12 text-primary mx-auto" />
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login">{t('auth.login')}</TabsTrigger>
             <TabsTrigger value="register">{t('auth.register')}</TabsTrigger>
@@ -203,13 +212,6 @@ export default function AuthPage() {
                         </div>
                       </RadioGroup>
                     </div>
-                    {error && (
-                      <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>{t('auth.errorTitle')}</AlertTitle>
-                        <AlertDescription>{error}</AlertDescription>
-                      </Alert>
-                    )}
                     <Button type="submit" className="w-full" disabled={loading}>
                       {loading ? t('auth.registering') : t('auth.registerButton')}
                     </Button>
