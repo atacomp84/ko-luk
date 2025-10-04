@@ -65,6 +65,7 @@
     "topicExplanation": "Konu Anlatımı",
     "questionSolving": "Soru Çözümü",
     "questionCount": "Soru Adedi",
+    "bookTitleLabel": "Kitap Adı (İsteğe Bağlı)",
     "rewardManagementTitle": "{{firstName}} {{lastName}} - Ödül Yönetimi",
     "rewardManagementDescription": "Bu öğrenciye yeni ödüller gönderin ve mevcut ödüllerini görüntüleyin.",
     "sendNewReward": "Yeni Ödül Gönder",

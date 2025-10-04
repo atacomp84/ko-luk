@@ -14,7 +14,7 @@ import { NumberInput } from '../ui/NumberInput';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Book, Calculator, FlaskConical, Globe, Palette, MessageSquare, History, Youtube, ChevronsDownUp, BookMarked, ClipboardList } from 'lucide-react';
+import { Trash2, Book, Calculator, FlaskConical, Globe, Palette, MessageSquare, History, Youtube, ChevronsDownUp, BookMarked, ClipboardList, BookOpen } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -54,6 +54,7 @@ interface TaskManagementDialogProps {
 
 const getSubjectIconComponent = (subject: string): React.ElementType => {
     switch (subject) {
+        case "Kitap Okuma": return BookOpen;
         case "Türkçe": return Book;
         case "Matematik": return Calculator;
         case "Fen Bilimleri": return FlaskConical;
@@ -66,6 +67,7 @@ const getSubjectIconComponent = (subject: string): React.ElementType => {
 
 const getSubjectColorClass = (subject: string): string => {
     switch (subject) {
+        case "Kitap Okuma": return "text-orange-500";
         case "Türkçe": return "text-blue-500";
         case "Matematik": return "text-green-500";
         case "Fen Bilimleri": return "text-purple-500";
@@ -198,7 +200,10 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!student || !selectedSubject || !selectedTopic) return;
-    if (taskType === 'soru_cozumu' && (questionCount === '' || Number(questionCount) <= 0)) {
+    
+    const isReadingTask = selectedSubject === 'Kitap Okuma';
+
+    if (!isReadingTask && taskType === 'soru_cozumu' && (questionCount === '' || Number(questionCount) <= 0)) {
         showError('Lütfen geçerli bir soru adedi girin.');
         return;
     }
@@ -211,9 +216,9 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       student_id: student.id,
       subject: selectedSubject,
       topic: selectedTopic,
-      task_type: taskType,
-      description: taskType === 'konu_anlatimi' ? (description || null) : null,
-      question_count: taskType === 'soru_cozumu' ? Number(questionCount) : null,
+      task_type: isReadingTask ? 'kitap_okuma' : taskType,
+      description: (isReadingTask || taskType === 'konu_anlatimi') ? (description || null) : null,
+      question_count: !isReadingTask && taskType === 'soru_cozumu' ? Number(questionCount) : null,
       status: 'pending',
     };
 
@@ -335,6 +340,13 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   };
 
   const formatTaskTitle = (task: Task) => {
+    if (task.subject === 'Kitap Okuma') {
+        let title = `${task.subject}: ${task.topic}`;
+        if (task.description) {
+            title += ` (${task.description})`;
+        }
+        return title;
+    }
     let title = `${task.topic}`;
     if (task.task_type === 'soru_cozumu' && task.question_count) {
       title += ` (${task.question_count} ${t('coach.questionSolving')})`;
@@ -345,21 +357,23 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   };
 
   const topicAssignmentStats = useMemo(() => {
-    const stats: Record<string, { explanations: number; questions: number }> = {};
+    const stats: Record<string, { explanations: number; questions: number; readings: number }> = {};
     tasks.forEach(task => {
         if (!stats[task.topic]) {
-            stats[task.topic] = { explanations: 0, questions: 0 };
+            stats[task.topic] = { explanations: 0, questions: 0, readings: 0 };
         }
         if (task.task_type === 'konu_anlatimi') {
             stats[task.topic].explanations += 1;
         } else if (task.task_type === 'soru_cozumu' && task.question_count) {
             stats[task.topic].questions += task.question_count;
+        } else if (task.task_type === 'kitap_okuma') {
+            stats[task.topic].readings += 1;
         }
     });
     return stats;
   }, [tasks]);
 
-  const isSubmitDisabled = !selectedTopic || (taskType === 'soru_cozumu' && (questionCount === '' || Number(questionCount) <= 0));
+  const isSubmitDisabled = !selectedTopic || (selectedSubject !== 'Kitap Okuma' && taskType === 'soru_cozumu' && (questionCount === '' || Number(questionCount) <= 0));
 
   const analyticsData = useMemo(() => {
     const questionTasks = tasks.filter(task => 
@@ -483,6 +497,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                                             <div className="flex items-center justify-between w-full">
                                                 <span className={`font-medium ${getTopicColorClass(index)}`}>{topic}</span>
                                                 <div className="flex items-center gap-1.5">
+                                                    {topicAssignmentStats[topic]?.readings > 0 && <Badge variant="outline" className="bg-orange-100 text-orange-700">{topicAssignmentStats[topic].readings} Okuma</Badge>}
                                                     {topicAssignmentStats[topic]?.explanations > 0 && <Badge variant="outline" className="bg-blue-100 text-blue-700">{topicAssignmentStats[topic].explanations} Anlatım</Badge>}
                                                     {topicAssignmentStats[topic]?.questions > 0 && <Badge variant="outline" className="bg-purple-100 text-purple-700">{topicAssignmentStats[topic].questions} Soru</Badge>}
                                                 </div>
@@ -492,7 +507,26 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                                   </Select>
                               </div>
                           </div>
-                          {selectedTopic && (<div className="space-y-6"><div className="space-y-2"><h3 className="font-semibold">{t('coach.selectTaskType')}</h3><RadioGroup value={taskType} onValueChange={(v: 'konu_anlatimi' | 'soru_cozumu') => setTaskType(v)}><div className="flex items-center space-x-2"><RadioGroupItem value="konu_anlatimi" id="r1" /><Label htmlFor="r1">{t('coach.topicExplanation')}</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="soru_cozumu" id="r2" /><Label htmlFor="r2">{t('coach.questionSolving')}</Label></div></RadioGroup></div>{taskType === 'soru_cozumu' && (<div className="space-y-2"><Label htmlFor="question-count">{t('coach.questionCount')}</Label><NumberInput value={questionCount} onChange={setQuestionCount} required /></div>)}{taskType === 'konu_anlatimi' && (<div className="space-y-2"><div className="flex items-center justify-between"><Label htmlFor="description">{t('coach.taskDescriptionLabel')}</Label><Button asChild variant="ghost" size="icon"><a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer"><Youtube className="h-5 w-5 text-red-500" /></a></Button></div><Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Öğrenciye not veya video linki..." /></div>)}</div>)}
+                          {selectedTopic && (
+                            selectedSubject === 'Kitap Okuma' ? (
+                                <div className="space-y-2 pt-6">
+                                    <Label htmlFor="description">{t('coach.bookTitleLabel')}</Label>
+                                    <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Okunacak kitabın adı..." />
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    <div className="space-y-2">
+                                        <h3 className="font-semibold">{t('coach.selectTaskType')}</h3>
+                                        <RadioGroup value={taskType} onValueChange={(v: 'konu_anlatimi' | 'soru_cozumu') => setTaskType(v)}>
+                                            <div className="flex items-center space-x-2"><RadioGroupItem value="konu_anlatimi" id="r1" /><Label htmlFor="r1">{t('coach.topicExplanation')}</Label></div>
+                                            <div className="flex items-center space-x-2"><RadioGroupItem value="soru_cozumu" id="r2" /><Label htmlFor="r2">{t('coach.questionSolving')}</Label></div>
+                                        </RadioGroup>
+                                    </div>
+                                    {taskType === 'soru_cozumu' && (<div className="space-y-2"><Label htmlFor="question-count">{t('coach.questionCount')}</Label><NumberInput value={questionCount} onChange={setQuestionCount} required /></div>)}
+                                    {taskType === 'konu_anlatimi' && (<div className="space-y-2"><div className="flex items-center justify-between"><Label htmlFor="description">{t('coach.taskDescriptionLabel')}</Label><Button asChild variant="ghost" size="icon"><a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer"><Youtube className="h-5 w-5 text-red-500" /></a></Button></div><Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Öğrenciye not veya video linki..." /></div>)}
+                                </div>
+                            )
+                          )}
                       </div>
                   </form>
                   <div className="space-y-4 flex flex-col overflow-hidden">

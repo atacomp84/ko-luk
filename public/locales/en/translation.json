@@ -65,6 +65,7 @@
     "topicExplanation": "Topic Explanation",
     "questionSolving": "Question Solving",
     "questionCount": "Number of Questions",
+    "bookTitleLabel": "Book Title (Optional)",
     "rewardManagementTitle": "{{firstName}} {{lastName}} - Reward Management",
     "rewardManagementDescription": "Send new rewards and view current rewards for this student.",
     "sendNewReward": "Send New Reward",

@@ -5,6 +5,16 @@ export interface Subject {
 
 export const lgsSubjects: Subject[] = [
   {
+    name: "Kitap Okuma",
+    topics: [
+      "10 Sayfa",
+      "20 Sayfa",
+      "30 Sayfa",
+      "40 Sayfa",
+      "50 Sayfa",
+    ],
+  },
+  {
     name: "Türkçe",
     topics: [
       "Sözcükte Anlam",
