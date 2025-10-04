@@ -70,7 +70,21 @@
     "sendRewardButton": "Ödülü Gönder",
     "sentRewards": "Gönderilen Ödüller",
     "statusClaimed": "Kullanıldı",
-    "noSentRewards": "Henüz gönderilmiş bir ödül yok."
+    "noSentRewards": "Henüz gönderilmiş bir ödül yok.",
+    "deleteStudent": {
+      "step1": {
+        "title": "Emin misiniz?",
+        "description": "{{studentName}} adlı öğrenci ile eşleşmeniz kaldırılacaktır. Bu işlem sonrası artık öğrenciniz olmayacaktır. Devam etmek istiyor musunuz?",
+        "continue": "Devam Et"
+      },
+      "step2": {
+        "title": "Son Onay",
+        "description": "Bu işlem geri alınamaz. Öğrenciyi listenizden kaldırmak istediğinizden kesinlikle emin misiniz?",
+        "confirm": "Evet, Öğrenciyi Sil"
+      },
+      "success": "Öğrenci başarıyla silindi.",
+      "error": "Öğrenci silinirken bir hata oluştu."
+    }
   },
   "student": {
     "dashboardTitle": "Öğrenci Paneli",

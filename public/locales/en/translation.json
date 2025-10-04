@@ -70,7 +70,21 @@
     "sendRewardButton": "Send Reward",
     "sentRewards": "Sent Rewards",
     "statusClaimed": "Claimed",
-    "noSentRewards": "No rewards have been sent yet."
+    "noSentRewards": "No rewards have been sent yet.",
+    "deleteStudent": {
+      "step1": {
+        "title": "Are you sure?",
+        "description": "You will be unpaired from {{studentName}}. They will no longer be your student. Do you want to continue?",
+        "continue": "Continue"
+      },
+      "step2": {
+        "title": "Final Confirmation",
+        "description": "This action cannot be undone. Are you absolutely sure you want to remove this student?",
+        "confirm": "Yes, Delete Student"
+      },
+      "success": "Student removed successfully.",
+      "error": "An error occurred while removing the student."
+    }
   },
   "student": {
     "dashboardTitle": "Student Dashboard",
