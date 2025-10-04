@@ -713,29 +713,26 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                         </div>
                     </div>
                 </TabsContent>
-                <TabsContent value="analytics" className="h-full m-0 flex flex-col">
-                    <div className="px-6 pt-4 pb-2">
-                        <Tabs defaultValue="weekly" onValueChange={(value) => setTimePeriod(value as TimePeriod)}>
-                            <div className="flex justify-between items-center">
-                                <TabsList>
-                                    <TabsTrigger value="daily">{t('coach.timeFilters.daily')}</TabsTrigger>
-                                    <TabsTrigger value="weekly">{t('coach.timeFilters.weekly')}</TabsTrigger>
-                                    <TabsTrigger value="monthly">{t('coach.timeFilters.monthly')}</TabsTrigger>
-                                    <TabsTrigger value="all">{t('coach.timeFilters.all')}</TabsTrigger>
-                                </TabsList>
-                                <div className="flex items-center gap-2">
-                                    <Button onClick={handleGenerateReport}>
-                                    <Download className="mr-2 h-4 w-4" />
-                                    {t('coach.getReport')}
-                                    </Button>
-                                    <Button variant="outline" size="icon" onClick={() => setOpenAccordions([])}>
-                                        <ChevronsDownUp className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                        </Tabs>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-6">
+                <TabsContent value="analytics" className="h-full overflow-y-auto p-6 space-y-4">
+                    <Tabs defaultValue="weekly" onValueChange={(value) => setTimePeriod(value as TimePeriod)}>
+                        <div className="flex justify-between items-center">
+                        <TabsList>
+                            <TabsTrigger value="daily">{t('coach.timeFilters.daily')}</TabsTrigger>
+                            <TabsTrigger value="weekly">{t('coach.timeFilters.weekly')}</TabsTrigger>
+                            <TabsTrigger value="monthly">{t('coach.timeFilters.monthly')}</TabsTrigger>
+                            <TabsTrigger value="all">{t('coach.timeFilters.all')}</TabsTrigger>
+                        </TabsList>
+                        <div className="flex items-center gap-2">
+                            <Button onClick={handleGenerateReport}>
+                            <Download className="mr-2 h-4 w-4" />
+                            {t('coach.getReport')}
+                            </Button>
+                            <Button variant="outline" size="icon" onClick={() => setOpenAccordions([])}>
+                                <ChevronsDownUp className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        </div>
+                        <div className="mt-4">
                         {loading ? <Skeleton className="h-full w-full" /> : (
                             <Accordion type="multiple" value={openAccordions} onValueChange={setOpenAccordions} className="w-full space-y-2">
                             {readingAnalyticsData.length > 0 && (
@@ -795,7 +792,8 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                             ) : null}
                             </Accordion>
                         )}
-                    </div>
+                        </div>
+                    </Tabs>
                 </TabsContent>
             </Tabs>
           </div>
