@@ -114,6 +114,8 @@ const CustomizedAxisTick = (props: any) => {
 };
 
 export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagementDialogProps) => {
+  console.log('[TaskManagementDialog] Component rendered or re-rendered.');
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSubject, setSelectedSubject] = useState('');
@@ -138,7 +140,22 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   const { t, i18n } = useTranslation();
   const dateLocale = i18n.language === 'tr' ? tr : enUS;
 
+  useEffect(() => {
+    console.log('[TaskManagementDialog] State changed:', {
+      tasksCount: tasks.length,
+      loading,
+      selectedSubject,
+      selectedTopic,
+      taskType,
+      questionCount,
+      activeTab,
+      studentId: student?.id,
+      isOpen,
+    });
+  }, [tasks, loading, selectedSubject, selectedTopic, taskType, questionCount, activeTab, student, isOpen]);
+
   const resetForm = useCallback(() => {
+    console.log('[TaskManagementDialog] Resetting form.');
     setSelectedSubject('');
     setSelectedTopic('');
     setAvailableTopics([]);
@@ -148,7 +165,11 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   }, []);
 
   const fetchTasks = useCallback(async () => {
-    if (!student) return;
+    if (!student) {
+        console.log('[TaskManagementDialog] fetchTasks skipped: no student.');
+        return;
+    }
+    console.log(`[TaskManagementDialog] fetchTasks started for student ID: ${student.id}`);
     setLoading(true);
     const { data, error } = await supabase
       .from('tasks')
@@ -157,8 +178,10 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       .order('created_at', { ascending: false });
     
     if (error) {
+      console.error('[TaskManagementDialog] fetchTasks error:', error.message);
       showError('Görevler getirilirken hata oluştu.');
     } else {
+      console.log(`[TaskManagementDialog] fetchTasks success: fetched ${data.length} tasks.`);
       setTasks(data as Task[]);
     }
     setLoading(false);
@@ -180,9 +203,11 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   }, [groupedTasks]);
 
   useEffect(() => {
+    console.log(`[TaskManagementDialog] Effect for isOpen/student triggered. isOpen: ${isOpen}, studentId: ${student?.id}`);
     if (isOpen && student) {
       fetchTasks();
     } else {
+      console.log('[TaskManagementDialog] Effect for isOpen/student: Resetting form because dialog is closed or no student.');
       resetForm();
     }
   }, [isOpen, student, fetchTasks, resetForm]);
@@ -208,6 +233,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[TaskManagementDialog] handleAddTask started.');
     if (!student || !selectedSubject || !selectedTopic) return;
     
     const isReadingTask = selectedSubject === 'Kitap Okuma';
@@ -230,12 +256,15 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       question_count: !isReadingTask && taskType === 'soru_cozumu' ? Number(questionCount) : null,
       status: 'pending',
     };
+    console.log('[TaskManagementDialog] handleAddTask: inserting task data:', taskData);
 
     const { error } = await supabase.from('tasks').insert(taskData);
 
     if (error) {
+      console.error('[TaskManagementDialog] handleAddTask error:', error.message);
       showError('Görev eklenirken bir hata oluştu.');
     } else {
+      console.log('[TaskManagementDialog] handleAddTask success.');
       showSuccess('Görev başarıyla eklendi.');
       resetForm();
       fetchTasks();
@@ -243,6 +272,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   };
 
   const handleTaskClick = (task: Task) => {
+    console.log('[TaskManagementDialog] handleTaskClick:', task);
     setTaskToUpdate(task);
     if (task.task_type === 'soru_cozumu') {
       setScoreData({ 
@@ -257,6 +287,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   };
 
   const handleSimpleApproval = async (newStatus: 'completed' | 'not_completed') => {
+    console.log(`[TaskManagementDialog] handleSimpleApproval: updating task ${taskToUpdate?.id} to status ${newStatus}`);
     if (!taskToUpdate) return;
     const { error } = await supabase
       .from('tasks')
@@ -275,6 +306,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
 
   const handleScoreSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log(`[TaskManagementDialog] handleScoreSubmit for task ${taskToUpdate?.id} with data:`, scoreData);
     if (!taskToUpdate || !taskToUpdate.question_count) return;
 
     const correct = Number(scoreData.correct) || 0;
@@ -333,6 +365,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
 
   const handleConfirmDelete = async () => {
     if (!taskToDelete) return;
+    console.log(`[TaskManagementDialog] handleConfirmDelete: deleting task ${taskToDelete.id}`);
     const { error } = await supabase
       .from('tasks')
       .delete()
@@ -518,13 +551,17 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     </div>;
   }
 
-  if (!student) return null;
+  if (!student) {
+    console.log('[TaskManagementDialog] Render skipped: no student.');
+    return null;
+  }
 
+  console.log('[TaskManagementDialog] Rendering main component body.');
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl p-0">
-          <DialogHeader className="px-6 pt-6">
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
             <div className="flex items-center gap-4">
                 <Avatar className="h-12 w-12">
                     <AvatarFallback className="bg-primary text-primary-foreground font-bold text-lg">
@@ -539,7 +576,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                 </div>
             </div>
           </DialogHeader>
-          <div className="px-6 mt-4">
+          <div className="px-6 pt-4">
             <Tabs defaultValue="addTask" value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="grid w-full grid-cols-2 bg-muted p-1 rounded-lg h-auto">
                     <TabsTrigger value="addTask" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md py-2">{t('coach.addNewTaskTab')}</TabsTrigger>
@@ -547,7 +584,8 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                 </TabsList>
             </Tabs>
           </div>
-          <div className="mt-4">
+          
+          <div className="flex-1 overflow-y-auto mt-4">
             <Tabs value={activeTab}>
                 <TabsContent value="addTask">
                 <div className="grid md:grid-cols-2 gap-6 px-6 py-4">
@@ -761,7 +799,8 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                 </TabsContent>
             </Tabs>
           </div>
-          <DialogFooter className="px-6 pb-6 pt-4 border-t sticky bottom-0 bg-background z-10">
+
+          <DialogFooter className="px-6 pb-6 pt-4 border-t">
             <DialogClose asChild><Button type="button" variant="outline" onClick={onClose}>{t('coach.close')}</Button></DialogClose>
             {activeTab === 'addTask' && (
               <Button type="submit" form="add-task-form" disabled={isSubmitDisabled}>
