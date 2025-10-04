@@ -65,11 +65,13 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   
   const [isScoreEntryOpen, setScoreEntryOpen] = useState(false);
+  const [isSimpleApprovalOpen, setSimpleApprovalOpen] = useState(false);
   const [scoreData, setScoreData] = useState<ScoreData>({ correct: '', empty: '', wrong: '' });
 
   const { t } = useTranslation();
 
   const resetForm = useCallback(() => {
+    console.log("[TaskManagement] Form sıfırlanıyor.");
     setSelectedSubject('');
     setSelectedTopic('');
     setAvailableTopics([]);
@@ -80,6 +82,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
 
   const fetchTasks = useCallback(async () => {
     if (!student) return;
+    console.log(`[TaskManagement] Adım 1: Görevler çekiliyor... Öğrenci ID: ${student.id}`);
     setLoading(true);
     const { data, error } = await supabase
       .from('tasks')
@@ -88,8 +91,10 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       .order('created_at', { ascending: false });
     
     if (error) {
+      console.error("[TaskManagement] HATA: Görevler çekilirken hata oluştu.", error);
       showError('Görevler getirilirken hata oluştu.');
     } else {
+      console.log("[TaskManagement] Adım 2: Görevler başarıyla çekildi.", data);
       setTasks(data as Task[]);
     }
     setLoading(false);
@@ -123,14 +128,22 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!student || !selectedSubject || !selectedTopic) return;
+    console.log("[TaskManagement] Adım 1: Yeni görev ekleme işlemi başlatıldı.");
+    if (!student || !selectedSubject || !selectedTopic) {
+      console.warn("[TaskManagement] Uyarı: Gerekli alanlar (öğrenci, ders, konu) doldurulmadığı için görev eklenemedi.");
+      return;
+    }
     if (taskType === 'soru_cozumu' && (questionCount === '' || Number(questionCount) <= 0)) {
         showError('Lütfen geçerli bir soru adedi girin.');
+        console.warn("[TaskManagement] Uyarı: Geçersiz soru adedi girildi.");
         return;
     }
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      console.error("[TaskManagement] HATA: Görev eklemek için kullanıcı oturumu bulunamadı.");
+      return;
+    }
 
     const taskData = {
       coach_id: user.id,
@@ -142,12 +155,15 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       question_count: taskType === 'soru_cozumu' ? Number(questionCount) : null,
       status: 'pending',
     };
+    console.log("[TaskManagement] Adım 2: Veritabanına gönderilecek görev verisi:", taskData);
 
     const { error } = await supabase.from('tasks').insert(taskData);
 
     if (error) {
+      console.error("[TaskManagement] HATA: Görev veritabanına eklenirken hata oluştu.", error);
       showError('Görev eklenirken bir hata oluştu.');
     } else {
+      console.log("[TaskManagement] Adım 3: Görev başarıyla eklendi. Form sıfırlanıyor ve görev listesi yenileniyor.");
       showSuccess('Görev başarıyla eklendi.');
       resetForm();
       fetchTasks();
@@ -155,28 +171,98 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   };
 
   const handleTaskClick = (task: Task) => {
+    console.log(`[TaskManagement] Onay bekleyen göreve tıklandı:`, task);
     if (task.status === 'pending_approval') {
       setTaskToUpdate(task);
       if (task.task_type === 'soru_cozumu') {
+        console.log("[TaskManagement] Görev türü 'Soru Çözümü'. Puan giriş ekranı açılıyor.");
         setScoreData({ correct: '', empty: '', wrong: '' });
         setScoreEntryOpen(true);
       } else {
-        // Simple approve/reject for topic explanation
-        // This can be a simple alert dialog, for now let's just handle score entry
+        console.log("[TaskManagement] Görev türü 'Konu Anlatımı'. Basit onay/red ekranı açılıyor.");
+        setSimpleApprovalOpen(true);
       }
+    } else {
+      console.log(`[TaskManagement] Tıklanan görevin durumu '${task.status}', işlem yapılmadı.`);
     }
   };
 
-  const handleRejectTask = async () => {
+  const handleSimpleApproval = async (newStatus: 'completed' | 'not_completed') => {
     if (!taskToUpdate) return;
+    console.log(`[TaskManagement] Basit onay işlemi: Görev ID ${taskToUpdate.id}, Yeni Durum: ${newStatus}`);
+    const { error } = await supabase
+      .from('tasks')
+      .update({ status: newStatus })
+      .eq('id', taskToUpdate.id);
+
+    if (error) {
+      console.error("[TaskManagement] HATA: Basit onay/red işlemi sırasında veritabanı hatası.", error);
+      showError('Görev güncellenirken bir hata oluştu.');
+    } else {
+      console.log("[TaskManagement] Başarılı: Görev durumu güncellendi. Liste yenileniyor.");
+      showSuccess(newStatus === 'completed' ? 'Görev onaylandı.' : 'Görev reddedildi.');
+      fetchTasks();
+    }
+    setSimpleApprovalOpen(false);
+    setTaskToUpdate(null);
+  };
+
+  const handleScoreSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskToUpdate || !taskToUpdate.question_count) return;
+    console.log("[TaskManagement] Adım 1: Puan giriş formu gönderildi. Görev:", taskToUpdate);
+
+    const correct = Number(scoreData.correct) || 0;
+    const empty = Number(scoreData.empty) || 0;
+    const wrong = Number(scoreData.wrong) || 0;
+    const total = correct + empty + wrong;
+    console.log(`[TaskManagement] Adım 2: Girilen değerler - Doğru: ${correct}, Yanlış: ${wrong}, Boş: ${empty}, Toplam: ${total}`);
+
+    if (total > taskToUpdate.question_count) {
+      console.warn(`[TaskManagement] UYARI: Doğrulama hatası. Toplam (${total}) > Soru Sayısı (${taskToUpdate.question_count})`);
+      showError(t('coach.scoreEntry.validationError', { count: taskToUpdate.question_count }));
+      return;
+    }
+    console.log("[TaskManagement] Adım 3: Doğrulama başarılı.");
+
+    const updateData = { 
+      status: 'completed',
+      correct_count: correct,
+      empty_count: empty,
+      wrong_count: wrong,
+    };
+    console.log("[TaskManagement] Adım 4: Veritabanına gönderilecek güncelleme verisi:", updateData);
+
+    const { error } = await supabase
+      .from('tasks')
+      .update(updateData)
+      .eq('id', taskToUpdate.id);
+
+    if (error) {
+      console.error("[TaskManagement] HATA: Puanlar kaydedilirken veritabanı hatası.", error);
+      showError('Görev güncellenirken bir hata oluştu.');
+    } else {
+      console.log("[TaskManagement] Adım 5: Puanlar başarıyla kaydedildi ve görev onaylandı. Liste yenileniyor.");
+      showSuccess('Görev onaylandı ve puanlar kaydedildi.');
+      fetchTasks();
+    }
+    setScoreEntryOpen(false);
+    setTaskToUpdate(null);
+  };
+  
+  const handleRejectTaskFromScoreDialog = async () => {
+    if (!taskToUpdate) return;
+    console.log(`[TaskManagement] Puan giriş ekranından görev reddedildi. Görev ID: ${taskToUpdate.id}`);
     const { error } = await supabase
       .from('tasks')
       .update({ status: 'not_completed' })
       .eq('id', taskToUpdate.id);
 
     if (error) {
+      console.error("[TaskManagement] HATA: Puan ekranından reddetme işlemi sırasında veritabanı hatası.", error);
       showError('Görev güncellenirken bir hata oluştu.');
     } else {
+      console.log("[TaskManagement] Başarılı: Görev reddedildi. Liste yenileniyor.");
       showSuccess('Görev reddedildi.');
       fetchTasks();
     }
@@ -184,55 +270,25 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     setTaskToUpdate(null);
   };
 
-  const handleScoreSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!taskToUpdate || !taskToUpdate.question_count) return;
-
-    const correct = Number(scoreData.correct) || 0;
-    const empty = Number(scoreData.empty) || 0;
-    const wrong = Number(scoreData.wrong) || 0;
-    const total = correct + empty + wrong;
-
-    if (total > taskToUpdate.question_count) {
-      showError(t('coach.scoreEntry.validationError', { count: taskToUpdate.question_count }));
-      return;
-    }
-
-    const { error } = await supabase
-      .from('tasks')
-      .update({ 
-        status: 'completed',
-        correct_count: correct,
-        empty_count: empty,
-        wrong_count: wrong,
-      })
-      .eq('id', taskToUpdate.id);
-
-    if (error) {
-      showError('Görev güncellenirken bir hata oluştu.');
-    } else {
-      showSuccess('Görev onaylandı ve puanlar kaydedildi.');
-      fetchTasks();
-    }
-    setScoreEntryOpen(false);
-    setTaskToUpdate(null);
-  };
-
   const handleOpenDeleteDialog = (task: Task) => {
+    console.log("[TaskManagement] Görev silme onayı isteniyor. Görev:", task);
     setTaskToDelete(task);
     setDeleteDialogOpen(true);
   };
 
   const handleConfirmDelete = async () => {
     if (!taskToDelete) return;
+    console.log("[TaskManagement] Adım 1: Görev silme onaylandı. Silinecek Görev ID:", taskToDelete.id);
     const { error } = await supabase
       .from('tasks')
       .delete()
       .eq('id', taskToDelete.id);
 
     if (error) {
+      console.error("[TaskManagement] HATA: Görev silinirken veritabanı hatası.", error);
       showError(t('coach.deleteTask.error'));
     } else {
+      console.log("[TaskManagement] Adım 2: Görev başarıyla silindi. Liste yenileniyor.");
       showSuccess(t('coach.deleteTask.success'));
       fetchTasks();
     }
@@ -272,6 +328,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   }, [tasks]);
 
   const analyticsData = useMemo(() => {
+    console.log("[Analytics] Adım 1: Analitik verileri yeniden hesaplanıyor.");
     const questionTasks = tasks.filter(task => 
       task.task_type === 'soru_cozumu' && 
       task.status === 'completed' &&
@@ -279,6 +336,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       task.empty_count != null &&
       task.wrong_count != null
     );
+    console.log("[Analytics] Adım 2: Grafik için filtrelenmiş görevler:", questionTasks);
 
     const dataBySubject = questionTasks.reduce((acc, task) => {
       if (!acc[task.subject]) acc[task.subject] = {};
@@ -290,8 +348,9 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       acc[task.subject][task.topic].wrong += task.wrong_count!;
       return acc;
     }, {} as Record<string, Record<string, { correct: number; empty: number; wrong: number }>>);
+    console.log("[Analytics] Adım 3: Konulara göre gruplanmış ham veriler:", dataBySubject);
 
-    return Object.entries(dataBySubject).map(([subject, topics]) => ({
+    const finalData = Object.entries(dataBySubject).map(([subject, topics]) => ({
       subject,
       data: Object.entries(topics).map(([topic, counts]) => ({
         topic,
@@ -299,6 +358,8 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
         net: (counts.correct - counts.wrong / 3).toFixed(2),
       })),
     }));
+    console.log("[Analytics] Adım 4: Grafik için işlenmiş nihai veri:", finalData);
+    return finalData;
   }, [tasks]);
 
   const getStatusClass = (status: string) => {
@@ -430,6 +491,20 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
         </DialogContent>
       </Dialog>
       
+      <AlertDialog open={isSimpleApprovalOpen} onOpenChange={setSimpleApprovalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('coach.approval.title')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('coach.approval.description')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setTaskToUpdate(null)}>{t('coach.cancel')}</AlertDialogCancel>
+            <Button variant="destructive" onClick={() => handleSimpleApproval('not_completed')}>{t('coach.approval.reject')}</Button>
+            <AlertDialogAction onClick={() => handleSimpleApproval('completed')}>{t('coach.approval.approve')}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Dialog open={isScoreEntryOpen} onOpenChange={setScoreEntryOpen}>
         <DialogContent>
             <DialogHeader>
@@ -458,7 +533,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                 </div>
             </form>
             <DialogFooter>
-                <Button variant="destructive" onClick={handleRejectTask}>{t('coach.approval.reject')}</Button>
+                <Button variant="destructive" onClick={handleRejectTaskFromScoreDialog}>{t('coach.approval.reject')}</Button>
                 <Button type="submit" form="score-form">{t('coach.scoreEntry.saveAndApprove')}</Button>
             </DialogFooter>
         </DialogContent>
