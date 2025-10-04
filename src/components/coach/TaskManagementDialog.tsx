@@ -489,7 +489,11 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                                                 {selectedTopic}
                                             </span>
                                         ) : (
-                                            <span className="text-muted-foreground">{t('coach.selectTopicPlaceholder')}</span>
+                                            <span className="text-muted-foreground">
+                                                {selectedSubject === 'Kitap Okuma' 
+                                                    ? t('coach.selectPageCountPlaceholder', 'Sayfa Sayısı Seçin') 
+                                                    : t('coach.selectTopicPlaceholder')}
+                                            </span>
                                         )}
                                     </SelectTrigger>
                                     <SelectContent>{availableTopics.map((topic, index) => (
