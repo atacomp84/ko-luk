@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
@@ -7,8 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { showError, showSuccess } from '@/utils/toast';
-import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { lgsSubjects } from '@/data/lgsSubjects';
 
 interface Student {
   id: string;
@@ -18,9 +20,11 @@ interface Student {
 
 interface Task {
     id: string;
-    title: string;
-    description: string;
-    due_date: string;
+    subject: string;
+    topic: string;
+    task_type: string;
+    question_count: number | null;
+    description: string | null;
     status: string;
     created_at: string;
 }
@@ -34,12 +38,22 @@ interface TaskManagementDialogProps {
 export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagementDialogProps) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [title, setTitle] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [taskType, setTaskType] = useState<'konu_anlatimi' | 'soru_cozumu'>('konu_anlatimi');
+  const [questionCount, setQuestionCount] = useState<number | ''>('');
   const [description, setDescription] = useState('');
-  const [dueDate, setDueDate] = useState('');
   const { t } = useTranslation();
 
-  const fetchTasks = async () => {
+  const resetForm = () => {
+    setSelectedSubject(null);
+    setSelectedTopic(null);
+    setTaskType('konu_anlatimi');
+    setQuestionCount('');
+    setDescription('');
+  };
+
+  const fetchTasks = useCallback(async () => {
     if (!student) return;
     setLoading(true);
     const { data, error } = await supabase
@@ -51,82 +65,136 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     if (error) {
       showError('Görevler getirilirken hata oluştu.');
     } else {
-      setTasks(data);
+      setTasks(data as Task[]);
     }
     setLoading(false);
-  };
+  }, [student]);
 
   useEffect(() => {
     if (isOpen && student) {
       fetchTasks();
+    } else {
+      resetForm();
     }
-  }, [isOpen, student]);
+  }, [isOpen, student, fetchTasks]);
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!student || !title) return;
+    if (!student || !selectedSubject || !selectedTopic) return;
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error } = await supabase.from('tasks').insert({
+    const taskData = {
       coach_id: user.id,
       student_id: student.id,
-      title,
-      description,
-      due_date: dueDate || null,
-    });
+      subject: selectedSubject,
+      topic: selectedTopic,
+      task_type: taskType,
+      description: description || null,
+      question_count: taskType === 'soru_cozumu' ? Number(questionCount) : null,
+    };
+
+    const { error } = await supabase.from('tasks').insert(taskData);
 
     if (error) {
       showError('Görev eklenirken bir hata oluştu.');
     } else {
       showSuccess('Görev başarıyla eklendi.');
-      setTitle('');
-      setDescription('');
-      setDueDate('');
+      resetForm();
       fetchTasks();
     }
+  };
+
+  const formatTaskTitle = (task: Task) => {
+    let title = `${task.subject}: ${task.topic}`;
+    if (task.task_type === 'soru_cozumu' && task.question_count) {
+      title += ` (${task.question_count} ${t('coach.questionSolving')})`;
+    } else {
+      title += ` (${t('coach.topicExplanation')})`;
+    }
+    return title;
   };
 
   if (!student) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl h-[90vh]">
         <DialogHeader>
           <DialogTitle>{t('coach.taskManagementTitle', { firstName: student.first_name, lastName: student.last_name })}</DialogTitle>
           <DialogDescription>{t('coach.taskManagementDescription')}</DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-6 py-4">
-            <div className="space-y-4">
-                <h3 className="font-semibold">{t('coach.addNewTask')}</h3>
-                <form onSubmit={handleAddTask} className="space-y-4">
-                    <div>
-                        <Label htmlFor="title">{t('coach.taskTitleLabel')}</Label>
-                        <Input id="title" value={title} onChange={e => setTitle(e.target.value)} required />
+        <div className="grid grid-cols-2 gap-6 py-4 flex-1 overflow-hidden">
+            <form onSubmit={handleAddTask} className="space-y-6 flex flex-col">
+                <div className="space-y-2">
+                    <h3 className="font-semibold">{t('coach.selectTopic')}</h3>
+                    <div className="border rounded-md max-h-64 overflow-y-auto">
+                        <Accordion type="single" collapsible className="w-full">
+                            {lgsSubjects.map(subject => (
+                                <AccordionItem value={subject.name} key={subject.name}>
+                                    <AccordionTrigger className="px-4">{subject.name}</AccordionTrigger>
+                                    <AccordionContent>
+                                        <div className="flex flex-col items-start">
+                                            {subject.topics.map(topic => (
+                                                <button
+                                                    type="button"
+                                                    key={topic}
+                                                    onClick={() => {
+                                                        setSelectedSubject(subject.name);
+                                                        setSelectedTopic(topic);
+                                                    }}
+                                                    className={`w-full text-left p-2 px-8 hover:bg-accent ${selectedTopic === topic && selectedSubject === subject.name ? 'bg-primary/20' : ''}`}
+                                                >
+                                                    {topic}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            ))}
+                        </Accordion>
                     </div>
-                    <div>
-                        <Label htmlFor="description">{t('coach.taskDescriptionLabel')}</Label>
-                        <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} />
+                </div>
+
+                <div className="space-y-2">
+                    <h3 className="font-semibold">{t('coach.selectTaskType')}</h3>
+                    <RadioGroup value={taskType} onValueChange={(v: 'konu_anlatimi' | 'soru_cozumu') => setTaskType(v)}>
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="konu_anlatimi" id="r1" />
+                            <Label htmlFor="r1">{t('coach.topicExplanation')}</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="soru_cozumu" id="r2" />
+                            <Label htmlFor="r2">{t('coach.questionSolving')}</Label>
+                        </div>
+                    </RadioGroup>
+                </div>
+
+                {taskType === 'soru_cozumu' && (
+                    <div className="space-y-2">
+                        <Label htmlFor="question-count">{t('coach.questionCount')}</Label>
+                        <Input id="question-count" type="number" value={questionCount} onChange={e => setQuestionCount(e.target.value === '' ? '' : Number(e.target.value))} required min="1" />
                     </div>
-                    <div>
-                        <Label htmlFor="due-date">{t('coach.taskDueDateLabel')}</Label>
-                        <Input id="due-date" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
-                    </div>
-                    <Button type="submit">{t('coach.addTaskButton')}</Button>
-                </form>
-            </div>
-            <div className="space-y-4">
+                )}
+
+                <div className="space-y-2">
+                    <Label htmlFor="description">{t('coach.taskDescriptionLabel')}</Label>
+                    <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Öğrenciye not..." />
+                </div>
+                
+                <Button type="submit" disabled={!selectedTopic}>{t('coach.addTaskButton')}</Button>
+            </form>
+            <div className="space-y-4 flex flex-col overflow-hidden">
                 <h3 className="font-semibold">{t('coach.assignedTasks')}</h3>
-                <div className="max-h-80 overflow-y-auto space-y-2 pr-2">
+                <div className="flex-1 overflow-y-auto space-y-2 pr-2 border rounded-md p-2">
                 {loading ? (
                     <Skeleton className="h-20 w-full" />
                 ) : tasks.length > 0 ? (
                     tasks.map(task => (
                     <div key={task.id} className={`p-3 rounded-md ${task.status === 'completed' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-secondary'}`}>
-                        <p className="font-bold">{task.title}</p>
-                        <p className="text-sm text-muted-foreground">{task.description}</p>
-                        {task.due_date && <p className="text-xs text-muted-foreground mt-1">Bitiş: {format(new Date(task.due_date), 'dd/MM/yyyy')}</p>}
+                        <p className="font-bold">{formatTaskTitle(task)}</p>
+                        {task.description && <p className="text-sm text-muted-foreground italic">"{task.description}"</p>}
                         <p className="text-xs font-semibold mt-1 capitalize">{t('coach.statusLabel')}: {task.status === 'pending' ? t('coach.statusPending') : t('coach.statusCompleted')}</p>
                     </div>
                     ))
@@ -138,7 +206,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline">{t('coach.close')}</Button>
+            <Button variant="outline" onClick={onClose}>{t('coach.close')}</Button>
           </DialogClose>
         </DialogFooter>
       </DialogContent>
