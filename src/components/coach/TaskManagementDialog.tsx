@@ -14,7 +14,7 @@ import { NumberInput } from '../ui/NumberInput';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Book, Calculator, FlaskConical, Globe, Palette, MessageSquare, History, Youtube, ChevronsDownUp } from 'lucide-react';
+import { Trash2, Book, Calculator, FlaskConical, Globe, Palette, MessageSquare, History, Youtube, ChevronsDownUp, User } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -81,7 +81,7 @@ const CustomizedAxisTick = (props: any) => {
     
     return (
         <g transform={`translate(${x},${y})`}>
-            <text x={0} y={0} dy={5} textAnchor="end" fill="hsl(var(--muted-foreground))" fontSize={12} transform="rotate(-65)">
+            <text x={0} y={0} dy={5} textAnchor="end" fill="hsl(var(--foreground))" fontSize={13} fontWeight="bold" transform="rotate(-65)">
                 {value}
             </text>
         </g>
@@ -410,7 +410,13 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-6xl h-[90vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>{t('coach.taskManagementTitle', { firstName: student.first_name, lastName: student.last_name })}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+                <User className="h-6 w-6 text-primary" />
+                <span>
+                    <span className="text-primary font-bold">{`${student.first_name} ${student.last_name}`}</span>
+                    <span>{` ${t('coach.taskManagementTitleOnly', 'için Görev Yönetimi')}`}</span>
+                </span>
+            </DialogTitle>
             <DialogDescription>{t('coach.taskManagementDescription')}</DialogDescription>
           </DialogHeader>
           <Tabs defaultValue="addTask" onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
@@ -438,7 +444,20 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                                         </SelectItem>)
                                     })}</SelectContent>
                                   </Select>
-                                  <Select value={selectedTopic} onValueChange={setSelectedTopic} disabled={!selectedSubject}><SelectTrigger><SelectValue placeholder={t('coach.selectTopicPlaceholder')}>{selectedTopic || null}</SelectValue></SelectTrigger><SelectContent>{availableTopics.map(topic => (<SelectItem key={topic} value={topic}><div className="flex items-center justify-between w-full"><span>{topic}</span><div className="flex items-center gap-1.5">{topicAssignmentStats[topic]?.explanations > 0 && <Badge variant="outline" className="bg-blue-100 text-blue-700">{topicAssignmentStats[topic].explanations} Anlatım</Badge>}{topicAssignmentStats[topic]?.questions > 0 && <Badge variant="outline" className="bg-purple-100 text-purple-700">{topicAssignmentStats[topic].questions} Soru</Badge>}</div></div></SelectItem>))}</SelectContent></Select>
+                                  <Select value={selectedTopic} onValueChange={setSelectedTopic} disabled={!selectedSubject}>
+                                    <SelectTrigger><SelectValue placeholder={t('coach.selectTopicPlaceholder')}>{selectedTopic || null}</SelectValue></SelectTrigger>
+                                    <SelectContent>{availableTopics.map(topic => (
+                                        <SelectItem key={topic} value={topic}>
+                                            <div className="flex items-center justify-between w-full">
+                                                <span className={`font-medium ${getSubjectColorClass(selectedSubject)}`}>{topic}</span>
+                                                <div className="flex items-center gap-1.5">
+                                                    {topicAssignmentStats[topic]?.explanations > 0 && <Badge variant="outline" className="bg-blue-100 text-blue-700">{topicAssignmentStats[topic].explanations} Anlatım</Badge>}
+                                                    {topicAssignmentStats[topic]?.questions > 0 && <Badge variant="outline" className="bg-purple-100 text-purple-700">{topicAssignmentStats[topic].questions} Soru</Badge>}
+                                                </div>
+                                            </div>
+                                        </SelectItem>
+                                    ))}</SelectContent>
+                                  </Select>
                               </div>
                           </div>
                           {selectedTopic && (<div className="space-y-6"><div className="space-y-2"><h3 className="font-semibold">{t('coach.selectTaskType')}</h3><RadioGroup value={taskType} onValueChange={(v: 'konu_anlatimi' | 'soru_cozumu') => setTaskType(v)}><div className="flex items-center space-x-2"><RadioGroupItem value="konu_anlatimi" id="r1" /><Label htmlFor="r1">{t('coach.topicExplanation')}</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="soru_cozumu" id="r2" /><Label htmlFor="r2">{t('coach.questionSolving')}</Label></div></RadioGroup></div>{taskType === 'soru_cozumu' && (<div className="space-y-2"><Label htmlFor="question-count">{t('coach.questionCount')}</Label><NumberInput value={questionCount} onChange={setQuestionCount} required /></div>)}{taskType === 'konu_anlatimi' && (<div className="space-y-2"><div className="flex items-center justify-between"><Label htmlFor="description">{t('coach.taskDescriptionLabel')}</Label><Button asChild variant="ghost" size="icon"><a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer"><Youtube className="h-5 w-5 text-red-500" /></a></Button></div><Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Öğrenciye not veya video linki..." /></div>)}</div>)}
