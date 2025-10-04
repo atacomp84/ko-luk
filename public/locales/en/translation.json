@@ -119,7 +119,7 @@
       "wrong": "Wrong",
       "empty": "Empty",
       "saveAndApprove": "Save and Approve",
-      "validationError": "The total number of answers cannot exceed the question count ({{count}})."
+      "validationError": "The total number of answers (correct + wrong + empty) must equal the question count ({{count}})."
     }
   },
   "student": {

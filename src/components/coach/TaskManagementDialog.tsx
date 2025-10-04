@@ -72,6 +72,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   const [taskType, setTaskType] = useState<'konu_anlatimi' | 'soru_cozumu'>('konu_anlatimi');
   const [questionCount, setQuestionCount] = useState<number | ''>('');
   const [description, setDescription] = useState('');
+  const [activeTab, setActiveTab] = useState('addTask');
   
   const [taskToUpdate, setTaskToUpdate] = useState<Task | null>(null);
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -208,7 +209,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     const wrong = Number(scoreData.wrong) || 0;
     const total = correct + empty + wrong;
 
-    if (total > taskToUpdate.question_count) {
+    if (total !== taskToUpdate.question_count) {
       showError(t('coach.scoreEntry.validationError', { count: taskToUpdate.question_count }));
       return;
     }
@@ -370,7 +371,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
             <DialogTitle>{t('coach.taskManagementTitle', { firstName: student.first_name, lastName: student.last_name })}</DialogTitle>
             <DialogDescription>{t('coach.taskManagementDescription')}</DialogDescription>
           </DialogHeader>
-          <Tabs defaultValue="addTask" className="flex-1 overflow-hidden flex flex-col">
+          <Tabs defaultValue="addTask" onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
             <TabsList className="shrink-0 grid w-full grid-cols-2">
               <TabsTrigger value="addTask">{t('coach.addNewTaskTab')}</TabsTrigger>
               <TabsTrigger value="analytics">{t('coach.analytics')}</TabsTrigger>
@@ -395,11 +396,17 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                       {loading ? <Skeleton className="h-24 w-full" /> : Object.keys(groupedTasks).length > 0 ? (
                         Object.entries(groupedTasks).map(([subject, subjectTasks]) => {
                           const pendingCount = subjectTasks.filter(t => t.status === 'pending' || t.status === 'pending_approval').length;
+                          const completedCount = subjectTasks.filter(t => t.status === 'completed').length;
+                          const notCompletedCount = subjectTasks.filter(t => t.status === 'not_completed').length;
                           return (
                             <Collapsible key={subject} defaultOpen className="space-y-2">
                               <CollapsibleTrigger className="flex justify-between items-center w-full p-2 bg-muted rounded-md">
                                 <span className="font-bold">{subject}</span>
-                                {pendingCount > 0 && <Badge variant="secondary">{pendingCount}</Badge>}
+                                <div className="flex items-center gap-1.5 font-mono text-xs">
+                                    {notCompletedCount > 0 && <Badge className="bg-red-500 text-white hover:bg-red-500">{notCompletedCount}</Badge>}
+                                    {pendingCount > 0 && <Badge className="bg-yellow-500 text-white hover:bg-yellow-500">{pendingCount}</Badge>}
+                                    {completedCount > 0 && <Badge className="bg-green-500 text-white hover:bg-green-500">{completedCount}</Badge>}
+                                </div>
                               </CollapsibleTrigger>
                               <CollapsibleContent className="space-y-2 pl-4">
                                 {subjectTasks.map(task => (
@@ -437,10 +444,10 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                             <YAxis />
                             <Tooltip />
                             <Bar dataKey="correct" stackId="a" fill="#22c55e" name={t('coach.scoreEntry.correct')} />
-                            <Bar dataKey="wrong" stackId="a" fill="#ef4444" name={t('coach.scoreEntry.wrong')} />
-                            <Bar dataKey="empty" stackId="a" fill="#3b82f6" name={t('coach.scoreEntry.empty')}>
+                            <Bar dataKey="wrong" stackId="a" fill="#ef4444" name={t('coach.scoreEntry.wrong')}>
                                 <LabelList dataKey="net" position="center" fill="#ffffff" fontWeight="bold" formatter={(value: number) => `Net: ${value}`} />
                             </Bar>
+                            <Bar dataKey="empty" stackId="a" fill="#3b82f6" name={t('coach.scoreEntry.empty')} />
                           </BarChart>
                         </ResponsiveContainer>
                       </CardContent>
@@ -452,7 +459,9 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
           </Tabs>
           <DialogFooter>
             <DialogClose asChild><Button type="button" variant="outline" onClick={onClose}>{t('coach.close')}</Button></DialogClose>
-            <Button type="submit" form="add-task-form" disabled={isSubmitDisabled}>{t('coach.addTaskButton')}</Button>
+            {activeTab === 'addTask' && (
+              <Button type="submit" form="add-task-form" disabled={isSubmitDisabled}>{t('coach.addTaskButton')}</Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

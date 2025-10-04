@@ -119,7 +119,7 @@
       "wrong": "Yanlış",
       "empty": "Boş",
       "saveAndApprove": "Kaydet ve Onayla",
-      "validationError": "Toplam sayı ({{count}}) soru adedini geçemez."
+      "validationError": "Toplam sayı (doğru + yanlış + boş) soru adedine ({{count}}) eşit olmalıdır."
     }
   },
   "student": {
