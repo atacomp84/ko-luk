@@ -8,22 +8,16 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log(`[ProtectedRoute] useEffect tetiklendi. Durum: loading=${loading}, session=${!!session}, profile=${JSON.stringify(profile)}`);
     if (!loading) {
       if (!session || !profile) {
-        console.log('[ProtectedRoute] Oturum veya profil yok. /auth adresine yönlendiriliyor.');
         navigate('/auth');
       } else if (!allowedRoles.includes(profile.role)) {
-        console.log(`[ProtectedRoute] Rol yetkisiz. Kullanıcı rolü: ${profile.role}, İzin verilen roller: ${allowedRoles}. Ana sayfaya yönlendiriliyor.`);
         navigate('/');
-      } else {
-        console.log('[ProtectedRoute] Erişim izni verildi.');
       }
     }
   }, [loading, session, profile, navigate, allowedRoles]);
 
   if (loading) {
-    console.log('[ProtectedRoute] Auth durumu yükleniyor. Skeleton gösteriliyor.');
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="p-8 space-y-4 w-full max-w-md">

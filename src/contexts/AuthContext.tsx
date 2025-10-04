@@ -27,7 +27,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const initializeSession = async () => {
       try {
-        console.log('[AuthContext] Başlangıç oturumu kontrol ediliyor...');
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
         if (error) throw error;
 
@@ -35,7 +34,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(initialSession?.user ?? null);
 
         if (initialSession?.user) {
-          console.log(`[AuthContext] Oturum bulundu (${initialSession.user.id}). Profil çekiliyor...`);
           const { data: userProfile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
@@ -43,10 +41,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .single();
           
           if (profileError) {
-            console.error("[AuthContext] Başlangıç profili çekilirken hata:", profileError.message);
+            console.warn("[AuthContext] Başlangıç profili çekilirken hata (yeni kullanıcı olabilir):", profileError.message);
             setProfile(null);
           } else {
-            console.log("[AuthContext] Başlangıç profili başarıyla çekildi.");
             setProfile(userProfile);
           }
         } else {
@@ -55,7 +52,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } catch (e) {
         console.error("[AuthContext] Başlangıç oturum kontrolü sırasında hata:", e);
       } finally {
-        console.log("[AuthContext] Başlangıç kontrolü tamamlandı. Yükleme bitti.");
         setLoading(false);
       }
     };
@@ -63,24 +59,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initializeSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log(`[AuthContext] Kimlik doğrulama durumu değişti. Olay: ${_event}. Oturum güncelleniyor.`);
-      setSession(session);
-      setUser(session?.user ?? null);
+      try {
+        setSession(session);
+        setUser(session?.user ?? null);
 
-      if (session?.user) {
-        const { data: userProfile, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (error) {
-            console.error("[AuthContext] Profil güncellenirken hata:", error.message);
-            setProfile(null);
+        if (session?.user) {
+          const { data: userProfile, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (error) {
+              console.warn("[AuthContext] Profil güncellenirken hata (yeni kullanıcı olabilir):", error.message);
+              setProfile(null);
+          } else {
+              setProfile(userProfile);
+          }
         } else {
-            setProfile(userProfile);
+          setProfile(null);
         }
-      } else {
+      } catch (e) {
+        console.error("[AuthContext] onAuthStateChange içinde beklenmedik hata:", e);
         setProfile(null);
       }
     });
