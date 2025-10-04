@@ -67,25 +67,9 @@ const CustomizedAxisTick = (props: any) => {
     const { x, y, payload } = props;
     const value = payload.value as string;
     
-    if (value.length > 18) {
-        const middle = Math.floor(value.length / 2);
-        let breakPoint = value.lastIndexOf(' ', middle);
-        if (breakPoint === -1) breakPoint = middle;
-        const line1 = value.substring(0, breakPoint);
-        const line2 = value.substring(breakPoint + 1);
-        return (
-            <g transform={`translate(${x},${y})`}>
-                <text x={0} y={0} dy={16} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize={12}>
-                    <tspan x="0" dy="0">{line1}</tspan>
-                    <tspan x="0" dy="15">{line2}</tspan>
-                </text>
-            </g>
-        );
-    }
-
     return (
         <g transform={`translate(${x},${y})`}>
-            <text x={0} y={0} dy={16} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize={12}>
+            <text x={0} y={0} dy={5} textAnchor="end" fill="hsl(var(--muted-foreground))" fontSize={12} transform="rotate(-65)">
                 {value}
             </text>
         </g>
@@ -496,10 +480,10 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                     <Card key={subject}>
                       <CardHeader><CardTitle>{subject}</CardTitle></CardHeader>
                       <CardContent>
-                        <ResponsiveContainer width="100%" height={350}>
-                          <BarChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 40 }}>
+                        <ResponsiveContainer width="100%" height={400}>
+                          <BarChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 80 }}>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="topic" height={60} interval={0} tick={<CustomizedAxisTick />} axisLine={false} tickLine={false} />
+                            <XAxis dataKey="topic" height={100} interval={0} tick={<CustomizedAxisTick />} axisLine={false} tickLine={false} />
                             <YAxis />
                             <Tooltip />
                             <Bar dataKey="correct" stackId="a" fill="#22c55e" name={t('coach.scoreEntry.correct')} />
