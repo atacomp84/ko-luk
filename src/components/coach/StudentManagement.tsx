@@ -115,27 +115,18 @@ const StudentManagement = () => {
     }
     console.log(`[handleConfirmDelete] Adım 2: Silinecek öğrenci: ${studentToDelete.first_name} ${studentToDelete.last_name} (ID: ${studentToDelete.id})`);
   
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error("[handleConfirmDelete] HATA: Koç kullanıcısı bulunamadı. İşlem iptal edildi.");
-      handleCloseDeleteDialog();
-      return;
-    }
-    console.log(`[handleConfirmDelete] Adım 3: Mevcut koç kullanıcısı: ${user.id}`);
-  
     handleCloseDeleteDialog();
   
-    console.log(`[handleConfirmDelete] Adım 4: Veritabanından silme isteği gönderiliyor... coach_id: ${user.id}, student_id: ${studentToDelete.id}`);
-    const { error } = await supabase
-      .from('coach_student_pairs')
-      .delete()
-      .match({ coach_id: user.id, student_id: studentToDelete.id });
+    console.log(`[handleConfirmDelete] Adım 4: 'delete-student' edge function çağrılıyor...`);
+    const { error } = await supabase.functions.invoke('delete-student', {
+      body: { student_id: studentToDelete.id },
+    });
   
     if (error) {
-      console.error("[handleConfirmDelete] Adım 4.1 HATA: Öğrenci-koç eşleşmesi silinirken hata oluştu:", error);
+      console.error("[handleConfirmDelete] Adım 4.1 HATA: Öğrenci silinirken edge function hatası oluştu:", error);
       showError(t('coach.deleteStudent.error'));
     } else {
-      console.log("[handleConfirmDelete] Adım 5: Öğrenci-koç eşleşmesi veritabanından başarıyla silindi.");
+      console.log("[handleConfirmDelete] Adım 5: Öğrenci edge function ile başarıyla silindi.");
       showSuccess(t('coach.deleteStudent.success'));
       console.log("[handleConfirmDelete] Adım 6: Arayüzü güncellemek için öğrenci listesi yeniden çekiliyor.");
       fetchStudents();
