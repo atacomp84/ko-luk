@@ -12,9 +12,8 @@ import { lgsSubjects } from '@/data/lgsSubjects';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { NumberInput } from '../ui/NumberInput';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Badge } from '@/components/ui/badge';
 
 interface Student {
   id: string;
@@ -146,38 +145,16 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
 
   const isSubmitDisabled = !selectedTopic || (taskType === 'soru_cozumu' && (questionCount === '' || Number(questionCount) <= 0));
 
-  const taskHistoryData = useMemo(() => {
-    const groupedBySubject: { [key: string]: Task[] } = {};
-    tasks.forEach(task => {
-      if (!groupedBySubject[task.subject]) {
-        groupedBySubject[task.subject] = [];
+  const groupedTasks = useMemo(() => {
+    return tasks.reduce((acc, task) => {
+      const { subject } = task;
+      if (!acc[subject]) {
+        acc[subject] = [];
       }
-      groupedBySubject[task.subject].push(task);
-    });
-    return groupedBySubject;
+      acc[subject].push(task);
+      return acc;
+    }, {} as Record<string, Task[]>);
   }, [tasks]);
-
-  const chartDataBySubject = useMemo(() => {
-    const data: { [key: string]: { name: string; soruSayisi: number }[] } = {};
-    Object.entries(taskHistoryData).forEach(([subject, subjectTasks]) => {
-      const topicCounts: { [key: string]: number } = {};
-      subjectTasks.forEach(task => {
-        if (task.task_type === 'soru_cozumu' && task.question_count) {
-          if (!topicCounts[task.topic]) {
-            topicCounts[task.topic] = 0;
-          }
-          topicCounts[task.topic] += task.question_count;
-        }
-      });
-      if (Object.keys(topicCounts).length > 0) {
-        data[subject] = Object.entries(topicCounts).map(([topic, count]) => ({
-          name: topic,
-          soruSayisi: count,
-        }));
-      }
-    });
-    return data;
-  }, [taskHistoryData]);
 
   if (!student) return null;
 
@@ -280,51 +257,32 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
           </TabsContent>
           <TabsContent value="taskHistory" className="flex-1 overflow-y-auto p-4">
             {loading ? <Skeleton className="h-full w-full" /> : 
-             Object.keys(taskHistoryData).length > 0 ? (
-                <Accordion type="multiple" className="w-full space-y-4">
-                    {Object.entries(taskHistoryData).map(([subject, subjectTasks]) => (
-                        <AccordionItem value={subject} key={subject}>
-                            <AccordionTrigger className="text-lg font-bold">{subject}</AccordionTrigger>
-                            <AccordionContent className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-4">
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>{t('coach.totalQuestionsByTopic')}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        {chartDataBySubject[subject] ? (
-                                            <ResponsiveContainer width="100%" height={300}>
-                                                <BarChart data={chartDataBySubject[subject]} margin={{ top: 5, right: 20, left: -10, bottom: 75 }}>
-                                                    <CartesianGrid strokeDasharray="3 3" />
-                                                    <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} height={1} tick={{ fontSize: 12 }} />
-                                                    <YAxis />
-                                                    <Tooltip />
-                                                    <Bar dataKey="soruSayisi" fill="#8884d8" name={t('coach.questionCount')} />
-                                                </BarChart>
-                                            </ResponsiveContainer>
-                                        ) : (
-                                            <p className="text-center text-muted-foreground py-10">{t('coach.noTasksForChart')}</p>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>{t('coach.allAssignedTasks')}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="max-h-80 overflow-y-auto">
-                                        <ul className="space-y-2">
-                                            {subjectTasks.map(task => (
-                                                <li key={task.id} className={`p-2 rounded-md text-sm ${task.status === 'completed' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-secondary'}`}>
-                                                    <span className="font-semibold">{formatTaskTitle(task)}</span>
-                                                    {task.description && <p className="text-xs text-muted-foreground italic">"{task.description}"</p>}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </CardContent>
-                                </Card>
-                            </AccordionContent>
-                        </AccordionItem>
+             Object.keys(groupedTasks).length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {Object.entries(groupedTasks).map(([subject, subjectTasks]) => (
+                        <Card key={subject}>
+                            <CardHeader>
+                                <CardTitle>{subject}</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                {subjectTasks.map(task => (
+                                    <div key={task.id} className="p-3 rounded-md bg-secondary text-sm">
+                                        <p className="font-semibold">{formatTaskTitle(task)}</p>
+                                        {task.description && <p className="text-xs text-muted-foreground italic mt-1">"{task.description}"</p>}
+                                        <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                                            <Badge variant={task.status === 'completed' ? 'default' : 'secondary'} className={task.status === 'completed' ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800' : ''}>
+                                                {t(task.status === 'completed' ? 'coach.statusCompleted' : 'coach.statusPending')}
+                                            </Badge>
+                                            <span className="text-xs text-muted-foreground">
+                                                {new Date(task.created_at).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </CardContent>
+                        </Card>
                     ))}
-                </Accordion>
+                </div>
              ) : (
                 <p className="text-center text-muted-foreground py-10">{t('coach.noAssignedTasks')}</p>
              )
