@@ -14,10 +14,11 @@ import { NumberInput } from '../ui/NumberInput';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Book, Calculator, FlaskConical, Globe, Palette, MessageSquare, History, Youtube, ChevronsDownUp, User } from 'lucide-react';
+import { Trash2, Book, Calculator, FlaskConical, Globe, Palette, MessageSquare, History, Youtube, ChevronsDownUp, BookMarked, ClipboardList } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 interface Student {
   id: string;
@@ -73,6 +74,22 @@ const getSubjectColorClass = (subject: string): string => {
         case "İngilizce": return "text-indigo-500";
         default: return "text-gray-500";
     }
+};
+
+const topicColors = [
+  "text-sky-500", "text-emerald-500", "text-violet-500", "text-fuchsia-500",
+  "text-cyan-500", "text-rose-500", "text-indigo-500", "text-teal-500",
+];
+
+const getTopicColorClass = (index: number): string => {
+  if (index < 0) return "text-foreground";
+  return topicColors[index % topicColors.length];
+};
+
+const getInitials = (firstName = '', lastName = '') => {
+    const firstInitial = firstName ? firstName[0] : '';
+    const lastInitial = lastName ? lastName[0] : '';
+    return `${firstInitial}${lastInitial}`.toUpperCase();
 };
 
 const CustomizedAxisTick = (props: any) => {
@@ -410,8 +427,12 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-6xl h-[90vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-                <User className="h-6 w-6 text-primary" />
+            <DialogTitle className="flex items-center gap-3">
+                <Avatar className="h-9 w-9">
+                    <AvatarFallback className="bg-primary text-primary-foreground font-bold">
+                        {getInitials(student.first_name, student.last_name)}
+                    </AvatarFallback>
+                </Avatar>
                 <span>
                     <span className="text-primary font-bold">{`${student.first_name} ${student.last_name}`}</span>
                     <span>{` ${t('coach.taskManagementTitleOnly', 'için Görev Yönetimi')}`}</span>
@@ -429,7 +450,10 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                   <form id="add-task-form" onSubmit={handleAddTask} className="flex flex-col h-full">
                       <div className="flex-1 space-y-6 overflow-y-auto pr-4 pb-4">
                           <div className="space-y-2">
-                              <h3 className="font-semibold">{t('coach.selectTopic')}</h3>
+                              <h3 className="font-semibold flex items-center gap-2">
+                                <BookMarked className="h-5 w-5 text-primary" />
+                                {t('coach.selectTopic')}
+                              </h3>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                   <Select value={selectedSubject} onValueChange={setSelectedSubject}>
                                     <SelectTrigger><SelectValue placeholder={t('coach.selectSubjectPlaceholder')} /></SelectTrigger>
@@ -445,11 +469,19 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                                     })}</SelectContent>
                                   </Select>
                                   <Select value={selectedTopic} onValueChange={setSelectedTopic} disabled={!selectedSubject}>
-                                    <SelectTrigger><SelectValue placeholder={t('coach.selectTopicPlaceholder')}>{selectedTopic || null}</SelectValue></SelectTrigger>
-                                    <SelectContent>{availableTopics.map(topic => (
+                                    <SelectTrigger>
+                                        {selectedTopic ? (
+                                            <span className={`font-medium ${getTopicColorClass(availableTopics.indexOf(selectedTopic))}`}>
+                                                {selectedTopic}
+                                            </span>
+                                        ) : (
+                                            <span className="text-muted-foreground">{t('coach.selectTopicPlaceholder')}</span>
+                                        )}
+                                    </SelectTrigger>
+                                    <SelectContent>{availableTopics.map((topic, index) => (
                                         <SelectItem key={topic} value={topic}>
                                             <div className="flex items-center justify-between w-full">
-                                                <span className={`font-medium ${getSubjectColorClass(selectedSubject)}`}>{topic}</span>
+                                                <span className={`font-medium ${getTopicColorClass(index)}`}>{topic}</span>
                                                 <div className="flex items-center gap-1.5">
                                                     {topicAssignmentStats[topic]?.explanations > 0 && <Badge variant="outline" className="bg-blue-100 text-blue-700">{topicAssignmentStats[topic].explanations} Anlatım</Badge>}
                                                     {topicAssignmentStats[topic]?.questions > 0 && <Badge variant="outline" className="bg-purple-100 text-purple-700">{topicAssignmentStats[topic].questions} Soru</Badge>}
@@ -465,7 +497,10 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                   </form>
                   <div className="space-y-4 flex flex-col overflow-hidden">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-semibold">{t('coach.assignedTasks')}</h3>
+                        <h3 className="font-semibold flex items-center gap-2">
+                            <ClipboardList className="h-5 w-5 text-primary" />
+                            {t('coach.assignedTasks')}
+                        </h3>
                         <Button variant="ghost" size="icon" onClick={() => setOpenCollapsibles([])}>
                             <ChevronsDownUp className="h-4 w-4" />
                         </Button>
