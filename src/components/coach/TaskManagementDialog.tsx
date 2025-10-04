@@ -14,7 +14,7 @@ import { NumberInput } from '../ui/NumberInput';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Book, Calculator, FlaskConical, Globe, Palette, MessageSquare, History, Youtube, ChevronsDownUp, BookMarked, ClipboardList, BookOpen, Download } from 'lucide-react';
+import { Trash2, Book, Calculator, FlaskConical, Globe, Palette, MessageSquare, History, Youtube, ChevronsDownUp, BookMarked, ClipboardList, BookOpen, Download, HelpCircle, CheckCircle2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -149,7 +149,6 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
 
   const fetchTasks = useCallback(async () => {
     if (!student) return;
-    console.log(`[TaskManagement] Fetching tasks for student ID: ${student.id}`);
     setLoading(true);
     const { data, error } = await supabase
       .from('tasks')
@@ -158,10 +157,8 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       .order('created_at', { ascending: false });
     
     if (error) {
-      console.error(`[TaskManagement] Error fetching tasks:`, error.message);
       showError('Görevler getirilirken hata oluştu.');
     } else {
-      console.log(`[TaskManagement] Fetched ${data.length} tasks successfully.`);
       setTasks(data as Task[]);
     }
     setLoading(false);
@@ -485,19 +482,19 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
 
   const getStatusBorderClass = (status: string) => {
     switch (status) {
-      case 'completed': return 'border-l-4 border-green-500';
-      case 'pending': return 'border-l-4 border-yellow-500';
-      case 'not_completed': return 'border-l-4 border-red-500';
-      case 'pending_approval': return 'border-l-4 border-blue-500';
+      case 'completed': return 'border-l-4 border-green-500 bg-green-50 dark:bg-green-900/20';
+      case 'pending':
+      case 'pending_approval': return 'border-l-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20';
+      case 'not_completed': return 'border-l-4 border-red-500 bg-red-50 dark:bg-red-900/20';
       default: return '';
     }
   };
 
   const getStatusBadgeClass = (status: string) => {
-    if (status === 'completed') return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800';
-    if (status === 'not_completed') return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800';
-    if (status === 'pending_approval') return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800';
-    return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800';
+    if (status === 'completed') return 'bg-green-200 text-green-800 dark:bg-green-800/30 dark:text-green-200';
+    if (status === 'not_completed') return 'bg-red-200 text-red-800 dark:bg-red-800/30 dark:text-red-200';
+    if (status === 'pending_approval' || status === 'pending') return 'bg-yellow-200 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-200';
+    return 'bg-gray-200 text-gray-800 dark:bg-gray-800/30 dark:text-gray-200';
   };
 
   const getStatusTranslationKey = (status: string) => {
@@ -507,248 +504,270 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     return 'coach.statusPending';
   };
 
+  const getTaskTypeIcon = (task: Task): ReactNode => {
+    const baseClasses = "h-10 w-10 rounded-md flex items-center justify-center";
+    const iconClasses = "h-5 w-5";
+
+    if (task.task_type === 'soru_cozumu') {
+        return <div className={`${baseClasses} bg-green-100 dark:bg-green-900/20`}>
+            <HelpCircle className={`${iconClasses} text-green-600 dark:text-green-400`} />
+        </div>;
+    }
+    return <div className={`${baseClasses} bg-yellow-100 dark:bg-yellow-900/20`}>
+        <BookOpen className={`${iconClasses} text-yellow-600 dark:text-yellow-400`} />
+    </div>;
+  }
+
   if (!student) return null;
 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-6xl h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-                <Avatar className="h-9 w-9">
-                    <AvatarFallback className="bg-primary text-primary-foreground font-bold">
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6">
+            <div className="flex items-center gap-4">
+                <Avatar className="h-12 w-12">
+                    <AvatarFallback className="bg-primary text-primary-foreground font-bold text-lg">
                         {getInitials(student.first_name, student.last_name)}
                     </AvatarFallback>
                 </Avatar>
-                <span>
-                    <span className="text-primary font-bold">{`${student.first_name} ${student.last_name}`}</span>
-                    <span>{` ${t('coach.taskManagementTitleOnly', 'için Görev Yönetimi')}`}</span>
-                </span>
-            </DialogTitle>
-            <DialogDescription>{t('coach.taskManagementDescription')}</DialogDescription>
-          </DialogHeader>
-          <Tabs defaultValue="addTask" value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="shrink-0 grid w-full grid-cols-2">
-              <TabsTrigger value="addTask">{t('coach.addNewTaskTab')}</TabsTrigger>
-              <TabsTrigger value="analytics">{t('coach.analytics')}</TabsTrigger>
-            </TabsList>
-            <TabsContent value="addTask" className="flex-1 overflow-hidden">
-              <div className="grid md:grid-cols-2 gap-6 py-4 h-full">
-                  <form id="add-task-form" onSubmit={handleAddTask} className="flex flex-col h-full">
-                      <div className="flex-1 space-y-6 overflow-y-auto pr-4 pb-4">
-                          <div className="space-y-2">
-                              <h3 className="font-semibold flex items-center gap-2">
-                                <BookMarked className="h-5 w-5 text-primary" />
-                                {t('coach.selectTopic')}
-                              </h3>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                  <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                                    <SelectTrigger><SelectValue placeholder={t('coach.selectSubjectPlaceholder')} /></SelectTrigger>
-                                    <SelectContent>{lgsSubjects.map(subject => {
-                                        const Icon = getSubjectIconComponent(subject.name);
-                                        const colorClass = getSubjectColorClass(subject.name);
-                                        return (<SelectItem key={subject.name} value={subject.name}>
-                                            <div className="flex items-center gap-2">
-                                                <Icon className={`h-5 w-5 ${colorClass}`} />
-                                                <span className={colorClass}>{subject.name}</span>
-                                            </div>
-                                        </SelectItem>)
-                                    })}</SelectContent>
-                                  </Select>
-                                  <Select value={selectedTopic} onValueChange={setSelectedTopic} disabled={!selectedSubject}>
-                                    <SelectTrigger>
-                                        {selectedTopic ? (
-                                            <span className={`font-medium ${getTopicColorClass(availableTopics.indexOf(selectedTopic))}`}>
-                                                {selectedTopic}
-                                            </span>
-                                        ) : (
-                                            <span className="text-muted-foreground">
-                                                {selectedSubject === 'Kitap Okuma' 
-                                                    ? t('coach.selectPageCountPlaceholder', 'Sayfa Sayısı Seçin') 
-                                                    : t('coach.selectTopicPlaceholder')}
-                                            </span>
-                                        )}
-                                    </SelectTrigger>
-                                    <SelectContent>{availableTopics.map((topic, index) => (
-                                        <SelectItem key={topic} value={topic}>
-                                            <div className="flex items-center justify-between w-full">
-                                                <span className={`font-medium ${getTopicColorClass(index)}`}>{topic}</span>
-                                                <div className="flex items-center gap-1.5">
-                                                    {topicAssignmentStats[topic]?.explanations > 0 && <Badge variant="outline" className="bg-blue-100 text-blue-700">{topicAssignmentStats[topic].explanations} Anlatım</Badge>}
-                                                    {topicAssignmentStats[topic]?.questions > 0 && <Badge variant="outline" className="bg-purple-100 text-purple-700">{topicAssignmentStats[topic].questions} Soru</Badge>}
-                                                </div>
-                                            </div>
-                                        </SelectItem>
-                                    ))}</SelectContent>
-                                  </Select>
-                              </div>
-                          </div>
-                          {selectedTopic && (
-                            selectedSubject === 'Kitap Okuma' ? (
-                                <div className="space-y-2 pt-6">
-                                    <Label htmlFor="description">{t('coach.bookTitleLabel')}</Label>
-                                    <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Okunacak kitabın adı..." />
-                                </div>
-                            ) : (
-                                <div className="space-y-6">
-                                    <div className="space-y-2">
-                                        <h3 className="font-semibold">{t('coach.selectTaskType')}</h3>
-                                        <RadioGroup value={taskType} onValueChange={(v: 'konu_anlatimi' | 'soru_cozumu') => setTaskType(v)}>
-                                            <div className="flex items-center space-x-2"><RadioGroupItem value="konu_anlatimi" id="r1" /><Label htmlFor="r1">{t('coach.topicExplanation')}</Label></div>
-                                            <div className="flex items-center space-x-2"><RadioGroupItem value="soru_cozumu" id="r2" /><Label htmlFor="r2">{t('coach.questionSolving')}</Label></div>
-                                        </RadioGroup>
-                                    </div>
-                                    {taskType === 'soru_cozumu' && (<div className="space-y-2"><Label htmlFor="question-count">{t('coach.questionCount')}</Label><NumberInput value={questionCount} onChange={setQuestionCount} required /></div>)}
-                                    {taskType === 'konu_anlatimi' && (<div className="space-y-2"><div className="flex items-center justify-between"><Label htmlFor="description">{t('coach.taskDescriptionLabel')}</Label><Button asChild variant="ghost" size="icon"><a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer"><Youtube className="h-5 w-5 text-red-500" /></a></Button></div><Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Öğrenciye not veya video linki..." /></div>)}
-                                </div>
-                            )
-                          )}
-                      </div>
-                  </form>
-                  <div className="space-y-4 flex flex-col overflow-hidden">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold flex items-center gap-2">
-                            <ClipboardList className="h-5 w-5 text-primary" />
-                            {t('coach.assignedTasks')}
-                        </h3>
-                        <Button variant="ghost" size="icon" onClick={() => setOpenCollapsibles([])}>
-                            <ChevronsDownUp className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-                      {loading ? <Skeleton className="h-24 w-full" /> : Object.keys(groupedTasks).length > 0 ? (
-                        Object.entries(groupedTasks).map(([subject, subjectTasks]) => {
-                          const pendingCount = subjectTasks.filter(t => t.status === 'pending' || t.status === 'pending_approval').length;
-                          const completedCount = subjectTasks.filter(t => t.status === 'completed').length;
-                          const notCompletedCount = subjectTasks.filter(t => t.status === 'not_completed').length;
-                          const Icon = getSubjectIconComponent(subject);
-                          const colorClass = getSubjectColorClass(subject);
-                          return (
-                            <Collapsible key={subject} open={openCollapsibles.includes(subject)} onOpenChange={(isOpen) => setOpenCollapsibles(prev => isOpen ? [...prev, subject] : prev.filter(s => s !== subject))} className="space-y-2">
-                              <CollapsibleTrigger className="flex justify-between items-center w-full p-2 bg-muted rounded-md">
-                                <div className="flex items-center gap-2">
-                                    <Icon className={`h-5 w-5 ${colorClass}`} />
-                                    <span className="font-bold">{subject}</span>
-                                </div>
-                                <div className="flex items-center gap-1.5 font-mono text-xs">
-                                    {notCompletedCount > 0 && <Badge className="bg-red-500 text-white hover:bg-red-500">{notCompletedCount}</Badge>}
-                                    {pendingCount > 0 && <Badge className="bg-yellow-500 text-white hover:bg-yellow-500">{pendingCount}</Badge>}
-                                    {completedCount > 0 && <Badge className="bg-green-500 text-white hover:bg-green-500">{completedCount}</Badge>}
-                                </div>
-                              </CollapsibleTrigger>
-                              <CollapsibleContent className="space-y-2 pl-4 pt-2">
-                                {subjectTasks.map(task => {
-                                  const TaskIcon = getSubjectIconComponent(task.subject);
-                                  return (
-                                  <Card key={task.id} className={`cursor-pointer hover:shadow-md transition-shadow ${getStatusBorderClass(task.status)}`} onClick={() => handleTaskClick(task)}>
-                                    <CardContent className="p-3 flex items-center gap-4">
-                                      <div className="flex-shrink-0">
-                                        <TaskIcon className={`h-6 w-6 ${getSubjectColorClass(task.subject)}`} />
-                                      </div>
-                                      <div className="flex-grow">
-                                        <p className="font-bold">{formatTaskTitle(task)}</p>
-                                        <Badge variant="outline" className={`mt-1 ${getStatusBadgeClass(task.status)}`}>{t(getStatusTranslationKey(task.status))}</Badge>
-                                      </div>
-                                      <Button variant="ghost" size="icon" className="ml-2 shrink-0" onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(task); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                                    </CardContent>
-                                  </Card>
-                                )})}
-                              </CollapsibleContent>
-                            </Collapsible>
-                          )
-                        })
-                      ) : (<p className="text-center text-muted-foreground py-4">{t('coach.noAssignedTasks')}</p>)}
-                      </div>
-                  </div>
-              </div>
-            </TabsContent>
-            <TabsContent value="analytics" className="flex-1 overflow-y-auto p-4 space-y-4">
-              <Tabs defaultValue="weekly" onValueChange={(value) => setTimePeriod(value as TimePeriod)}>
-                <div className="flex justify-between items-center">
-                  <TabsList>
-                    <TabsTrigger value="daily">{t('coach.timeFilters.daily')}</TabsTrigger>
-                    <TabsTrigger value="weekly">{t('coach.timeFilters.weekly')}</TabsTrigger>
-                    <TabsTrigger value="monthly">{t('coach.timeFilters.monthly')}</TabsTrigger>
-                    <TabsTrigger value="all">{t('coach.timeFilters.all')}</TabsTrigger>
-                  </TabsList>
-                  <div className="flex items-center gap-2">
-                    <Button onClick={handleGenerateReport}>
-                      <Download className="mr-2 h-4 w-4" />
-                      {t('coach.getReport')}
-                    </Button>
-                    <Button variant="outline" size="icon" onClick={() => setOpenAccordions([])}>
-                        <ChevronsDownUp className="h-4 w-4" />
-                    </Button>
-                  </div>
+                <div>
+                    <DialogTitle className="text-xl font-bold tracking-tight">
+                        {`${student.first_name?.toUpperCase()} ${student.last_name?.toUpperCase()}`} için Görev Yönetimi
+                    </DialogTitle>
+                    <DialogDescription className="text-sm text-muted-foreground mt-1">{t('coach.taskManagementDescription')}</DialogDescription>
                 </div>
-                <div className="mt-4">
-                  {loading ? <Skeleton className="h-full w-full" /> : (
-                    <Accordion type="multiple" value={openAccordions} onValueChange={setOpenAccordions} className="w-full space-y-2">
-                      {readingAnalyticsData.length > 0 && (
-                        <AccordionItem value="kitap-okuma" className="border rounded-md px-4">
-                            <AccordionTrigger className="hover:no-underline">
-                                <div className="flex items-center gap-2">
-                                    <BookOpen className="h-6 w-6 text-orange-500" />
-                                    <span className="font-bold text-lg">Kitap Okuma Performansı</span>
+            </div>
+          </DialogHeader>
+          <div className="px-6 mt-4">
+            <Tabs defaultValue="addTask" value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-2 bg-muted p-1 rounded-lg h-auto">
+                    <TabsTrigger value="addTask" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md py-2">{t('coach.addNewTaskTab')}</TabsTrigger>
+                    <TabsTrigger value="analytics" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md py-2">{t('coach.analytics')}</TabsTrigger>
+                </TabsList>
+            </Tabs>
+          </div>
+          <div className="flex-1 overflow-hidden mt-4">
+            <Tabs value={activeTab} className="h-full">
+                <TabsContent value="addTask" className="h-full overflow-hidden">
+                <div className="grid md:grid-cols-2 gap-6 px-6 py-4 h-full">
+                    <form id="add-task-form" onSubmit={handleAddTask} className="flex flex-col h-full">
+                        <div className="flex-1 space-y-6 overflow-y-auto pr-4 pb-4">
+                            <div className="space-y-2">
+                                <h3 className="font-semibold flex items-center gap-2">
+                                    <BookMarked className="h-5 w-5 text-primary" />
+                                    {t('coach.selectTopic')}
+                                </h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                                        <SelectTrigger><SelectValue placeholder={t('coach.selectSubjectPlaceholder')} /></SelectTrigger>
+                                        <SelectContent>{lgsSubjects.map(subject => {
+                                            const Icon = getSubjectIconComponent(subject.name);
+                                            const colorClass = getSubjectColorClass(subject.name);
+                                            return (<SelectItem key={subject.name} value={subject.name}>
+                                                <div className="flex items-center gap-2">
+                                                    <Icon className={`h-5 w-5 ${colorClass}`} />
+                                                    <span className={colorClass}>{subject.name}</span>
+                                                </div>
+                                            </SelectItem>)
+                                        })}</SelectContent>
+                                    </Select>
+                                    <Select value={selectedTopic} onValueChange={setSelectedTopic} disabled={!selectedSubject}>
+                                        <SelectTrigger>
+                                            {selectedTopic ? (
+                                                <span className={`font-medium ${getTopicColorClass(availableTopics.indexOf(selectedTopic))}`}>
+                                                    {selectedTopic}
+                                                </span>
+                                            ) : (
+                                                <span className="text-muted-foreground">
+                                                    {selectedSubject === 'Kitap Okuma' 
+                                                        ? t('coach.selectPageCountPlaceholder', 'Sayfa Sayısı Seçin') 
+                                                        : t('coach.selectTopicPlaceholder')}
+                                                </span>
+                                            )}
+                                        </SelectTrigger>
+                                        <SelectContent>{availableTopics.map((topic, index) => (
+                                            <SelectItem key={topic} value={topic}>
+                                                <div className="flex items-center justify-between w-full">
+                                                    <span className={`font-medium ${getTopicColorClass(index)}`}>{topic}</span>
+                                                    <div className="flex items-center gap-1.5">
+                                                        {topicAssignmentStats[topic]?.explanations > 0 && <Badge variant="outline" className="bg-blue-100 text-blue-700">{topicAssignmentStats[topic].explanations} Anlatım</Badge>}
+                                                        {topicAssignmentStats[topic]?.questions > 0 && <Badge variant="outline" className="bg-purple-100 text-purple-700">{topicAssignmentStats[topic].questions} Soru</Badge>}
+                                                    </div>
+                                                </div>
+                                            </SelectItem>
+                                        ))}</SelectContent>
+                                    </Select>
                                 </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                                <ResponsiveContainer width="100%" height={300}>
-                                <BarChart data={readingAnalyticsData} margin={{ top: 20, right: 20, left: -10, bottom: 20 }}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="week" />
-                                    <YAxis />
-                                    <Tooltip />
-                                    <Bar dataKey="pages" fill="#f97316" name="Okunan Sayfa">
-                                        <LabelList dataKey="pages" position="top" />
-                                    </Bar>
-                                </BarChart>
-                                </ResponsiveContainer>
-                            </AccordionContent>
-                        </AccordionItem>
-                      )}
-                      {analyticsData.length > 0 ? (
-                          analyticsData.map(({ subject, data }) => {
+                            </div>
+                            {selectedTopic && (
+                                selectedSubject === 'Kitap Okuma' ? (
+                                    <div className="space-y-2 pt-6">
+                                        <Label htmlFor="description">{t('coach.bookTitleLabel')}</Label>
+                                        <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Okunacak kitabın adı..." />
+                                    </div>
+                                ) : (
+                                    <div className="space-y-6">
+                                        <div className="space-y-2">
+                                            <h3 className="font-semibold">{t('coach.selectTaskType')}</h3>
+                                            <RadioGroup value={taskType} onValueChange={(v: 'konu_anlatimi' | 'soru_cozumu') => setTaskType(v)}>
+                                                <div className="flex items-center space-x-2"><RadioGroupItem value="konu_anlatimi" id="r1" /><Label htmlFor="r1">{t('coach.topicExplanation')}</Label></div>
+                                                <div className="flex items-center space-x-2"><RadioGroupItem value="soru_cozumu" id="r2" /><Label htmlFor="r2">{t('coach.questionSolving')}</Label></div>
+                                            </RadioGroup>
+                                        </div>
+                                        {taskType === 'soru_cozumu' && (<div className="space-y-2"><Label htmlFor="question-count">{t('coach.questionCount')}</Label><NumberInput value={questionCount} onChange={setQuestionCount} required /></div>)}
+                                        {taskType === 'konu_anlatimi' && (<div className="space-y-2"><div className="flex items-center justify-between"><Label htmlFor="description">{t('coach.taskDescriptionLabel')}</Label><Button asChild variant="ghost" size="icon"><a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer"><Youtube className="h-5 w-5 text-red-500" /></a></Button></div><Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Öğrenciye not veya video linki..." /></div>)}
+                                    </div>
+                                )
+                            )}
+                        </div>
+                    </form>
+                    <div className="space-y-4 flex flex-col overflow-hidden">
+                        <div className="flex items-center justify-between">
+                            <h3 className="font-semibold flex items-center gap-2">
+                                <ClipboardList className="h-5 w-5 text-primary" />
+                                {t('coach.assignedTasks')}
+                            </h3>
+                            <Button variant="ghost" size="icon" onClick={() => setOpenCollapsibles([])}>
+                                <ChevronsDownUp className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+                        {loading ? <Skeleton className="h-24 w-full" /> : Object.keys(groupedTasks).length > 0 ? (
+                            Object.entries(groupedTasks).map(([subject, subjectTasks]) => {
+                            const pendingCount = subjectTasks.filter(t => t.status === 'pending' || t.status === 'pending_approval').length;
+                            const completedCount = subjectTasks.filter(t => t.status === 'completed').length;
                             const Icon = getSubjectIconComponent(subject);
                             const colorClass = getSubjectColorClass(subject);
                             return (
-                            <AccordionItem value={subject} key={subject} className="border rounded-md px-4">
+                                <Collapsible key={subject} open={openCollapsibles.includes(subject)} onOpenChange={(isOpen) => setOpenCollapsibles(prev => isOpen ? [...prev, subject] : prev.filter(s => s !== subject))} className="space-y-2">
+                                <CollapsibleTrigger className="flex justify-between items-center w-full p-2 bg-muted rounded-md">
+                                    <div className="flex items-center gap-2">
+                                        <Icon className={`h-5 w-5 ${colorClass}`} />
+                                        <span className="font-bold">{subject}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 font-mono text-xs">
+                                        {pendingCount > 0 && <Badge className="bg-yellow-400 text-yellow-900 hover:bg-yellow-400 rounded-full h-5 w-5 flex items-center justify-center p-0">{pendingCount}</Badge>}
+                                        {completedCount > 0 && <Badge className="bg-green-500 text-white hover:bg-green-500 rounded-full h-5 w-5 flex items-center justify-center p-0">{completedCount}</Badge>}
+                                    </div>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="space-y-2 pl-4 pt-2">
+                                    {subjectTasks.map(task => (
+                                    <Card key={task.id} className={`cursor-pointer hover:shadow-md transition-shadow rounded-lg ${getStatusBorderClass(task.status)}`} onClick={() => handleTaskClick(task)}>
+                                        <CardContent className="p-3 flex items-center gap-4">
+                                            {getTaskTypeIcon(task)}
+                                            <div className="flex-grow">
+                                                <p className="font-semibold">{formatTaskTitle(task)}</p>
+                                                <Badge className={`mt-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border-0 ${getStatusBadgeClass(task.status)}`}>
+                                                    {t(getStatusTranslationKey(task.status))}
+                                                </Badge>
+                                            </div>
+                                            <Button variant="ghost" size="icon" className="ml-2 shrink-0 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(task); }}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </CardContent>
+                                    </Card>
+                                    ))}
+                                </CollapsibleContent>
+                                </Collapsible>
+                            )
+                            })
+                        ) : (<p className="text-center text-muted-foreground py-4">{t('coach.noAssignedTasks')}</p>)}
+                        </div>
+                    </div>
+                </div>
+                </TabsContent>
+                <TabsContent value="analytics" className="h-full overflow-y-auto p-6 space-y-4">
+                <Tabs defaultValue="weekly" onValueChange={(value) => setTimePeriod(value as TimePeriod)}>
+                    <div className="flex justify-between items-center">
+                    <TabsList>
+                        <TabsTrigger value="daily">{t('coach.timeFilters.daily')}</TabsTrigger>
+                        <TabsTrigger value="weekly">{t('coach.timeFilters.weekly')}</TabsTrigger>
+                        <TabsTrigger value="monthly">{t('coach.timeFilters.monthly')}</TabsTrigger>
+                        <TabsTrigger value="all">{t('coach.timeFilters.all')}</TabsTrigger>
+                    </TabsList>
+                    <div className="flex items-center gap-2">
+                        <Button onClick={handleGenerateReport}>
+                        <Download className="mr-2 h-4 w-4" />
+                        {t('coach.getReport')}
+                        </Button>
+                        <Button variant="outline" size="icon" onClick={() => setOpenAccordions([])}>
+                            <ChevronsDownUp className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    </div>
+                    <div className="mt-4">
+                    {loading ? <Skeleton className="h-full w-full" /> : (
+                        <Accordion type="multiple" value={openAccordions} onValueChange={setOpenAccordions} className="w-full space-y-2">
+                        {readingAnalyticsData.length > 0 && (
+                            <AccordionItem value="kitap-okuma" className="border rounded-md px-4">
                                 <AccordionTrigger className="hover:no-underline">
                                     <div className="flex items-center gap-2">
-                                        <Icon className={`h-6 w-6 ${colorClass}`} />
-                                        <span className="font-bold text-lg">{subject}</span>
+                                        <BookOpen className="h-6 w-6 text-orange-500" />
+                                        <span className="font-bold text-lg">Kitap Okuma Performansı</span>
                                     </div>
                                 </AccordionTrigger>
                                 <AccordionContent>
-                                    <ResponsiveContainer width="100%" height={400}>
-                                        <BarChart data={data} margin={{ top: 20, right: 20, left: -10, bottom: 80 }}>
+                                    <ResponsiveContainer width="100%" height={300}>
+                                    <BarChart data={readingAnalyticsData} margin={{ top: 20, right: 20, left: -10, bottom: 20 }}>
                                         <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="topic" height={100} interval={0} tick={<CustomizedAxisTick />} axisLine={false} tickLine={false} />
+                                        <XAxis dataKey="week" />
                                         <YAxis />
                                         <Tooltip />
-                                        <Bar dataKey="correct" stackId="a" fill="#22c55e" name={t('coach.scoreEntry.correct')} />
-                                        <Bar dataKey="wrong" stackId="a" fill="#ef4444" name={t('coach.scoreEntry.wrong')} />
-                                        <Bar dataKey="empty" stackId="a" fill="#3b82f6" name={t('coach.scoreEntry.empty')}>
-                                            <LabelList dataKey="net" position="top" offset={5} fill="hsl(var(--foreground))" fontSize={12} fontWeight="bold" formatter={(value: number) => `Net: ${value.toFixed(2)}`} />
+                                        <Bar dataKey="pages" fill="#f97316" name="Okunan Sayfa">
+                                            <LabelList dataKey="pages" position="top" />
                                         </Bar>
-                                        </BarChart>
+                                    </BarChart>
                                     </ResponsiveContainer>
                                 </AccordionContent>
                             </AccordionItem>
-                          )})
-                      ) : readingAnalyticsData.length === 0 ? (
-                        <div className="text-center text-muted-foreground py-10">{t('coach.noTasksForChart')}</div>
-                      ) : null}
-                    </Accordion>
-                  )}
-                </div>
-              </Tabs>
-            </TabsContent>
-          </Tabs>
-          <DialogFooter>
+                        )}
+                        {analyticsData.length > 0 ? (
+                            analyticsData.map(({ subject, data }) => {
+                                const Icon = getSubjectIconComponent(subject);
+                                const colorClass = getSubjectColorClass(subject);
+                                return (
+                                <AccordionItem value={subject} key={subject} className="border rounded-md px-4">
+                                    <AccordionTrigger className="hover:no-underline">
+                                        <div className="flex items-center gap-2">
+                                            <Icon className={`h-6 w-6 ${colorClass}`} />
+                                            <span className="font-bold text-lg">{subject}</span>
+                                        </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                        <ResponsiveContainer width="100%" height={400}>
+                                            <BarChart data={data} margin={{ top: 20, right: 20, left: -10, bottom: 80 }}>
+                                            <CartesianGrid strokeDasharray="3 3" />
+                                            <XAxis dataKey="topic" height={100} interval={0} tick={<CustomizedAxisTick />} axisLine={false} tickLine={false} />
+                                            <YAxis />
+                                            <Tooltip />
+                                            <Bar dataKey="correct" stackId="a" fill="#22c55e" name={t('coach.scoreEntry.correct')} />
+                                            <Bar dataKey="wrong" stackId="a" fill="#ef4444" name={t('coach.scoreEntry.wrong')} />
+                                            <Bar dataKey="empty" stackId="a" fill="#3b82f6" name={t('coach.scoreEntry.empty')}>
+                                                <LabelList dataKey="net" position="top" offset={5} fill="hsl(var(--foreground))" fontSize={12} fontWeight="bold" formatter={(value: number) => `Net: ${value.toFixed(2)}`} />
+                                            </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            )})
+                        ) : readingAnalyticsData.length === 0 ? (
+                            <div className="text-center text-muted-foreground py-10">{t('coach.noTasksForChart')}</div>
+                        ) : null}
+                        </Accordion>
+                    )}
+                    </div>
+                </Tabs>
+                </TabsContent>
+            </Tabs>
+          </div>
+          <DialogFooter className="px-6 pb-6 pt-4 border-t">
             <DialogClose asChild><Button type="button" variant="outline" onClick={onClose}>{t('coach.close')}</Button></DialogClose>
             {activeTab === 'addTask' && (
-              <Button type="submit" form="add-task-form" disabled={isSubmitDisabled}>{t('coach.addTaskButton')}</Button>
+              <Button type="submit" form="add-task-form" disabled={isSubmitDisabled}>
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                {t('coach.addTaskButton')}
+              </Button>
             )}
           </DialogFooter>
         </DialogContent>
