@@ -137,7 +137,7 @@ const StudentManagement = () => {
                     <Button variant="secondary" size="sm" onClick={() => handleOpenRewardManagement(student)}>
                       {t('coach.sendReward')}
                     </Button>
-                    <Button variant="destructive" size="icon-sm" onClick={() => handleOpenDeleteDialog(student)}>
+                    <Button variant="destructive" size="icon" onClick={() => handleOpenDeleteDialog(student)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
