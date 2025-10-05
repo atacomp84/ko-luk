@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useContext, ReactNode, useMemo } from 'react';
+import { createContext, useState, useEffect, useContext, ReactNode, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
 
@@ -7,7 +7,7 @@ interface Profile {
   role: string;
   first_name: string;
   last_name: string;
-  username: string; // Add username here
+  username: string;
 }
 
 interface AuthContextType {
@@ -15,6 +15,7 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,35 +26,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchProfile = useCallback(async (currentUser: User | null) => {
+    if (currentUser) {
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .single();
+      
+      if (profileError) {
+        setProfile(null);
+        console.error("Error fetching profile:", profileError.message);
+      } else {
+        setProfile(userProfile);
+      }
+    } else {
+      setProfile(null);
+    }
+  }, []);
+
+  const refreshProfile = useCallback(async () => {
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    await fetchProfile(currentUser);
+  }, [fetchProfile]);
+
   useEffect(() => {
     const fetchSessionAndProfile = async () => {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      setLoading(true);
+      const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError) {
         setLoading(false);
         return;
       }
 
-      setSession(session);
-      const currentUser = session?.user ?? null;
+      setSession(currentSession);
+      const currentUser = currentSession?.user ?? null;
       setUser(currentUser);
-
-      if (currentUser) {
-        const { data: userProfile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', currentUser.id)
-          .single();
-        
-        if (profileError) {
-          setProfile(null);
-        } else {
-          setProfile(userProfile);
-        }
-      } else {
-        setProfile(null);
-      }
-      
+      await fetchProfile(currentUser);
       setLoading(false);
     };
 
@@ -63,37 +73,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
       const currentUser = session?.user ?? null;
       setUser(currentUser);
-
-      if (currentUser) {
-        if (profile?.id !== currentUser.id) { // Fetch profile only if it's a different user
-          const { data: userProfile, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', currentUser.id)
-            .single();
-          
-          if (error) {
-            setProfile(null);
-          } else {
-            setProfile(userProfile);
-          }
-        }
-      } else {
-        setProfile(null);
-      }
+      await fetchProfile(currentUser);
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [profile?.id]);
+  }, [fetchProfile]);
 
   const value = useMemo(() => ({
     session,
     user,
     profile,
     loading,
-  }), [session, user, profile, loading]);
+    refreshProfile,
+  }), [session, user, profile, loading, refreshProfile]);
 
   return (
     <AuthContext.Provider value={value}>

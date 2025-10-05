@@ -12,10 +12,10 @@ import { AlertCircle } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 
 const UserProfileSettings = () => {
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading, refreshProfile } = useAuth();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [username, setUsername] = useState(''); // Add username state
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -27,7 +27,7 @@ const UserProfileSettings = () => {
     if (profile && user) {
       setFirstName(profile.first_name || '');
       setLastName(profile.last_name || '');
-      setUsername(profile.username || ''); // Set username
+      setUsername(profile.username || '');
       setEmail(user.email || '');
     }
   }, [profile, user]);
@@ -43,7 +43,6 @@ const UserProfileSettings = () => {
       return;
     }
 
-    // Check if username already exists and is not the current user's username
     if (username !== profile?.username) {
       const { data: existingUser, error: usernameCheckError } = await supabase
         .from('profiles')
@@ -68,7 +67,7 @@ const UserProfileSettings = () => {
       .update({ 
         first_name: firstName, 
         last_name: lastName, 
-        username: username, // Update username
+        username: username,
         updated_at: new Date().toISOString() 
       })
       .eq('id', user.id);
@@ -78,6 +77,7 @@ const UserProfileSettings = () => {
       showError(t('settings.profileUpdateError'));
     } else {
       showSuccess(t('settings.profileUpdateSuccess'));
+      await refreshProfile();
     }
     setLoading(false);
   };
@@ -106,7 +106,6 @@ const UserProfileSettings = () => {
       showError(t('settings.emailUpdateError'));
     } else {
       showSuccess(t('settings.emailUpdateSuccess'));
-      // Supabase sends a confirmation email for email changes
     }
     setLoading(false);
   };
@@ -201,7 +200,7 @@ const UserProfileSettings = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="username">{t('auth.usernameLabel')}</Label> {/* New username field */}
+              <Label htmlFor="username">{t('auth.usernameLabel')}</Label>
               <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>

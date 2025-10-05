@@ -4,7 +4,7 @@ import StudentCurrentTasks from "@/components/student/StudentCurrentTasks";
 import StudentCompletedTasks from "@/components/student/StudentCompletedTasks";
 import Layout from "@/components/Layout";
 import StudentMessages from "@/components/student/StudentMessages";
-import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 const StudentDashboard = () => {
   const { t } = useTranslation();
@@ -17,13 +17,8 @@ const StudentDashboard = () => {
                     <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="current-tasks">{t('student.currentTasks')}</TabsTrigger>
                         <TabsTrigger value="completed-tasks">{t('student.completedTasks')}</TabsTrigger>
-                        <TabsTrigger value="messages" className="relative">
+                        <TabsTrigger value="messages" className={cn(unreadMessageCount > 0 && "text-red-500 animate-blink font-bold")}>
                             {t('messages.title')}
-                            {unreadMessageCount > 0 && (
-                                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center rounded-full bg-red-500 text-white">
-                                    {unreadMessageCount}
-                                </Badge>
-                            )}
                         </TabsTrigger>
                     </TabsList>
                     <TabsContent value="current-tasks" className="mt-4">

@@ -80,4 +80,13 @@
     background-image: radial-gradient(circle at 1px 1px, hsl(var(--border)) 1px, transparent 0);
     background-size: 2rem 2rem;
   }
+  .animate-blink {
+    animation: blink 1.5s linear infinite;
+  }
+
+  @keyframes blink {
+    50% {
+      opacity: 0.3;
+    }
+  }
 }

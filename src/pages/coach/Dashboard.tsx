@@ -3,7 +3,7 @@ import Layout from "@/components/Layout";
 import { useTranslation } from "react-i18next";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CoachMessages from "@/components/coach/CoachMessages";
-import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 const CoachDashboard = () => {
   const { t } = useTranslation();
@@ -14,13 +14,8 @@ const CoachDashboard = () => {
                 <Tabs defaultValue="student-management" className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="student-management">{t('coach.myStudents')}</TabsTrigger>
-                        <TabsTrigger value="messages" className="relative">
+                        <TabsTrigger value="messages" className={cn(unreadMessageCount > 0 && "text-red-500 animate-blink font-bold")}>
                             {t('messages.title')}
-                            {unreadMessageCount > 0 && (
-                                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center rounded-full bg-red-500 text-white">
-                                    {unreadMessageCount}
-                                </Badge>
-                            )}
                         </TabsTrigger>
                     </TabsList>
                     <TabsContent value="student-management" className="mt-4">

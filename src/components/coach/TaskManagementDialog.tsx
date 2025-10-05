@@ -14,7 +14,7 @@ import { NumberInput } from '../ui/NumberInput';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, BookMarked, ClipboardList, BookOpen, Download, HelpCircle, CheckCircle2, ChevronsDownUp, Youtube, Clock } from 'lucide-react';
+import { Trash2, BookMarked, ClipboardList, BookOpen, Download, HelpCircle, CheckCircle2, ChevronsDownUp, Clock } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -23,7 +23,7 @@ import { startOfWeek, format, isWithinInterval, subDays, subMonths, differenceIn
 import { tr, enUS } from 'date-fns/locale';
 import { generateWordReport } from '@/lib/reportGenerator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { getSubjectIconComponent, getSubjectColorClass, topicColors, getTopicColorClass } from '@/utils/subjectUtils';
+import { getSubjectIconComponent, getSubjectColorClass, getTopicColorClass } from '@/utils/subjectUtils';
 import { getInitials } from '@/lib/utils';
 
 interface Student {
@@ -543,12 +543,11 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     } else {
       console.log(`[TaskManagementDialog] Task ${taskId} successfully marked as not_completed.`);
       showSuccess('Bir görevin süresi doldu ve tamamlanmadı olarak işaretlendi.');
-      fetchTasks(); // Refresh tasks to reflect the change
+      fetchTasks();
     }
   }, [fetchTasks]);
 
   useEffect(() => {
-    // Clear existing intervals
     Object.values(intervalRefs.current).forEach(clearInterval);
     intervalRefs.current = {};
 
@@ -560,10 +559,8 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
         const timeLeftMs = differenceInMilliseconds(twentyFourHoursLater, now);
 
         if (timeLeftMs <= 0) {
-          // Task is already overdue, mark it as not_completed immediately
           handleTaskTimeout(task.id);
         } else {
-          // Set up a countdown interval
           const interval = setInterval(() => {
             const updatedTimeLeftMs = differenceInMilliseconds(addHours(new Date(task.created_at), 24), new Date());
             if (updatedTimeLeftMs <= 0) {
@@ -571,7 +568,6 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
               delete intervalRefs.current[task.id];
               handleTaskTimeout(task.id);
             } else {
-              // Force a re-render to update the timer display
               setTasks(prevTasks => prevTasks.map(t => t.id === task.id ? { ...t } : t));
             }
           }, 1000);
@@ -583,7 +579,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     return () => {
       Object.values(intervalRefs.current).forEach(clearInterval);
     };
-  }, [tasks, handleTaskTimeout]); // Re-run when tasks change
+  }, [tasks, handleTaskTimeout]);
 
   const sortedGroupedTasks = useMemo(() => {
     const grouped = tasks.reduce((acc, task) => {
@@ -595,7 +591,6 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       return acc;
     }, {} as Record<string, Task[]>);
 
-    // Sort tasks within each subject group
     Object.keys(grouped).forEach(subject => {
       grouped[subject].sort((a, b) => {
         const statusOrder = { 'pending': 1, 'pending_approval': 2, 'completed': 3, 'not_completed': 4 };
@@ -709,7 +704,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                                             </RadioGroup>
                                         </div>
                                         {taskType === 'soru_cozumu' && (<div className="space-y-2"><Label htmlFor="question-count">{t('coach.questionCount')}</Label><NumberInput value={questionCount} onChange={setQuestionCount} required /></div>)}
-                                        {taskType === 'konu_anlatimi' && (<div className="space-y-2"><div className="flex items-center justify-between"><Label htmlFor="description">{t('coach.taskDescriptionLabel')}</Label><Button asChild variant="ghost" size="icon"><a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer"><Youtube className="h-5 w-5 text-red-500" /></a></Button></div><Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Öğrenciye not veya video linki..." /></div>)}
+                                        {taskType === 'konu_anlatimi' && (<div className="space-y-2"><Label htmlFor="description">{t('coach.taskDescriptionLabel')}</Label><Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Öğrenciye not veya video linki..." /></div>)}
                                     </div>
                                 )
                             )}
@@ -892,7 +887,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
             <AlertDialogAction onClick={() => handleSimpleApproval('completed')}>{t('coach.approval.approve')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+      </Dialog>
 
       <Dialog open={isScoreEntryOpen} onOpenChange={setScoreEntryOpen}>
         <DialogContent>
