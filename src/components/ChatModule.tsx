@@ -10,7 +10,7 @@ import { getInitials } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { Skeleton } from './ui/skeleton';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
-import { showError } from '@/utils/toast'; // showError import edildi
+import { showError } from '@/utils/toast';
 
 interface ChatPartner {
   id: string;
@@ -39,21 +39,24 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
   const { t } = useTranslation();
 
   const scrollToBottom = useCallback(() => {
+    console.log('[ChatModule] scrollToBottom: Attempting to scroll.');
     setTimeout(() => {
       const scrollViewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
       if (scrollViewport) {
         scrollViewport.scrollTop = scrollViewport.scrollHeight;
-        console.log('[ChatModule] Scrolled to bottom.');
+        console.log('[ChatModule] scrollToBottom: Successfully scrolled to bottom.');
+      } else {
+        console.warn('[ChatModule] scrollToBottom: Scroll viewport not found.');
       }
     }, 100);
   }, []);
 
   const markMessagesAsRead = useCallback(async () => {
     if (!user || !chatPartner) {
-      console.log('[ChatModule] markMessagesAsRead skipped: No user or chat partner.');
+      console.log('[ChatModule] markMessagesAsRead: Skipped (No user or chat partner).');
       return;
     }
-    console.log(`[ChatModule] Attempting to mark messages from ${chatPartner.id} as read for user ${user.id}`);
+    console.log(`[ChatModule] markMessagesAsRead: Attempting to mark messages from ${chatPartner.id} as read for user ${user.id}`);
     const { error } = await supabase
       .from('messages')
       .update({ is_read: true })
@@ -61,25 +64,28 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
       .eq('sender_id', chatPartner.id)
       .eq('is_read', false);
     if (error) {
-      console.error('[ChatModule] Error marking messages as read:', error.message);
+      console.error('[ChatModule] markMessagesAsRead: Error marking messages as read:', error.message);
     } else {
-      console.log('[ChatModule] Successfully marked messages as read.');
+      console.log('[ChatModule] markMessagesAsRead: Successfully marked messages as read.');
     }
   }, [user, chatPartner]);
 
   const fetchMessages = useCallback(async () => {
+    console.log('[ChatModule] fetchMessages: Function started.');
     if (!user) {
-      console.log('[ChatModule] fetchMessages skipped: No current user.');
+      console.log('[ChatModule] fetchMessages: Skipped (No current user). Setting messages to empty.');
       setMessages([]);
+      setLoading(false); // Ensure loading is false if skipped
       return;
     }
     if (!chatPartner) {
-      console.log('[ChatModule] fetchMessages skipped: No chat partner selected.');
+      console.log('[ChatModule] fetchMessages: Skipped (No chat partner selected). Setting messages to empty.');
       setMessages([]);
+      setLoading(false); // Ensure loading is false if skipped
       return;
     }
 
-    console.log(`[ChatModule] Fetching messages between user ${user.id} and chat partner ${chatPartner.id}`);
+    console.log(`[ChatModule] fetchMessages: Fetching messages between user ${user.id} and chat partner ${chatPartner.id}`);
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -89,36 +95,38 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
         .order('created_at', { ascending: true });
 
       if (error) {
-        console.error('[ChatModule] Error fetching messages from Supabase:', error.message);
+        console.error('[ChatModule] fetchMessages: Error fetching messages from Supabase:', error.message);
         throw error;
       }
       
-      console.log(`[ChatModule] Fetched ${data.length} messages successfully.`);
+      console.log(`[ChatModule] fetchMessages: Fetched ${data.length} messages successfully. Data:`, data);
       setMessages(data as Message[]);
       await markMessagesAsRead();
       scrollToBottom();
     } catch (error: any) {
-      console.error('[ChatModule] General error during message fetch:', error.message);
+      console.error('[ChatModule] fetchMessages: General error during message fetch:', error.message);
       setMessages([]);
       showError(t('messages.fetchError'));
     } finally {
       setLoading(false);
+      console.log('[ChatModule] fetchMessages: Function finished.');
     }
   }, [user, chatPartner, markMessagesAsRead, scrollToBottom, t]);
 
   useEffect(() => {
-    console.log('[ChatModule] chatPartner changed, re-fetching messages.');
+    console.log('[ChatModule] useEffect (chatPartner change): chatPartner changed, re-fetching messages.');
     fetchMessages();
-  }, [chatPartner, fetchMessages]); // chatPartner değiştiğinde mesajları yeniden çek
+  }, [chatPartner, fetchMessages]);
 
   useEffect(() => {
+    console.log('[ChatModule] useEffect (real-time subscription): Setting up subscription.');
     if (!user || !chatPartner) {
-      console.log('[ChatModule] Real-time subscription skipped: No user or chat partner.');
+      console.log('[ChatModule] useEffect (real-time subscription): Skipped (No user or chat partner).');
       return;
     }
 
     const channelId = `chat_${[user.id, chatPartner.id].sort().join('_')}`;
-    console.log(`[ChatModule] Subscribing to real-time channel: ${channelId}`);
+    console.log(`[ChatModule] useEffect (real-time subscription): Subscribing to channel: ${channelId}`);
     
     const channel = supabase
       .channel(channelId)
@@ -134,44 +142,46 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
                            (newMessage.sender_id === chatPartner.id && newMessage.receiver_id === user.id);
 
         if (isRelevant) {
-          console.log('[ChatModule] Message is relevant, updating state.');
+          console.log('[ChatModule] Real-time: Message is relevant, updating state.');
           setMessages(currentMessages => {
             if (currentMessages.some(m => m.id === newMessage.id)) {
-              console.log('[ChatModule] Duplicate message received, ignoring.');
+              console.log('[ChatModule] Real-time: Duplicate message received, ignoring.');
               return currentMessages;
             }
             return [...currentMessages, newMessage];
           });
           if (newMessage.receiver_id === user.id) {
+            console.log('[ChatModule] Real-time: New message is for current user, marking as read.');
             markMessagesAsRead();
           }
           scrollToBottom();
         } else {
-          console.log('[ChatModule] Received message is not for this chat, ignoring.');
+          console.log('[ChatModule] Real-time: Received message is not for this chat, ignoring.');
         }
       })
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
-          console.log(`[ChatModule] Successfully subscribed to channel ${channelId}`);
+          console.log(`[ChatModule] Real-time: Successfully subscribed to channel ${channelId}`);
         }
         if (status === 'CHANNEL_ERROR') {
-          console.error(`[ChatModule] Subscription error on channel ${channelId}:`, err);
+          console.error(`[ChatModule] Real-time: Subscription error on channel ${channelId}:`, err);
         }
         if (status === 'TIMED_OUT') {
-            console.warn(`[ChatModule] Subscription timed out on channel ${channelId}.`);
+            console.warn(`[ChatModule] Real-time: Subscription timed out on channel ${channelId}.`);
         }
       });
 
     return () => {
-      console.log(`[ChatModule] Unsubscribing from channel: ${channelId}`);
+      console.log(`[ChatModule] useEffect (real-time subscription cleanup): Unsubscribing from channel: ${channelId}`);
       supabase.removeChannel(channel);
     };
   }, [user, chatPartner, markMessagesAsRead, scrollToBottom]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[ChatModule] handleSendMessage: Function started.');
     if (!newMessage.trim() || !user || !chatPartner) {
-      console.log('[ChatModule] Send message skipped: Empty message, no user, or no chat partner.');
+      console.log('[ChatModule] handleSendMessage: Skipped (Empty message, no user, or no chat partner).');
       return;
     }
 
@@ -181,7 +191,7 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
       content: newMessage.trim(),
     };
 
-    console.log('[ChatModule] Attempting to send message:', messageToSend);
+    console.log('[ChatModule] handleSendMessage: Attempting to send message:', messageToSend);
     
     const tempId = `temp_${Date.now()}`;
     const optimisticMessage: Message = {
@@ -197,20 +207,23 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
       const { data, error } = await supabase.from('messages').insert(messageToSend).select().single();
 
       if (error) {
-        console.error('[ChatModule] Error inserting message into Supabase:', error.message);
+        console.error('[ChatModule] handleSendMessage: Error inserting message into Supabase:', error.message);
         throw error;
       }
       
-      console.log('[ChatModule] Message sent successfully and confirmed by server:', data);
+      console.log('[ChatModule] handleSendMessage: Message sent successfully and confirmed by server. Data:', data);
       setMessages(currentMessages => currentMessages.map(m => m.id === tempId ? (data as Message) : m));
     } catch (error: any) {
-      console.error('[ChatModule] General error during message send:', error.message);
+      console.error('[ChatModule] handleSendMessage: General error during message send:', error.message);
       setMessages(currentMessages => currentMessages.filter(m => m.id !== tempId)); // Optimistik mesajı geri al
       showError(t('messages.sendError'));
+    } finally {
+      console.log('[ChatModule] handleSendMessage: Function finished.');
     }
   };
 
   if (!chatPartner) {
+    console.log('[ChatModule] Render: No chat partner selected, showing placeholder.');
     return (
       <Card className="h-full flex items-center justify-center">
         <CardContent className="text-center">
@@ -220,6 +233,7 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
     );
   }
 
+  console.log('[ChatModule] Render: Chat partner selected, rendering chat interface.');
   return (
     <Card className="flex flex-col h-[calc(100vh-12rem)]">
       <CardHeader>
