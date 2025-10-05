@@ -1,5 +1,5 @@
 import { ReactNode, useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ interface LayoutProps {
 const Layout = ({ children, title }: LayoutProps) => {
   const { profile, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
@@ -72,11 +73,20 @@ const Layout = ({ children, title }: LayoutProps) => {
     navigate('/auth');
   };
 
+  const handleGoBack = () => {
+    // Specific fix for admin settings page lock
+    if (profile?.role === 'admin' && location.pathname === '/settings') {
+      navigate('/admin/dashboard');
+    } else {
+      navigate(-1);
+    }
+  };
+
   return (
     <div className="min-h-screen w-full bg-secondary/50">
       <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 py-4">
         <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="mr-2">
+            <Button variant="ghost" size="icon" onClick={handleGoBack} className="mr-2">
                 <ArrowLeft className="h-4 w-4" />
                 <span className="sr-only">{t('back')}</span>
             </Button>

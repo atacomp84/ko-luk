@@ -113,7 +113,7 @@ const StudentManagement = () => {
   
     handleCloseDeleteDialog();
   
-    const { error } = await supabase.functions.invoke('delete-student', {
+    const { error } = await supabase.functions.invoke('unpair-student', {
       body: { student_id: studentToDelete.id },
     });
   

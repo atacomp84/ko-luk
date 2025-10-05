@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { showError, showSuccess } from '@/utils/toast';
 import { useTranslation } from 'react-i18next';
-import { Trash2, Edit, GraduationCap } from 'lucide-react';
+import { Trash2, Edit, GraduationCap, Shield, User, UserCog } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn, getInitials } from '@/lib/utils';
 import { EditUserDialog } from './EditUserDialog';
@@ -61,6 +61,17 @@ const UserManagement = () => {
     fetchUsers();
   }, [fetchUsers]);
 
+  const groupedUsers = useMemo(() => {
+    return users.reduce((acc, user) => {
+      const role = user.role || 'student';
+      if (!acc[role]) {
+        acc[role] = [];
+      }
+      acc[role].push(user);
+      return acc;
+    }, {} as Record<string, UserProfile[]>);
+  }, [users]);
+
   const handleEditUser = (user: UserProfile) => {
     setSelectedUser(user);
     setEditUserDialogOpen(true);
@@ -106,6 +117,58 @@ const UserManagement = () => {
     }
   };
 
+  const renderUserGroup = (title: string, icon: React.ReactNode, userList: UserProfile[]) => {
+    if (!userList || userList.length === 0) return null;
+    return (
+      <div key={title}>
+        <h2 className="text-lg font-semibold flex items-center gap-2 mb-4 mt-6">
+          {icon}
+          {title}
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {userList.map((user, index) => (
+            <Card key={user.id} className="flex flex-col justify-between">
+              <CardContent className="p-4 flex items-center gap-4">
+                <Avatar>
+                  <AvatarFallback className={cn("font-bold", avatarColors[index % avatarColors.length])}>
+                    {getInitials(user.first_name, user.last_name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <p className="font-semibold">{user.first_name} {user.last_name}</p>
+                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                  {user.role === 'student' && (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      <strong>{t('admin.reassignStudent.currentCoach')}:</strong> {user.coach_name || t('admin.reassignStudent.noCoachAssigned')}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+              <div className="grid grid-cols-3 gap-1 p-2 border-t bg-muted/50">
+                  <Button variant="ghost" size="sm" onClick={() => handleEditUser(user)} className="flex flex-col h-auto gap-1 hover:text-blue-600 dark:hover:text-blue-400">
+                    <Edit className="h-4 w-4" />
+                    <span className="text-xs">{t('admin.userManagement.edit')}</span>
+                  </Button>
+                  {user.role === 'student' && (
+                    <Button variant="ghost" size="sm" onClick={() => handleReassignStudent(user)} className="flex flex-col h-auto gap-1 hover:text-purple-600 dark:hover:text-purple-400">
+                      <GraduationCap className="h-4 w-4" />
+                      <span className="text-xs">{t('admin.userManagement.reassignCoach')}</span>
+                    </Button>
+                  )}
+                  {user.role !== 'admin' && (
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteUser(user)} className="flex flex-col h-auto gap-1 text-red-500 hover:text-red-700 dark:text-red-500 dark:hover:text-red-400">
+                      <Trash2 className="h-4 w-4" />
+                      <span className="text-xs">{t('admin.userManagement.delete')}</span>
+                    </Button>
+                  )}
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <Card>
@@ -121,48 +184,10 @@ const UserManagement = () => {
               <Skeleton className="h-24 w-full" />
             </div>
           ) : users.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {users.map((user, index) => (
-                <Card key={user.id} className="flex flex-col justify-between">
-                  <CardContent className="p-4 flex items-center gap-4">
-                    <Avatar>
-                      <AvatarFallback className={cn("font-bold", avatarColors[index % avatarColors.length])}>
-                        {getInitials(user.first_name, user.last_name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <p className="font-semibold">{user.first_name} {user.last_name}</p>
-                      <p className="text-sm text-muted-foreground">{user.email}</p>
-                      <Badge variant="secondary" className="mt-1">
-                        {user.role === 'student' ? t('auth.roleStudent') : user.role === 'coach' ? t('auth.roleCoach') : t('admin.roleAdmin')}
-                      </Badge>
-                      {user.role === 'student' && (
-                        <div className="mt-2 text-xs text-muted-foreground">
-                          <strong>{t('admin.reassignStudent.currentCoach')}:</strong> {user.coach_name || t('admin.reassignStudent.noCoachAssigned')}
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                  <div className="grid grid-cols-3 gap-1 p-2 border-t bg-muted/50">
-                      <Button variant="ghost" size="sm" onClick={() => handleEditUser(user)} className="flex flex-col h-auto gap-1 hover:text-blue-600 dark:hover:text-blue-400">
-                        <Edit className="h-4 w-4" />
-                        <span className="text-xs">{t('admin.userManagement.edit')}</span>
-                      </Button>
-                      {user.role === 'student' && (
-                        <Button variant="ghost" size="sm" onClick={() => handleReassignStudent(user)} className="flex flex-col h-auto gap-1 hover:text-purple-600 dark:hover:text-purple-400">
-                          <GraduationCap className="h-4 w-4" />
-                          <span className="text-xs">{t('admin.userManagement.reassignCoach')}</span>
-                        </Button>
-                      )}
-                      {user.role !== 'admin' && ( // Prevent deleting admin via this UI
-                        <Button variant="ghost" size="sm" onClick={() => handleDeleteUser(user)} className="flex flex-col h-auto gap-1 text-red-500 hover:text-red-700 dark:text-red-500 dark:hover:text-red-400">
-                          <Trash2 className="h-4 w-4" />
-                          <span className="text-xs">{t('admin.userManagement.delete')}</span>
-                        </Button>
-                      )}
-                  </div>
-                </Card>
-              ))}
+            <div>
+              {renderUserGroup(t('admin.roleAdminPlural', 'Yöneticiler'), <Shield className="h-5 w-5 text-red-500" />, groupedUsers['admin'])}
+              {renderUserGroup(t('auth.roleCoachPlural', 'Koçlar'), <UserCog className="h-5 w-5 text-blue-500" />, groupedUsers['coach'])}
+              {renderUserGroup(t('auth.roleStudentPlural', 'Öğrenciler'), <User className="h-5 w-5 text-green-500" />, groupedUsers['student'])}
             </div>
           ) : (
             <div className="text-center py-10">
