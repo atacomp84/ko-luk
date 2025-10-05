@@ -21,6 +21,7 @@
     "roleLabel": "I am a...",
     "roleStudent": "Student",
     "roleCoach": "Coach",
+    "roleAdmin": "Admin",
     "registerButton": "Create Account",
     "registering": "Creating account...",
     "registerSuccess": "Registration successful! Please log in.",
@@ -150,6 +151,44 @@
     "fetchError": "Failed to load messages.",
     "sendError": "Failed to send message.",
     "noCoach": "You are not paired with a coach yet. Please contact your administrator."
+  },
+  "admin": {
+    "dashboardTitle": "Admin Dashboard",
+    "userManagement": "User Management",
+    "databaseManagement": "Database Management",
+    "userManagement": {
+      "title": "User Management",
+      "description": "View, edit, and delete user profiles and their roles.",
+      "fetchError": "Failed to fetch user data.",
+      "updateError": "Failed to update user.",
+      "updateSuccess": "User updated successfully.",
+      "deleteError": "Failed to delete user.",
+      "deleteSuccess": "User deleted successfully.",
+      "noUsers": "No users found.",
+      "editUserTitle": "Edit User",
+      "deleteUserTitle": "Delete User",
+      "deleteUserDescription": "{{userName}} adlı kullanıcıyı ve tüm ilişkili verilerini kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+      "saveChanges": "Save Changes",
+      "confirmDelete": "Delete User"
+    },
+    "databaseManagement": {
+      "title": "Database Management",
+      "description": "Backup, restore, or clear all application data.",
+      "backupButton": "Backup Database",
+      "backupSuccess": "Database backup successful!",
+      "backupError": "Failed to backup database.",
+      "restoreButton": "Restore Database",
+      "restoreSuccess": "Database restored successfully!",
+      "restoreError": "Failed to restore database.",
+      "noFileSelected": "No file selected for restore.",
+      "clearButton": "Clear All Data",
+      "clearWarning": "This action will permanently delete ALL application data, including users, tasks, messages, and pairs. Proceed with extreme caution.",
+      "clearConfirmTitle": "Confirm Data Deletion",
+      "clearConfirmDescription": "Are you absolutely sure you want to permanently delete ALL data from the database? This action is irreversible and will log you out.",
+      "clearConfirmButton": "Yes, Delete All Data",
+      "clearSuccess": "All database data cleared successfully!",
+      "clearError": "Failed to clear database data."
+    }
   },
   "logout": "Logout"
 }

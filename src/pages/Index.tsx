@@ -17,9 +17,14 @@ const Index = () => {
   useEffect(() => {
     if (!loading && profile) {
       if (profile.role === 'coach') {
+        console.log("[Index] User is a coach, navigating to /coach/dashboard.");
         navigate('/coach/dashboard');
       } else if (profile.role === 'student') {
+        console.log("[Index] User is a student, navigating to /student/dashboard.");
         navigate('/student/dashboard');
+      } else if (profile.role === 'admin') { // Admin rolü için yönlendirme eklendi
+        console.log("[Index] User is an admin, navigating to /admin/dashboard.");
+        navigate('/admin/dashboard');
       }
     }
   }, [loading, profile, navigate]);

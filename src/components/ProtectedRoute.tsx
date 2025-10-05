@@ -10,9 +10,13 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
   useEffect(() => {
     if (!loading) {
       if (!session || !profile) {
+        console.log("[ProtectedRoute] No session or profile, redirecting to /auth.");
         navigate('/auth');
       } else if (!allowedRoles.includes(profile.role)) {
+        console.log(`[ProtectedRoute] User role '${profile.role}' not allowed for this route, redirecting to /.`);
         navigate('/');
+      } else {
+        console.log(`[ProtectedRoute] User role '${profile.role}' allowed. Access granted.`);
       }
     }
   }, [loading, session, profile, navigate, allowedRoles]);
