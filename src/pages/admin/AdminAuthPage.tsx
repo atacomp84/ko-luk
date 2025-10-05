@@ -59,6 +59,7 @@ export default function AdminAuthPage() {
     if (profileData.role !== 'admin') {
       setError(t('admin.login.notAdminError'));
       showError(t('admin.login.notAdminError'));
+      await supabase.auth.signOut(); // Log out non-admin users
       setLoading(false);
       return;
     }
