@@ -23,30 +23,34 @@ const Layout = ({ children, title }: LayoutProps) => {
   const { t } = useTranslation();
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
-  useEffect(() => {
+  const fetchUnreadMessageCount = useCallback(async () => {
     if (!user) {
       setUnreadMessageCount(0);
       return;
     }
+    console.log(`[Layout] Fetching unread message count for user: ${user.id}`);
+    const { count, error } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('receiver_id', user.id)
+      .eq('is_read', false);
 
-    const fetchAndSetCount = async () => {
-      const { count, error } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('receiver_id', user.id)
-        .eq('is_read', false);
+    if (error) {
+      console.error("[Layout] Error fetching unread message count:", error.message);
+      setUnreadMessageCount(0);
+    } else {
+      console.log(`[Layout] Fetched unread count: ${count}`);
+      setUnreadMessageCount(count || 0);
+    }
+  }, [user]);
 
-      if (!error) {
-        setUnreadMessageCount(count ?? 0);
-      } else {
-        console.error('[Layout] Failed to fetch unread message count:', error.message);
-      }
-    };
+  useEffect(() => {
+    if (!user) return;
 
-    fetchAndSetCount();
+    fetchUnreadMessageCount();
 
     const channel = supabase
-      .channel(`public:messages:receiver_id=eq.${user.id}`)
+      .channel(`unread_messages_count_for_${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -55,16 +59,20 @@ const Layout = ({ children, title }: LayoutProps) => {
           table: 'messages',
           filter: `receiver_id=eq.${user.id}`,
         },
-        () => {
-          fetchAndSetCount();
+        (payload) => {
+          console.log('[Layout] Realtime message event received:', payload);
+          fetchUnreadMessageCount();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`[Layout] Subscribed to messages channel with status: ${status}`);
+      });
 
     return () => {
+      console.log(`[Layout] Unsubscribing from messages channel for user: ${user.id}`);
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, fetchUnreadMessageCount]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

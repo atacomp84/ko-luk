@@ -25,6 +25,7 @@ interface EditUserDialogProps {
 
 export const EditUserDialog = ({ isOpen, onClose, user, onUserUpdated }: EditUserDialogProps) => {
   const { t } = useTranslation();
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -53,23 +54,31 @@ export const EditUserDialog = ({ isOpen, onClose, user, onUserUpdated }: EditUse
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    setLoading(true);
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        role: formData.role,
-      })
-      .eq('id', user.id);
+    const updatePayload = {
+      user_id_to_update: user.id,
+      first_name: formData.first_name,
+      last_name: formData.last_name,
+      role: formData.role,
+    };
+
+    console.log("[EditUserDialog] Invoking 'update-user-admin' function with payload:", updatePayload);
+
+    const { data, error } = await supabase.functions.invoke('update-user-admin', {
+      body: updatePayload,
+    });
 
     if (error) {
+      console.error("[EditUserDialog] Function invocation error:", error);
       showError(t('admin.editUser.updateError', { message: error.message }));
     } else {
+      console.log("[EditUserDialog] Function invocation successful. Response:", data);
       showSuccess(t('admin.editUser.updateSuccess'));
       onUserUpdated();
       onClose();
     }
+    setLoading(false);
   };
 
   if (!user) return null;
@@ -79,7 +88,7 @@ export const EditUserDialog = ({ isOpen, onClose, user, onUserUpdated }: EditUse
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t('admin.editUser.title', { userName: `${user.first_name} ${user.last_name}` })}</DialogTitle>
-          <DialogDescription>{t('admin.editUser.description', 'Buradan kullanıcının bilgilerini ve rolünü güncelleyebilirsiniz.')}</DialogDescription>
+          <DialogDescription>{t('admin.editUser.description')}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -107,7 +116,9 @@ export const EditUserDialog = ({ isOpen, onClose, user, onUserUpdated }: EditUse
             <DialogClose asChild>
               <Button type="button" variant="outline">{t('coach.cancel')}</Button>
             </DialogClose>
-            <Button type="submit">{t('admin.editUser.saveChanges')}</Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? t('settings.saving') : t('admin.editUser.saveChanges')}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
