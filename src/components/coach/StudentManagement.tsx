@@ -5,13 +5,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { AddStudentDialog } from './AddStudentDialog';
 import { TaskManagementDialog } from './TaskManagementDialog';
-import { RewardManagementDialog } from './RewardManagementDialog';
 import { DeleteStudentDialog } from './DeleteStudentDialog';
 import { showError, showSuccess } from '@/utils/toast';
 import { useTranslation } from 'react-i18next';
-import { Trash2, ClipboardList, Gift, UserPlus } from 'lucide-react';
+import { Trash2, ClipboardList, UserPlus } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { getInitials } from '@/lib/utils';
 
 interface Student {
   id: string;
@@ -34,7 +34,6 @@ const StudentManagement = () => {
   const [loading, setLoading] = useState(true);
   const [isAddStudentOpen, setAddStudentOpen] = useState(false);
   const [isTaskManagementOpen, setTaskManagementOpen] = useState(false);
-  const [isRewardManagementOpen, setRewardManagementOpen] = useState(false);
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
@@ -99,11 +98,6 @@ const StudentManagement = () => {
     setTaskManagementOpen(true);
   };
 
-  const handleOpenRewardManagement = (student: Student) => {
-    setSelectedStudent(student);
-    setRewardManagementOpen(true);
-  };
-
   const handleOpenDeleteDialog = (student: Student) => {
     setStudentToDelete(student);
     setDeleteDialogOpen(true);
@@ -158,20 +152,15 @@ const StudentManagement = () => {
                   <CardContent className="p-4 flex items-center gap-4">
                     <Avatar>
                       <AvatarFallback className={cn("font-bold", avatarColors[index % avatarColors.length])}>
-                        {student.first_name?.[0]?.toUpperCase()}
-                        {student.last_name?.[0]?.toUpperCase()}
+                        {getInitials(student.first_name, student.last_name)}
                       </AvatarFallback>
                     </Avatar>
                     <span className="font-semibold">{student.first_name} {student.last_name}</span>
                   </CardContent>
-                  <div className="grid grid-cols-3 gap-1 p-2 border-t bg-muted/50">
+                  <div className="grid grid-cols-2 gap-1 p-2 border-t bg-muted/50">
                       <Button variant="ghost" size="sm" onClick={() => handleOpenTaskManagement(student)} className="flex flex-col h-auto gap-1 hover:text-blue-600 dark:hover:text-blue-400">
                         <ClipboardList className="h-4 w-4" />
                         <span className="text-xs">{t('coach.manageTasks')}</span>
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleOpenRewardManagement(student)} className="flex flex-col h-auto gap-1 hover:text-green-600 dark:hover:text-green-400">
-                        <Gift className="h-4 w-4" />
-                        <span className="text-xs">{t('coach.sendReward')}</span>
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => handleOpenDeleteDialog(student)} className="flex flex-col h-auto gap-1 text-red-500 hover:text-red-700 dark:text-red-500 dark:hover:text-red-400">
                         <Trash2 className="h-4 w-4" />
@@ -197,11 +186,6 @@ const StudentManagement = () => {
         student={selectedStudent}
         isOpen={isTaskManagementOpen}
         onClose={() => setTaskManagementOpen(false)}
-      />
-      <RewardManagementDialog
-        student={selectedStudent}
-        isOpen={isRewardManagementOpen}
-        onClose={() => setRewardManagementOpen(false)}
       />
       <DeleteStudentDialog
         isOpen={isDeleteDialogOpen}

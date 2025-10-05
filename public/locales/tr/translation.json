@@ -38,7 +38,6 @@
     "addStudent": "Öğrenci Ekle",
     "noStudents": "Henüz size kayıtlı bir öğrenci yok.",
     "manageTasks": "Görevleri Yönet",
-    "sendReward": "Ödül Gönder",
     "addStudentTitle": "Öğrenci Ekle",
     "cancel": "İptal",
     "addSelected": "Seçilenleri Ekle",
@@ -67,14 +66,6 @@
     "questionSolving": "Soru Çözümü",
     "questionCount": "Soru Adedi",
     "bookTitleLabel": "Kitap Adı (İsteğe Bağlı)",
-    "rewardManagementTitle": "{{firstName}} {{lastName}} - Ödül Yönetimi",
-    "rewardManagementDescription": "Bu öğrenciye yeni ödüller gönderin ve mevcut ödüllerini görüntüleyin.",
-    "sendNewReward": "Yeni Ödül Gönder",
-    "rewardTitleLabel": "Ödül Başlığı",
-    "sendRewardButton": "Ödülü Gönder",
-    "sentRewards": "Gönderilen Ödüller",
-    "statusClaimed": "Kullanıldı",
-    "noSentRewards": "Henüz gönderilmiş bir ödül yok.",
     "deleteStudent": {
       "step1": {
         "title": "Emin misiniz?",
@@ -135,13 +126,9 @@
     "dashboardTitle": "Öğrenci Paneli",
     "welcome": "Hoş Geldin, {{firstName}}!",
     "myTasks": "Görevlerim",
-    "myRewards": "Ödüllerim",
     "tasksDescription": "Koçun tarafından sana atanan görevleri burada bulabilirsin.",
     "markAsCompleted": "Tamamlandı İşaretle",
     "noTasks": "Henüz sana atanmış bir görev yok.",
-    "rewardsDescription": "Koçun tarafından sana gönderilen ödülleri burada bulabilirsin.",
-    "claimReward": "Ödülü Kullan",
-    "noRewards": "Henüz sana gönderilmiş bir ödül yok.",
     "statusCompleted": "Durum: Tamamlandı (Onaylandı)",
     "statusPendingApproval": "Durum: Koç Onayı Bekliyor",
     "statusNotCompleted": "Durum: Tamamlanmadı (Reddedildi)",
@@ -151,6 +138,18 @@
     "completedTasksDescription": "Tamamladığınız veya tamamlanmadı olarak işaretlenen görevler burada listelenir.",
     "noCompletedTasks": "Henüz tamamlanmış veya reddedilmiş göreviniz yok.",
     "week": "Hafta"
+  },
+  "messages": {
+    "title": "Mesajlar",
+    "myStudents": "Öğrencilerim",
+    "noStudents": "Henüz mesajlaşacak öğrenciniz yok.",
+    "selectChat": "Sohbete başlamak için bir öğrenci seçin.",
+    "noMessages": "Henüz mesaj yok. Sohbeti başlatın!",
+    "typeMessage": "Mesajınızı yazın...",
+    "sendButton": "Gönder",
+    "fetchError": "Mesajlar yüklenirken hata oluştu.",
+    "sendError": "Mesaj gönderilirken hata oluştu.",
+    "noCoach": "Henüz bir koçla eşleşmediniz. Lütfen yöneticinizle iletişime geçin."
   },
   "logout": "Çıkış Yap"
 }

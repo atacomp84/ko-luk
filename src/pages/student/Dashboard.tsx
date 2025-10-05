@@ -2,8 +2,8 @@ import { useTranslation } from "react-i18next";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StudentCurrentTasks from "@/components/student/StudentCurrentTasks";
 import StudentCompletedTasks from "@/components/student/StudentCompletedTasks";
-import StudentRewards from "@/components/student/StudentRewards"; // StudentRewards import edildi
 import Layout from "@/components/Layout";
+import StudentMessages from "@/components/student/StudentMessages"; // Yeni mesajlaşma bileşeni
 
 const StudentDashboard = () => {
   const { t } = useTranslation();
@@ -15,7 +15,7 @@ const StudentDashboard = () => {
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="current-tasks">{t('student.currentTasks')}</TabsTrigger>
               <TabsTrigger value="completed-tasks">{t('student.completedTasks')}</TabsTrigger>
-              <TabsTrigger value="rewards">{t('student.myRewards')}</TabsTrigger>
+              <TabsTrigger value="messages">{t('messages.title')}</TabsTrigger> {/* Ödüller yerine mesajlar */}
             </TabsList>
             <TabsContent value="current-tasks" className="mt-4">
               <StudentCurrentTasks />
@@ -23,8 +23,8 @@ const StudentDashboard = () => {
             <TabsContent value="completed-tasks" className="mt-4">
               <StudentCompletedTasks />
             </TabsContent>
-            <TabsContent value="rewards" className="mt-4">
-              <StudentRewards />
+            <TabsContent value="messages" className="mt-4">
+              <StudentMessages />
             </TabsContent>
           </Tabs>
         </div>
