@@ -8,7 +8,7 @@ import { ChatModule } from '@/components/ChatModule';
 import { useTranslation } from 'react-i18next';
 import { getInitials } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge'; // Added import
+import { Badge } from '@/components/ui/badge';
 
 interface Student {
   id: string;
@@ -74,9 +74,10 @@ const CoachMessages = () => {
   const fetchUnreadCounts = useCallback(async () => {
     if (!user) return;
     console.log(`[CoachMessages] Fetching unread message counts for coach ID: ${user.id}`);
+    // Fetch all unread messages for the current user
     const { data, error } = await supabase
       .from('messages')
-      .select('sender_id, count', { count: 'exact' })
+      .select('sender_id') // Only select sender_id
       .eq('receiver_id', user.id)
       .eq('is_read', false);
 
@@ -87,7 +88,7 @@ const CoachMessages = () => {
 
     const counts: UnreadCounts = {};
     data.forEach(item => {
-      counts[item.sender_id] = (counts[item.sender_id] || 0) + item.count;
+      counts[item.sender_id] = (counts[item.sender_id] || 0) + 1; // Increment count for each sender
     });
     setUnreadCounts(counts);
     console.log("[CoachMessages] Unread counts fetched:", counts);

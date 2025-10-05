@@ -56,8 +56,8 @@ export const ChatModule = ({ chatPartner, onUnreadCountChange }: ChatModuleProps
     setLoading(true);
     console.log(`[ChatModule] Fetching messages between user ${user.id} and chat partner ${chatPartner.id}`);
     
-    // Construct the OR condition for the query
-    const queryCondition = `(sender_id.eq.${user.id}.and.receiver_id.eq.${chatPartner.id}).or(sender_id.eq.${chatPartner.id}.and.receiver_id.eq.${user.id})`;
+    // Corrected OR condition syntax for Supabase
+    const queryCondition = `and(sender_id.eq.${user.id},receiver_id.eq.${chatPartner.id}),and(sender_id.eq.${chatPartner.id},receiver_id.eq.${user.id})`;
     console.log(`[ChatModule] Supabase query condition: ${queryCondition}`);
 
     const { data, error } = await supabase
@@ -118,7 +118,8 @@ export const ChatModule = ({ chatPartner, onUnreadCountChange }: ChatModuleProps
           event: '*',
           schema: 'public',
           table: 'messages',
-          filter: `(sender_id.eq.${user.id}.and.receiver_id.eq.${chatPartner.id}).or(sender_id.eq.${chatPartner.id}.and.receiver_id.eq.${user.id})`,
+          // Corrected filter for real-time subscription
+          filter: `or(and(sender_id.eq.${user.id},receiver_id.eq.${chatPartner.id}),and(sender_id.eq.${chatPartner.id},receiver_id.eq.${user.id}))`,
         },
         (payload) => {
           console.log("[ChatModule] Real-time message update received:", payload);
