@@ -10,6 +10,7 @@ import { getInitials } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { Skeleton } from './ui/skeleton';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
+import { showError } from '@/utils/toast'; // showError import edildi
 
 interface ChatPartner {
   id: string;
@@ -42,13 +43,17 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
       const scrollViewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
       if (scrollViewport) {
         scrollViewport.scrollTop = scrollViewport.scrollHeight;
+        console.log('[ChatModule] Scrolled to bottom.');
       }
     }, 100);
   }, []);
 
   const markMessagesAsRead = useCallback(async () => {
-    if (!user || !chatPartner) return;
-    console.log(`[ChatModule] Marking messages from ${chatPartner.id} as read for user ${user.id}`);
+    if (!user || !chatPartner) {
+      console.log('[ChatModule] markMessagesAsRead skipped: No user or chat partner.');
+      return;
+    }
+    console.log(`[ChatModule] Attempting to mark messages from ${chatPartner.id} as read for user ${user.id}`);
     const { error } = await supabase
       .from('messages')
       .update({ is_read: true })
@@ -98,7 +103,10 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
   }, [fetchMessages]);
 
   useEffect(() => {
-    if (!user || !chatPartner) return;
+    if (!user || !chatPartner) {
+      console.log('[ChatModule] Real-time subscription skipped: No user or chat partner.');
+      return;
+    }
 
     const channelId = `chat_${[user.id, chatPartner.id].sort().join('_')}`;
     console.log(`[ChatModule] Subscribing to real-time channel: ${channelId}`);
@@ -120,6 +128,7 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
           console.log('[ChatModule] Message is relevant, updating state.');
           setMessages(currentMessages => {
             if (currentMessages.some(m => m.id === newMessage.id)) {
+              console.log('[ChatModule] Duplicate message received, ignoring.');
               return currentMessages;
             }
             return [...currentMessages, newMessage];
@@ -149,7 +158,10 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !user || !chatPartner) return;
+    if (!newMessage.trim() || !user || !chatPartner) {
+      console.log('[ChatModule] Send message skipped: Empty message, no user, or no chat partner.');
+      return;
+    }
 
     const messageToSend = {
       sender_id: user.id,
@@ -181,6 +193,7 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
     } catch (error: any) {
       console.error('[ChatModule] Error sending message:', error.message);
       setMessages(currentMessages => currentMessages.filter(m => m.id !== tempId));
+      showError(t('messages.sendError'));
     }
   };
 
@@ -208,18 +221,22 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
                 <Skeleton className="h-12 w-3/4 ml-auto" />
                 <Skeleton className="h-12 w-3/4" />
               </div>
-            ) : messages.map(msg => (
-              <div key={msg.id} className={`flex items-end gap-2 ${msg.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}>
-                {msg.sender_id !== user?.id && (
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>{getInitials(chatPartner.first_name, chatPartner.last_name)}</AvatarFallback>
-                  </Avatar>
-                )}
-                <div className={`max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-3 py-2 ${msg.sender_id === user?.id ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                  <p className="text-sm">{msg.content}</p>
+            ) : messages.length === 0 ? (
+              <div className="text-center text-muted-foreground py-6">{t('messages.noMessages')}</div>
+            ) : (
+              messages.map(msg => (
+                <div key={msg.id} className={`flex items-end gap-2 ${msg.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}>
+                  {msg.sender_id !== user?.id && (
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>{getInitials(chatPartner.first_name, chatPartner.last_name)}</AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div className={`max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-3 py-2 ${msg.sender_id === user?.id ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                    <p className="text-sm">{msg.content}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </ScrollArea>
       </CardContent>

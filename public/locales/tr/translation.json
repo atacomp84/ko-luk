@@ -171,6 +171,7 @@
     "emailDescription": "E-posta adresinizi güncelleyin. Yeni adrese bir onay e-postası gönderilecektir.",
     "passwordTitle": "Şifre",
     "passwordDescription": "Şifrenizi değiştirin.",
+    "currentPasswordLabel": "Mevcut Şifre",
     "newPasswordLabel": "Yeni Şifre",
     "confirmPasswordLabel": "Yeni Şifreyi Onayla",
     "saveProfile": "Profili Kaydet",

@@ -171,6 +171,7 @@
     "emailDescription": "Update your email address. A confirmation email will be sent to the new address.",
     "passwordTitle": "Password",
     "passwordDescription": "Change your password.",
+    "currentPasswordLabel": "Current Password",
     "newPasswordLabel": "New Password",
     "confirmPasswordLabel": "Confirm New Password",
     "saveProfile": "Save Profile",

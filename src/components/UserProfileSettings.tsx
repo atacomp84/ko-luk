@@ -17,9 +17,9 @@ const UserProfileSettings = () => {
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [currentPassword, setCurrentPassword] = useState(''); // Mevcut şifre alanı
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [currentPassword, setCurrentPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation();
@@ -82,6 +82,48 @@ const UserProfileSettings = () => {
     }
   };
 
+  const handleEmailUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    if (!user) {
+      setError(t('settings.noUserError'));
+      setLoading(false);
+      return;
+    }
+
+    if (email === user.email) {
+      setError(t('settings.emailSameError'));
+      setLoading(false);
+      return;
+    }
+
+    // Re-authenticate with current password to ensure session freshness for sensitive update
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user.email!, // Current email
+      password: currentPassword,
+    });
+
+    if (signInError) {
+      setError(signInError.message);
+      showError(signInError.message);
+      setLoading(false);
+      return;
+    }
+
+    const { error: emailUpdateError } = await supabase.auth.updateUser({ email });
+
+    if (emailUpdateError) {
+      setError(emailUpdateError.message);
+      showError(emailUpdateError.message);
+    } else {
+      showSuccess(t('settings.emailUpdateSuccess'));
+      setCurrentPassword(''); // Clear current password after successful update
+    }
+    setLoading(false);
+  };
+
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -105,12 +147,17 @@ const UserProfileSettings = () => {
       return;
     }
 
-    // Re-authenticate user before sensitive operation
-    const { error: reauthError } = await supabase.auth.reauthenticate();
-    if(reauthError){
-        setError(reauthError.message);
-        setLoading(false);
-        return;
+    // Re-authenticate with current password to ensure session freshness for sensitive update
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user.email!, // Current email
+      password: currentPassword,
+    });
+
+    if (signInError) {
+      setError(signInError.message);
+      showError(signInError.message);
+      setLoading(false);
+      return;
     }
 
     const { error: passwordError } = await supabase.auth.updateUser({ password: newPassword });
@@ -122,7 +169,7 @@ const UserProfileSettings = () => {
       showSuccess(t('settings.passwordUpdateSuccess'));
       setNewPassword('');
       setConfirmPassword('');
-      setCurrentPassword('');
+      setCurrentPassword(''); // Clear current password after successful update
     }
     setLoading(false);
   };
@@ -193,11 +240,37 @@ const UserProfileSettings = () => {
 
       <Card>
         <CardHeader>
+          <CardTitle>{t('settings.emailTitle')}</CardTitle>
+          <CardDescription>{t('settings.emailDescription')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleEmailUpdate} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">{t('auth.emailLabel')}</Label>
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="current-password-email">{t('settings.currentPasswordLabel')}</Label>
+              <Input id="current-password-email" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? t('settings.saving') : t('settings.updateEmail')}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>{t('settings.passwordTitle')}</CardTitle>
           <CardDescription>{t('settings.passwordDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handlePasswordUpdate} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="current-password">{t('settings.currentPasswordLabel')}</Label>
+              <Input id="current-password" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="new-password">{t('settings.newPasswordLabel')}</Label>
               <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
