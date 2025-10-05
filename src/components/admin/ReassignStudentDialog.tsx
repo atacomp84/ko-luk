@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { showError, showSuccess } from '@/utils/toast';
 import { useTranslation } from 'react-i18next';
 import { Skeleton } from '../ui/skeleton';
-import { Input } from '@/components/ui/input'; // <-- Eklendi
+import { Input } from '@/components/ui/input';
 
 interface UserProfile {
   id: string;
@@ -43,19 +43,15 @@ export const ReassignStudentDialog = ({ isOpen, onClose, student, onStudentReass
       return;
     }
 
-    // Fetch all coaches
-    const { data: coachesData, error: coachesError } = await supabase
-      .from('profiles')
-      .select('id, first_name, last_name')
-      .eq('role', 'coach');
+    // Fetch all coaches using the new edge function
+    const { data: coachesData, error: coachesError } = await supabase.functions.invoke('get-coaches');
 
     if (coachesError) {
       showError(t('admin.reassignStudent.fetchCoachesError'));
       setAvailableCoaches([]);
-      setLoading(false);
-      return;
+    } else {
+      setAvailableCoaches(coachesData as Coach[]);
     }
-    setAvailableCoaches(coachesData as Coach[]);
 
     // Fetch current coach for the student
     const { data: pairData, error: pairError } = await supabase
@@ -94,18 +90,17 @@ export const ReassignStudentDialog = ({ isOpen, onClose, student, onStudentReass
     setLoading(true);
 
     try {
+      // If there's a current coach, delete the existing pair
       if (currentCoachId) {
-        // If there's a current coach, delete the existing pair
         const { error: deleteError } = await supabase
           .from('coach_student_pairs')
           .delete()
-          .eq('student_id', student.id)
-          .eq('coach_id', currentCoachId);
+          .eq('student_id', student.id);
         if (deleteError) throw deleteError;
       }
 
-      if (selectedCoachId) {
-        // Create a new pair with the selected coach
+      // If a new coach is selected (and it's not the 'unassign' option), create a new pair
+      if (selectedCoachId && selectedCoachId !== 'unassign') {
         const { error: insertError } = await supabase
           .from('coach_student_pairs')
           .insert({ student_id: student.id, coach_id: selectedCoachId });
@@ -149,7 +144,7 @@ export const ReassignStudentDialog = ({ isOpen, onClose, student, onStudentReass
             </div>
             <div className="space-y-2">
               <Label htmlFor="select-new-coach">{t('admin.reassignStudent.selectNewCoach')}</Label>
-              <Select value={selectedCoachId || ''} onValueChange={setSelectedCoachId}>
+              <Select value={selectedCoachId || 'unassign'} onValueChange={setSelectedCoachId}>
                 <SelectTrigger id="select-new-coach">
                   <SelectValue placeholder={t('admin.reassignStudent.selectCoachPlaceholder')} />
                 </SelectTrigger>
@@ -169,7 +164,7 @@ export const ReassignStudentDialog = ({ isOpen, onClose, student, onStudentReass
           <DialogClose asChild>
             <Button type="button" variant="outline">{t('coach.cancel')}</Button>
           </DialogClose>
-          <Button onClick={handleReassign} disabled={loading || (selectedCoachId === currentCoachId && selectedCoachId !== 'unassign')}>
+          <Button onClick={handleReassign} disabled={loading || selectedCoachId === currentCoachId}>
             {loading ? t('settings.saving') : t('admin.reassignStudent.reassignButton')}
           </Button>
         </DialogFooter>
