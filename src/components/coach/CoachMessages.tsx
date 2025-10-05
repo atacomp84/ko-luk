@@ -8,7 +8,7 @@ import { ChatModule } from '@/components/ChatModule';
 import { useTranslation } from 'react-i18next';
 import { getInitials } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge'; // Added import
+import { Badge } from '@/components/ui/badge';
 
 interface Student {
   id: string;

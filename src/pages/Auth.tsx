@@ -76,7 +76,7 @@ export default function AuthPage() {
       setLoading(false);
       showError(signUpError.message);
     } else {
-      await supabase.auth.signOut();
+      // await supabase.auth.signOut(); // Bu satır kaldırıldı
       setLoading(false);
       showSuccess(t('auth.registerSuccess'));
       // Düzeltme: Şifreyi temizle, sekmeyi değiştir. E-posta state'i aynı kalacak.
