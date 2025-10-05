@@ -20,7 +20,9 @@ const Layout = ({ children, title }: LayoutProps) => {
   const { t } = useTranslation();
 
   const handleLogout = async () => {
+    console.log("[Layout] Attempting to log out.");
     await supabase.auth.signOut();
+    console.log("[Layout] User signed out. Navigating to /auth.");
     navigate('/auth');
   };
 
@@ -33,7 +35,7 @@ const Layout = ({ children, title }: LayoutProps) => {
         </div>
         <div className="ml-auto flex items-center gap-4">
           <Badge variant="outline" className="border-primary text-primary font-semibold hidden sm:inline-block">
-            {profile?.first_name} {profile?.last_name}
+            {profile?.first_name?.toUpperCase()} {profile?.last_name?.toUpperCase()}
           </Badge>
           <LanguageSwitcher />
           <ThemeToggle />

@@ -14,7 +14,7 @@ import { NumberInput } from '../ui/NumberInput';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Book, Calculator, FlaskConical, Globe, Palette, MessageSquare, History, Youtube, ChevronsDownUp, BookMarked, ClipboardList, BookOpen, Download, HelpCircle, CheckCircle2 } from 'lucide-react';
+import { Trash2, BookMarked, ClipboardList, BookOpen, Download, HelpCircle, CheckCircle2, ChevronsDownUp, Youtube } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -23,6 +23,8 @@ import { startOfWeek, format, isWithinInterval, subDays, subMonths } from 'date-
 import { tr, enUS } from 'date-fns/locale';
 import { generateWordReport } from '@/lib/reportGenerator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { getSubjectIconComponent, getSubjectColorClass, topicColors, getTopicColorClass } from '@/utils/subjectUtils';
+import { getInitials } from '@/lib/utils';
 
 interface Student {
   id: string;
@@ -57,48 +59,6 @@ interface TaskManagementDialogProps {
 }
 
 type TimePeriod = 'daily' | 'weekly' | 'monthly' | 'all';
-
-const getSubjectIconComponent = (subject: string): React.ElementType => {
-    switch (subject) {
-        case "Kitap Okuma": return BookOpen;
-        case "Türkçe": return Book;
-        case "Matematik": return Calculator;
-        case "Fen Bilimleri": return FlaskConical;
-        case "T.C. İnkılap Tarihi ve Atatürkçülük": return History;
-        case "Din Kültürü ve Ahlak Bilgisi": return MessageSquare;
-        case "İngilizce": return Globe;
-        default: return Palette;
-    }
-};
-
-const getSubjectColorClass = (subject: string): string => {
-    switch (subject) {
-        case "Kitap Okuma": return "text-orange-500";
-        case "Türkçe": return "text-blue-500";
-        case "Matematik": return "text-green-500";
-        case "Fen Bilimleri": return "text-purple-500";
-        case "T.C. İnkılap Tarihi ve Atatürkçülük": return "text-red-500";
-        case "Din Kültürü ve Ahlak Bilgisi": return "text-yellow-500";
-        case "İngilizce": return "text-indigo-500";
-        default: return "text-gray-500";
-    }
-};
-
-const topicColors = [
-  "text-sky-500", "text-emerald-500", "text-violet-500", "text-fuchsia-500",
-  "text-cyan-500", "text-rose-500", "text-indigo-500", "text-teal-500",
-];
-
-const getTopicColorClass = (index: number): string => {
-  if (index < 0) return "text-foreground";
-  return topicColors[index % topicColors.length];
-};
-
-const getInitials = (firstName = '', lastName = '') => {
-    const firstInitial = firstName ? firstName[0] : '';
-    const lastInitial = lastName ? lastName[0] : '';
-    return `${firstInitial}${lastInitial}`.toUpperCase();
-};
 
 const CustomizedAxisTick = (props: any) => {
     const { x, y, payload } = props;

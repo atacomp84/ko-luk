@@ -145,7 +145,12 @@
     "statusCompleted": "Durum: Tamamlandı (Onaylandı)",
     "statusPendingApproval": "Durum: Koç Onayı Bekliyor",
     "statusNotCompleted": "Durum: Tamamlanmadı (Reddedildi)",
-    "awaitingApproval": "Onay Bekleniyor"
+    "awaitingApproval": "Onay Bekleniyor",
+    "currentTasks": "Mevcut Görevler",
+    "completedTasks": "Tamamlanan Görevler",
+    "completedTasksDescription": "Tamamladığınız veya tamamlanmadı olarak işaretlenen görevler burada listelenir.",
+    "noCompletedTasks": "Henüz tamamlanmış veya reddedilmiş göreviniz yok.",
+    "week": "Hafta"
   },
   "logout": "Çıkış Yap"
 }

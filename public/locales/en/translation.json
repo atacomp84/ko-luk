@@ -145,7 +145,12 @@
     "statusCompleted": "Status: Completed (Approved)",
     "statusPendingApproval": "Status: Awaiting Coach Approval",
     "statusNotCompleted": "Status: Not Completed (Rejected)",
-    "awaitingApproval": "Awaiting Approval"
+    "awaitingApproval": "Awaiting Approval",
+    "currentTasks": "Current Tasks",
+    "completedTasks": "Completed Tasks",
+    "completedTasksDescription": "Here are the tasks you have completed or that were marked as not completed.",
+    "noCompletedTasks": "You don't have any completed or rejected tasks yet.",
+    "week": "Week"
   },
   "logout": "Logout"
 }
