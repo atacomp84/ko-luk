@@ -19,6 +19,7 @@ const UserProfileSettings = () => {
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation();
@@ -81,34 +82,6 @@ const UserProfileSettings = () => {
     }
   };
 
-  const handleEmailUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    if (!user) {
-      setError(t('settings.noUserError'));
-      setLoading(false);
-      return;
-    }
-
-    if (email === user.email) {
-      setError(t('settings.emailSameError'));
-      setLoading(false);
-      return;
-    }
-
-    const { error: emailError } = await supabase.auth.updateUser({ email });
-
-    if (emailError) {
-      setError(emailError.message);
-      showError(emailError.message);
-    } else {
-      showSuccess(t('settings.emailUpdateSuccess'));
-    }
-    setLoading(false);
-  };
-
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -132,6 +105,14 @@ const UserProfileSettings = () => {
       return;
     }
 
+    // Re-authenticate user before sensitive operation
+    const { error: reauthError } = await supabase.auth.reauthenticate();
+    if(reauthError){
+        setError(reauthError.message);
+        setLoading(false);
+        return;
+    }
+
     const { error: passwordError } = await supabase.auth.updateUser({ password: newPassword });
 
     if (passwordError) {
@@ -141,6 +122,7 @@ const UserProfileSettings = () => {
       showSuccess(t('settings.passwordUpdateSuccess'));
       setNewPassword('');
       setConfirmPassword('');
+      setCurrentPassword('');
     }
     setLoading(false);
   };
@@ -204,24 +186,6 @@ const UserProfileSettings = () => {
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? t('settings.saving') : t('settings.saveProfile')}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('settings.emailTitle')}</CardTitle>
-          <CardDescription>{t('settings.emailDescription')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleEmailUpdate} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">{t('auth.emailLabel')}</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? t('settings.saving') : t('settings.updateEmail')}
             </Button>
           </form>
         </CardContent>

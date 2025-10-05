@@ -70,22 +70,27 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
     }
     console.log(`[ChatModule] Fetching messages between ${user.id} and ${chatPartner.id}`);
     setLoading(true);
-    const { data, error } = await supabase
-      .from('messages')
-      .select('id, sender_id, receiver_id, content, created_at')
-      .or(`(sender_id.eq.${user.id},and(receiver_id.eq.${chatPartner.id})),(sender_id.eq.${chatPartner.id},and(receiver_id.eq.${user.id}))`)
-      .order('created_at', { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('id, sender_id, receiver_id, content, created_at')
+        .or(`(sender_id.eq.${user.id},and(receiver_id.eq.${chatPartner.id})),(sender_id.eq.${chatPartner.id},and(receiver_id.eq.${user.id}))`)
+        .order('created_at', { ascending: true });
 
-    if (error) {
-      console.error('[ChatModule] Error fetching messages:', error.message);
-      setMessages([]);
-    } else {
+      if (error) {
+        throw error;
+      }
+      
       console.log(`[ChatModule] Fetched ${data.length} messages.`);
       setMessages(data as Message[]);
       await markMessagesAsRead();
       scrollToBottom();
+    } catch (error: any) {
+      console.error('[ChatModule] Error fetching messages:', error.message);
+      setMessages([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [user, chatPartner, markMessagesAsRead, scrollToBottom]);
 
   useEffect(() => {
@@ -154,7 +159,6 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
 
     console.log('[ChatModule] Attempting to send message:', messageToSend);
     
-    // Optimistically update UI
     const tempId = `temp_${Date.now()}`;
     const optimisticMessage: Message = {
       id: tempId,
@@ -165,16 +169,18 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
     setNewMessage('');
     scrollToBottom();
 
-    const { data, error } = await supabase.from('messages').insert(messageToSend).select().single();
+    try {
+      const { data, error } = await supabase.from('messages').insert(messageToSend).select().single();
 
-    if (error) {
-      console.error('[ChatModule] Error sending message:', error.message);
-      // Revert optimistic update on error
-      setMessages(currentMessages => currentMessages.filter(m => m.id !== tempId));
-    } else {
+      if (error) {
+        throw error;
+      }
+      
       console.log('[ChatModule] Message sent successfully and confirmed by server:', data);
-      // Replace optimistic message with real one from server
       setMessages(currentMessages => currentMessages.map(m => m.id === tempId ? (data as Message) : m));
+    } catch (error: any) {
+      console.error('[ChatModule] Error sending message:', error.message);
+      setMessages(currentMessages => currentMessages.filter(m => m.id !== tempId));
     }
   };
 
