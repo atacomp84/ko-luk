@@ -124,12 +124,7 @@ export const ChatModule = ({ chatPartner, onUnreadCountChange }: ChatModuleProps
         (payload) => {
           console.log("[ChatModule] Real-time message update received:", payload);
           if (payload.eventType === 'INSERT') {
-            // Only add if it's not the current user's message (current user's message is added instantly)
-            // Or if it's an update to an existing message (e.g., is_read status)
-            if ((payload.new as Message).sender_id !== user.id) {
-                setMessages((prev) => [...prev, payload.new as Message]);
-            }
-            
+            setMessages((prev) => [...prev, payload.new as Message]);
             if ((payload.new as Message).receiver_id === user.id) {
               // Mark new incoming message as read
               supabase

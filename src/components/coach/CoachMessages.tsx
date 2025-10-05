@@ -9,12 +9,16 @@ import { useTranslation } from 'react-i18next';
 import { getInitials } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { showError, showSuccess } from '@/utils/toast';
 
 interface Student {
   id: string;
   first_name: string;
   last_name: string;
   role: string;
+  chat_enabled: boolean; // Add chat_enabled status
 }
 
 interface UnreadCounts {
@@ -39,7 +43,7 @@ const CoachMessages = () => {
     console.log(`[CoachMessages] Fetching students for coach ID: ${user.id}`);
     const { data: pairs, error: pairsError } = await supabase
       .from('coach_student_pairs')
-      .select('student_id')
+      .select('student_id, chat_enabled') // Select chat_enabled
       .eq('coach_id', user.id);
 
     if (pairsError) {
@@ -50,6 +54,7 @@ const CoachMessages = () => {
     }
 
     const studentIds = pairs.map(p => p.student_id);
+    const studentChatStatus = new Map(pairs.map(p => [p.student_id, p.chat_enabled]));
 
     if (studentIds.length > 0) {
       const { data: profiles, error: profilesError } = await supabase
@@ -62,7 +67,11 @@ const CoachMessages = () => {
         setStudents([]);
       } else {
         console.log(`[CoachMessages] Fetched ${profiles.length} student profiles.`);
-        setStudents(profiles as Student[]);
+        const studentsWithChatStatus = profiles.map(profile => ({
+          ...profile,
+          chat_enabled: studentChatStatus.get(profile.id) ?? true, // Default to true if not found
+        }));
+        setStudents(studentsWithChatStatus as Student[]);
       }
     } else {
       console.log("[CoachMessages] No student IDs to fetch profiles for.");
@@ -119,16 +128,59 @@ const CoachMessages = () => {
         }
       )
       .subscribe();
+    
+    // Real-time subscription for chat_enabled changes
+    const chatStatusChannel = supabase
+      .channel(`chat_status_coach_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'coach_student_pairs',
+          filter: `coach_id.eq.${user.id}`,
+        },
+        (payload) => {
+          console.log("[CoachMessages] Real-time chat status update received:", payload);
+          setStudents(prevStudents => prevStudents.map(student => 
+            student.id === (payload.new as any).student_id 
+              ? { ...student, chat_enabled: (payload.new as any).chat_enabled } 
+              : student
+          ));
+        }
+      )
+      .subscribe();
+
 
     return () => {
       console.log("[CoachMessages] Unsubscribing from real-time unread messages channel.");
       supabase.removeChannel(channel);
+      supabase.removeChannel(chatStatusChannel);
     };
   }, [user, fetchUnreadCounts]);
 
   const handleUnreadCountChange = useCallback((studentId: string, count: number) => {
     setUnreadCounts(prev => ({ ...prev, [studentId]: count }));
   }, []);
+
+  const handleToggleChat = async (studentId: string, checked: boolean) => {
+    console.log(`[CoachMessages] Toggling chat for student ${studentId} to ${checked}`);
+    const { error } = await supabase
+      .from('coach_student_pairs')
+      .update({ chat_enabled: checked })
+      .eq('coach_id', user?.id)
+      .eq('student_id', studentId);
+
+    if (error) {
+      console.error("[CoachMessages] Error toggling chat status:", error.message);
+      showError(t('messages.toggleChatError')); // Add this translation key
+    } else {
+      showSuccess(t(checked ? 'messages.chatEnabled' : 'messages.chatDisabled')); // Add these translation keys
+      setStudents(prevStudents => prevStudents.map(student => 
+        student.id === studentId ? { ...student, chat_enabled: checked } : student
+      ));
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[calc(100vh-15rem)]">
@@ -164,11 +216,22 @@ const CoachMessages = () => {
                   <div className="flex-1">
                     <p className="font-medium">{student.first_name} {student.last_name}</p>
                   </div>
-                  {unreadCounts[student.id] > 0 && (
-                    <Badge className="bg-red-500 text-white rounded-full h-5 w-5 flex items-center justify-center p-0">
-                      {unreadCounts[student.id]}
-                    </Badge>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor={`chat-toggle-${student.id}`} className="sr-only">
+                      {t('messages.toggleChat')}
+                    </Label>
+                    <Switch
+                      id={`chat-toggle-${student.id}`}
+                      checked={student.chat_enabled}
+                      onCheckedChange={(checked) => handleToggleChat(student.id, checked)}
+                      onClick={(e) => e.stopPropagation()} // Prevent card click when toggling
+                    />
+                    {unreadCounts[student.id] > 0 && (
+                      <Badge className="bg-red-500 text-white rounded-full h-5 w-5 flex items-center justify-center p-0">
+                        {unreadCounts[student.id]}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

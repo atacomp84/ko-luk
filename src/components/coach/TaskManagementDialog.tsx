@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import { useState, useEffect, useCallback, useMemo, ReactNode, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
@@ -14,12 +14,12 @@ import { NumberInput } from '../ui/NumberInput';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, BookMarked, ClipboardList, BookOpen, Download, HelpCircle, CheckCircle2, ChevronsDownUp, Youtube } from 'lucide-react';
+import { Trash2, BookMarked, ClipboardList, BookOpen, Download, HelpCircle, CheckCircle2, ChevronsDownUp, Youtube, Clock } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { startOfWeek, format, isWithinInterval, subDays, subMonths } from 'date-fns';
+import { startOfWeek, format, isWithinInterval, subDays, subMonths, differenceInMilliseconds, addHours } from 'date-fns';
 import { tr, enUS } from 'date-fns/locale';
 import { generateWordReport } from '@/lib/reportGenerator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -96,6 +96,8 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   const [openCollapsibles, setOpenCollapsibles] = useState<string[]>([]);
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('weekly');
   const [openAccordions, setOpenAccordions] = useState<string[]>([]);
+  const intervalRefs = useRef<Record<string, NodeJS.Timeout>>({});
+
 
   const { t, i18n } = useTranslation();
   const dateLocale = i18n.language === 'tr' ? tr : enUS;
@@ -511,6 +513,100 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     </div>;
   }
 
+  const calculateTimeLeft = useCallback((createdAt: string) => {
+    const creationTime = new Date(createdAt);
+    const twentyFourHoursLater = addHours(creationTime, 24);
+    const now = new Date();
+    const timeLeftMs = differenceInMilliseconds(twentyFourHoursLater, now);
+
+    if (timeLeftMs <= 0) {
+      return "00:00:00";
+    }
+
+    const hours = Math.floor(timeLeftMs / (1000 * 60 * 60));
+    const minutes = Math.floor((timeLeftMs % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((timeLeftMs % (1000 * 60)) / 1000);
+
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }, []);
+
+  const handleTaskTimeout = useCallback(async (taskId: string) => {
+    console.log(`[TaskManagementDialog] Task ${taskId} timed out. Marking as not_completed.`);
+    const { error } = await supabase
+      .from('tasks')
+      .update({ status: 'not_completed' })
+      .eq('id', taskId);
+
+    if (error) {
+      console.error(`[TaskManagementDialog] Error marking task ${taskId} as not_completed:`, error.message);
+      showError('Görev zaman aşımına uğradı ve güncellenirken bir hata oluştu.');
+    } else {
+      console.log(`[TaskManagementDialog] Task ${taskId} successfully marked as not_completed.`);
+      showSuccess('Bir görevin süresi doldu ve tamamlanmadı olarak işaretlendi.');
+      fetchTasks(); // Refresh tasks to reflect the change
+    }
+  }, [fetchTasks]);
+
+  useEffect(() => {
+    // Clear existing intervals
+    Object.values(intervalRefs.current).forEach(clearInterval);
+    intervalRefs.current = {};
+
+    tasks.forEach(task => {
+      if (task.status === 'pending') {
+        const creationTime = new Date(task.created_at);
+        const twentyFourHoursLater = addHours(creationTime, 24);
+        const now = new Date();
+        const timeLeftMs = differenceInMilliseconds(twentyFourHoursLater, now);
+
+        if (timeLeftMs <= 0) {
+          // Task is already overdue, mark it as not_completed immediately
+          handleTaskTimeout(task.id);
+        } else {
+          // Set up a countdown interval
+          const interval = setInterval(() => {
+            const updatedTimeLeftMs = differenceInMilliseconds(addHours(new Date(task.created_at), 24), new Date());
+            if (updatedTimeLeftMs <= 0) {
+              clearInterval(intervalRefs.current[task.id]);
+              delete intervalRefs.current[task.id];
+              handleTaskTimeout(task.id);
+            } else {
+              // Force a re-render to update the timer display
+              setTasks(prevTasks => prevTasks.map(t => t.id === task.id ? { ...t } : t));
+            }
+          }, 1000);
+          intervalRefs.current[task.id] = interval;
+        }
+      }
+    });
+
+    return () => {
+      Object.values(intervalRefs.current).forEach(clearInterval);
+    };
+  }, [tasks, handleTaskTimeout]); // Re-run when tasks change
+
+  const sortedGroupedTasks = useMemo(() => {
+    const grouped = tasks.reduce((acc, task) => {
+      const { subject } = task;
+      if (!acc[subject]) {
+        acc[subject] = [];
+      }
+      acc[subject].push(task);
+      return acc;
+    }, {} as Record<string, Task[]>);
+
+    // Sort tasks within each subject group
+    Object.keys(grouped).forEach(subject => {
+      grouped[subject].sort((a, b) => {
+        const statusOrder = { 'pending': 1, 'pending_approval': 2, 'completed': 3, 'not_completed': 4 };
+        return statusOrder[a.status as keyof typeof statusOrder] - statusOrder[b.status as keyof typeof statusOrder];
+      });
+    });
+
+    return grouped;
+  }, [tasks]);
+
+
   if (!student) {
     console.log('[TaskManagementDialog] Render skipped: no student.');
     return null;
@@ -629,8 +725,8 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                                 </Button>
                             </div>
                             <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-                                {loading ? <Skeleton className="h-24 w-full" /> : Object.keys(groupedTasks).length > 0 ? (
-                                    Object.entries(groupedTasks).map(([subject, subjectTasks]) => {
+                                {loading ? <Skeleton className="h-24 w-full" /> : Object.keys(sortedGroupedTasks).length > 0 ? (
+                                    Object.entries(sortedGroupedTasks).map(([subject, subjectTasks]) => {
                                     const pendingCount = subjectTasks.filter(t => t.status === 'pending' || t.status === 'pending_approval').length;
                                     const completedCount = subjectTasks.filter(t => t.status === 'completed').length;
                                     const Icon = getSubjectIconComponent(subject);
@@ -648,22 +744,36 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                                             </div>
                                         </CollapsibleTrigger>
                                         <CollapsibleContent className="space-y-2 pl-4 pt-2">
-                                            {subjectTasks.map(task => (
-                                            <Card key={task.id} className={`cursor-pointer hover:shadow-md transition-shadow rounded-lg ${getStatusBorderClass(task.status)}`} onClick={() => handleTaskClick(task)}>
-                                                <CardContent className="p-3 flex items-center gap-4">
-                                                    {getTaskTypeIcon(task)}
-                                                    <div className="flex-grow">
-                                                        <p className="font-semibold">{formatTaskTitle(task)}</p>
-                                                        <Badge className={`mt-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border-0 ${getStatusBadgeClass(task.status)}`}>
-                                                            {t(getStatusTranslationKey(task.status))}
-                                                        </Badge>
-                                                    </div>
-                                                    <Button variant="ghost" size="icon" className="ml-2 shrink-0 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(task); }}>
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </CardContent>
-                                            </Card>
-                                            ))}
+                                            {subjectTasks.map(task => {
+                                                const timeLeft = task.status === 'pending' ? calculateTimeLeft(task.created_at) : null;
+                                                const isTimedOut = task.status === 'not_completed' && differenceInMilliseconds(addHours(new Date(task.created_at), 24), new Date()) <= 0;
+                                                return (
+                                                <Card key={task.id} className={`cursor-pointer hover:shadow-md transition-shadow rounded-lg ${getStatusBorderClass(task.status)}`} onClick={() => handleTaskClick(task)}>
+                                                    <CardContent className="p-3 flex items-center gap-4">
+                                                        {getTaskTypeIcon(task)}
+                                                        <div className="flex-grow">
+                                                            <p className="font-semibold">{formatTaskTitle(task)}</p>
+                                                            <Badge className={`mt-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border-0 ${getStatusBadgeClass(task.status)}`}>
+                                                                {t(getStatusTranslationKey(task.status))}
+                                                            </Badge>
+                                                            {timeLeft && timeLeft !== "00:00:00" && (
+                                                                <p className="text-xs font-semibold mt-1 text-red-600 dark:text-red-400">
+                                                                    <Clock className="h-3 w-3 inline-block mr-1" />
+                                                                    {t('coach.timeLeft')}: {timeLeft}
+                                                                </p>
+                                                            )}
+                                                            {isTimedOut && (
+                                                                <p className="text-xs font-semibold mt-1 text-red-700 dark:text-red-300">
+                                                                    {t('coach.timedOut')}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <Button variant="ghost" size="icon" className="ml-2 shrink-0 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(task); }}>
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </CardContent>
+                                                </Card>
+                                            )})}
                                         </CollapsibleContent>
                                         </Collapsible>
                                     )

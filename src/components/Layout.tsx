@@ -8,11 +8,11 @@ import { LanguageSwitcher } from '@/components/language-switcher';
 import { LogOut, Rocket, MessageCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from './ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Added import
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { getInitials } from '@/lib/utils';
 
 interface LayoutProps {
-  children: ReactNode;
+  children: ReactNode | ((unreadMessageCount: number) => ReactNode); // Tip tanımı güncellendi
   title: string;
 }
 
@@ -106,7 +106,8 @@ const Layout = ({ children, title }: LayoutProps) => {
         </div>
       </header>
       <main className="p-4 sm:px-6 sm:py-0">
-        {children}
+        {/* Pass unreadMessageCount to children */}
+        {typeof children === 'function' ? children(unreadMessageCount) : children}
       </main>
     </div>
   );

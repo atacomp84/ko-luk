@@ -120,7 +120,9 @@
       "monthly": "Monthly",
       "all": "All Time"
     },
-    "getReport": "Get Report"
+    "getReport": "Get Report",
+    "timeLeft": "Time Left",
+    "timedOut": "Timed Out (Not Completed)"
   },
   "student": {
     "dashboardTitle": "Student Dashboard",
@@ -149,7 +151,13 @@
     "sendButton": "Send",
     "fetchError": "Failed to load messages.",
     "sendError": "Failed to send message.",
-    "noCoach": "You are not paired with a coach yet. Please contact your administrator."
+    "noCoach": "You are not paired with a coach yet. Please contact your administrator.",
+    "toggleChat": "Toggle Chat",
+    "chatEnabled": "Chat enabled for student.",
+    "chatDisabled": "Chat disabled for student.",
+    "toggleChatError": "Failed to toggle chat status.",
+    "chatDisabledByCoach": "Chat Disabled by Coach",
+    "chatDisabledDescription": "Your coach has temporarily disabled chat. Please contact them through other means if urgent."
   },
   "logout": "Logout"
 }

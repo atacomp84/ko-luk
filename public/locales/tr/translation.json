@@ -120,7 +120,9 @@
       "monthly": "Aylık",
       "all": "Tümü"
     },
-    "getReport": "Rapor Al"
+    "getReport": "Rapor Al",
+    "timeLeft": "Kalan Süre",
+    "timedOut": "Süresi Doldu (Tamamlanmadı)"
   },
   "student": {
     "dashboardTitle": "Öğrenci Paneli",
@@ -149,7 +151,13 @@
     "sendButton": "Gönder",
     "fetchError": "Mesajlar yüklenirken hata oluştu.",
     "sendError": "Mesaj gönderilirken hata oluştu.",
-    "noCoach": "Henüz bir koçla eşleşmediniz. Lütfen yöneticinizle iletişime geçin."
+    "noCoach": "Henüz bir koçla eşleşmediniz. Lütfen yöneticinizle iletişime geçin.",
+    "toggleChat": "Sohbeti Aç/Kapat",
+    "chatEnabled": "Öğrenci için sohbet etkinleştirildi.",
+    "chatDisabled": "Öğrenci için sohbet devre dışı bırakıldı.",
+    "toggleChatError": "Sohbet durumu güncellenirken hata oluştu.",
+    "chatDisabledByCoach": "Koç Tarafından Sohbet Devre Dışı Bırakıldı",
+    "chatDisabledDescription": "Koçunuz sohbeti geçici olarak devre dışı bıraktı. Acil durumlarda lütfen başka yollarla iletişime geçin."
   },
   "logout": "Çıkış Yap"
 }

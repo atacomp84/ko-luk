@@ -7,13 +7,14 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ChatModule } from '@/components/ChatModule';
 import { useTranslation } from 'react-i18next';
 import { getInitials } from '@/lib/utils';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, MessageSquareOff } from 'lucide-react';
 
 interface Coach {
   id: string;
   first_name: string;
   last_name: string;
   role: string;
+  chat_enabled: boolean; // Add chat_enabled status
 }
 
 const StudentMessages = () => {
@@ -33,7 +34,7 @@ const StudentMessages = () => {
     console.log(`[StudentMessages] Fetching coach for student ID: ${user.id}`);
     const { data: pair, error: pairError } = await supabase
       .from('coach_student_pairs')
-      .select('coach_id')
+      .select('coach_id, chat_enabled') // Select chat_enabled
       .eq('student_id', user.id)
       .single();
 
@@ -56,7 +57,7 @@ const StudentMessages = () => {
         setCoach(null);
       } else {
         console.log("[StudentMessages] Coach profile fetched successfully:", coachProfile);
-        setCoach(coachProfile as Coach);
+        setCoach({ ...coachProfile, chat_enabled: pair.chat_enabled } as Coach); // Combine with chat_enabled
       }
     } else {
       console.log("[StudentMessages] No coach found for this student.");
@@ -107,10 +108,34 @@ const StudentMessages = () => {
         }
       )
       .subscribe();
+    
+    // Real-time subscription for chat_enabled changes
+    const chatStatusChannel = supabase
+      .channel(`chat_status_student_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'coach_student_pairs',
+          filter: `student_id.eq.${user.id}`,
+        },
+        (payload) => {
+          console.log("[StudentMessages] Real-time chat status update received:", payload);
+          setCoach(prevCoach => {
+            if (prevCoach && prevCoach.id === (payload.new as any).coach_id) {
+              return { ...prevCoach, chat_enabled: (payload.new as any).chat_enabled };
+            }
+            return prevCoach;
+          });
+        }
+      )
+      .subscribe();
 
     return () => {
       console.log("[StudentMessages] Unsubscribing from real-time unread messages channel.");
       supabase.removeChannel(channel);
+      supabase.removeChannel(chatStatusChannel);
     };
   }, [user, fetchUnreadCount]);
 
@@ -135,6 +160,18 @@ const StudentMessages = () => {
         <CardContent className="text-center text-muted-foreground">
           <MessageCircle className="h-12 w-12 mx-auto mb-4" />
           <p>{t('messages.noCoach')}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!coach.chat_enabled) {
+    return (
+      <Card className="h-[calc(100vh-15rem)] flex items-center justify-center">
+        <CardContent className="text-center text-muted-foreground">
+          <MessageSquareOff className="h-12 w-12 mx-auto mb-4 text-red-500" />
+          <p className="text-lg font-semibold">{t('messages.chatDisabledByCoach')}</p>
+          <p className="text-sm mt-2">{t('messages.chatDisabledDescription')}</p>
         </CardContent>
       </Card>
     );
