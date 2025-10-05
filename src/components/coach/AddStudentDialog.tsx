@@ -32,31 +32,9 @@ export const AddStudentDialog = ({ isOpen, onClose, onStudentAdded }: AddStudent
     const fetchUnassignedStudents = async () => {
       setLoading(true);
       try {
-        // 1. Get all student IDs that are already assigned to a coach.
-        const { data: assignedPairs, error: pairsError } = await supabase
-          .from('coach_student_pairs')
-          .select('student_id');
-
-        if (pairsError) throw pairsError;
-
-        const assignedStudentIds = assignedPairs.map(pair => pair.student_id);
-
-        // 2. Get all profiles with the 'student' role.
-        let query = supabase
-          .from('profiles')
-          .select('id, first_name, last_name')
-          .eq('role', 'student');
-
-        // 3. Filter out the students who are already assigned.
-        if (assignedStudentIds.length > 0) {
-          query = query.not('id', 'in', `(${assignedStudentIds.join(',')})`);
-        }
-
-        const { data: unassignedStudentsData, error: studentsError } = await query;
-
-        if (studentsError) throw studentsError;
-
-        setUnassignedStudents(unassignedStudentsData as Student[]);
+        const { data, error } = await supabase.functions.invoke('get-unassigned-students');
+        if (error) throw error;
+        setUnassignedStudents(data as Student[]);
       } catch (error: any) {
         showError(t('coach.fetchUnassignedError', 'Boştaki öğrenciler getirilirken bir hata oluştu.'));
         setUnassignedStudents([]);
