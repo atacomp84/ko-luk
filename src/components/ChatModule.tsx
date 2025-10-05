@@ -88,10 +88,11 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
     console.log(`[ChatModule] fetchMessages: Fetching messages between user ${user.id} and chat partner ${chatPartner.id}`);
     setLoading(true);
     try {
+      // Düzeltilen Supabase sorgusu: 'or' operatörü doğru sözdizimi ile kullanılıyor.
       const { data, error } = await supabase
         .from('messages')
         .select('id, sender_id, receiver_id, content, created_at')
-        .or(`(sender_id.eq.${user.id},and(receiver_id.eq.${chatPartner.id})),(sender_id.eq.${chatPartner.id},and(receiver_id.eq.${user.id}))`)
+        .or(`sender_id.eq.${user.id},receiver_id.eq.${chatPartner.id}.or.sender_id.eq.${chatPartner.id},receiver_id.eq.${user.id}`)
         .order('created_at', { ascending: true });
 
       if (error) {
