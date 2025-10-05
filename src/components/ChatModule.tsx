@@ -58,7 +58,7 @@ export const ChatModule = ({ chatPartner, onUnreadCountChange }: ChatModuleProps
     
     // Corrected OR condition syntax for Supabase
     const queryCondition = `and(sender_id.eq.${user.id},receiver_id.eq.${chatPartner.id}),and(sender_id.eq.${chatPartner.id},receiver_id.eq.${user.id})`;
-    console.log(`[ChatModule] Supabase query condition: ${queryCondition}`);
+    console.log(`[ChatModule] Supabase query condition for fetch: ${queryCondition}`);
 
     const { data, error } = await supabase
       .from('messages')
@@ -124,7 +124,12 @@ export const ChatModule = ({ chatPartner, onUnreadCountChange }: ChatModuleProps
         (payload) => {
           console.log("[ChatModule] Real-time message update received:", payload);
           if (payload.eventType === 'INSERT') {
-            setMessages((prev) => [...prev, payload.new as Message]);
+            // Only add if it's not the current user's message (current user's message is added instantly)
+            // Or if it's an update to an existing message (e.g., is_read status)
+            if ((payload.new as Message).sender_id !== user.id) {
+                setMessages((prev) => [...prev, payload.new as Message]);
+            }
+            
             if ((payload.new as Message).receiver_id === user.id) {
               // Mark new incoming message as read
               supabase
@@ -167,17 +172,18 @@ export const ChatModule = ({ chatPartner, onUnreadCountChange }: ChatModuleProps
     }
 
     console.log(`[ChatModule] Sending message from ${user.id} to ${chatPartner.id}: "${newMessage}"`);
-    const { error } = await supabase.from('messages').insert({
+    const { data, error } = await supabase.from('messages').insert({
       sender_id: user.id,
       receiver_id: chatPartner.id,
       content: newMessage.trim(),
-    });
+    }).select().single(); // Select the inserted message to add it to state
 
     if (error) {
       console.error("[ChatModule] Error sending message:", error.message, error);
       showError(t('messages.sendError'));
     } else {
-      console.log("[ChatModule] Message sent successfully.");
+      console.log("[ChatModule] Message sent successfully. Adding to state:", data);
+      setMessages((prev) => [...prev, data]); // Add the new message instantly for the sender
       setNewMessage('');
     }
   };
