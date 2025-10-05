@@ -5,14 +5,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { LanguageSwitcher } from '@/components/language-switcher';
-import { LogOut, Rocket, MessageCircle, ArrowLeft } from 'lucide-react';
+import { LogOut, Rocket, ArrowLeft, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { getInitials } from '@/lib/utils';
 
 interface LayoutProps {
-  children: ReactNode | ((unreadMessageCount: number) => ReactNode); // Tip tanımı güncellendi
+  children: ReactNode | ((unreadMessageCount: number) => ReactNode);
   title: string;
 }
 
@@ -27,7 +27,6 @@ const Layout = ({ children, title }: LayoutProps) => {
       setUnreadMessageCount(0);
       return;
     }
-    console.log(`[Layout] Fetching unread message count for user ID: ${user.id}`);
     const { count, error } = await supabase
       .from('messages')
       .select('*', { count: 'exact', head: true })
@@ -39,7 +38,6 @@ const Layout = ({ children, title }: LayoutProps) => {
       setUnreadMessageCount(0);
     } else {
       setUnreadMessageCount(count || 0);
-      console.log(`[Layout] Unread message count: ${count}`);
     }
   }, [user]);
 
@@ -48,7 +46,6 @@ const Layout = ({ children, title }: LayoutProps) => {
 
     if (!user) return;
 
-    console.log("[Layout] Setting up real-time subscription for unread messages in Layout.");
     const channel = supabase
       .channel(`unread_messages_layout_${user.id}`)
       .on(
@@ -59,23 +56,19 @@ const Layout = ({ children, title }: LayoutProps) => {
           table: 'messages',
           filter: `receiver_id.eq.${user.id}`,
         },
-        (payload) => {
-          console.log("[Layout] Real-time unread message update received in Layout:", payload);
-          fetchUnreadMessageCount(); // Re-fetch count on any message change
+        () => {
+          fetchUnreadMessageCount();
         }
       )
       .subscribe();
 
     return () => {
-      console.log("[Layout] Unsubscribing from real-time unread messages channel in Layout.");
       supabase.removeChannel(channel);
     };
   }, [user, fetchUnreadMessageCount]);
 
   const handleLogout = async () => {
-    console.log("[Layout] Attempting to log out.");
     await supabase.auth.signOut();
-    console.log("[Layout] User signed out. Navigating to /auth.");
     navigate('/auth');
   };
 
@@ -103,6 +96,10 @@ const Layout = ({ children, title }: LayoutProps) => {
           )}
           <LanguageSwitcher />
           <ThemeToggle />
+          <Button variant="outline" size="icon" onClick={() => navigate('/settings')}>
+            <Settings className="h-4 w-4" />
+            <span className="sr-only">{t('settings.title')}</span>
+          </Button>
           <Button variant="outline" size="icon" onClick={handleLogout}>
             <LogOut className="h-4 w-4" />
             <span className="sr-only">{t('logout')}</span>
@@ -110,7 +107,6 @@ const Layout = ({ children, title }: LayoutProps) => {
         </div>
       </header>
       <main className="p-4 sm:px-6 sm:py-0">
-        {/* Pass unreadMessageCount to children */}
         {typeof children === 'function' ? children(unreadMessageCount) : children}
       </main>
     </div>
