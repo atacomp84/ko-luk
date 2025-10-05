@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { showError, showSuccess } from '@/utils/toast';
@@ -36,94 +36,73 @@ export const ReassignStudentDialog = ({ isOpen, onClose, student, onStudentReass
   const [loading, setLoading] = useState(true);
   const { t } = useTranslation();
 
-  const fetchCoachesAndCurrentAssignment = async () => {
-    setLoading(true);
-    if (!student) {
-      setLoading(false);
-      return;
-    }
-
-    // Fetch all coaches using the new edge function
-    const { data: coachesData, error: coachesError } = await supabase.functions.invoke('get-coaches');
-
-    if (coachesError) {
-      showError(t('admin.reassignStudent.fetchCoachesError'));
-      setAvailableCoaches([]);
-    } else {
-      setAvailableCoaches(coachesData as Coach[]);
-    }
-
-    // Fetch current coach for the student
-    const { data: pairData, error: pairError } = await supabase
-      .from('coach_student_pairs')
-      .select('coach_id')
-      .eq('student_id', student.id)
-      .single();
-
-    if (pairError && pairError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-      showError(t('admin.reassignStudent.fetchCurrentCoachError'));
-      setCurrentCoachId(null);
-      setSelectedCoachId(null);
-    } else if (pairData) {
-      setCurrentCoachId(pairData.coach_id);
-      setSelectedCoachId(pairData.coach_id);
-    } else {
-      setCurrentCoachId(null);
-      setSelectedCoachId(null);
-    }
-    setLoading(false);
-  };
-
   useEffect(() => {
+    const fetchCoachesAndCurrentAssignment = async () => {
+      if (!student) return;
+      setLoading(true);
+
+      try {
+        const { data: coachesData, error: coachesError } = await supabase.functions.invoke('get-coaches');
+        if (coachesError) throw coachesError;
+        setAvailableCoaches(coachesData as Coach[]);
+
+        const { data: pairData, error: pairError } = await supabase
+          .from('coach_student_pairs')
+          .select('coach_id')
+          .eq('student_id', student.id)
+          .single();
+
+        if (pairError && pairError.code !== 'PGRST116') throw pairError;
+        
+        const coachId = pairData?.coach_id || null;
+        setCurrentCoachId(coachId);
+        setSelectedCoachId(coachId);
+
+      } catch (error: any) {
+        showError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (isOpen && student) {
       fetchCoachesAndCurrentAssignment();
-    } else {
-      setCurrentCoachId(null);
-      setSelectedCoachId(null);
-      setAvailableCoaches([]);
     }
   }, [isOpen, student]);
 
   const handleReassign = async () => {
     if (!student) return;
-
     setLoading(true);
 
-    try {
-      // If there's a current coach, delete the existing pair
-      if (currentCoachId) {
-        const { error: deleteError } = await supabase
-          .from('coach_student_pairs')
-          .delete()
-          .eq('student_id', student.id);
-        if (deleteError) throw deleteError;
-      }
+    const { error } = await supabase.functions.invoke('reassign-coach-admin', {
+      body: { 
+        student_id: student.id, 
+        coach_id: selectedCoachId === 'unassign' ? null : selectedCoachId 
+      },
+    });
 
-      // If a new coach is selected (and it's not the 'unassign' option), create a new pair
-      if (selectedCoachId && selectedCoachId !== 'unassign') {
-        const { error: insertError } = await supabase
-          .from('coach_student_pairs')
-          .insert({ student_id: student.id, coach_id: selectedCoachId });
-        if (insertError) throw insertError;
-      }
-
+    if (error) {
+      showError(t('admin.reassignStudent.reassignError', { message: error.message }));
+    } else {
       showSuccess(t('admin.reassignStudent.reassignSuccess'));
       onStudentReassigned();
       onClose();
-    } catch (err: any) {
-      showError(t('admin.reassignStudent.reassignError', { message: err.message }));
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   if (!student) return null;
+
+  const currentCoachName = availableCoaches.find(c => c.id === currentCoachId)?.first_name + ' ' + availableCoaches.find(c => c.id === currentCoachId)?.last_name;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t('admin.reassignStudent.title', { studentName: `${student.first_name} ${student.last_name}` })}</DialogTitle>
+          <DialogDescription>
+            Öğrencinin mevcut koçunu değiştirebilir veya koç atamasını kaldırabilirsiniz.
+          </DialogDescription>
         </DialogHeader>
         {loading ? (
           <div className="space-y-4 py-4">
@@ -137,14 +116,14 @@ export const ReassignStudentDialog = ({ isOpen, onClose, student, onStudentReass
             <div className="space-y-2">
               <Label>{t('admin.reassignStudent.currentCoach')}</Label>
               <Input
-                value={availableCoaches.find(c => c.id === currentCoachId)?.first_name + ' ' + availableCoaches.find(c => c.id === currentCoachId)?.last_name || t('admin.reassignStudent.noCoachAssigned')}
+                value={currentCoachId ? currentCoachName : t('admin.reassignStudent.noCoachAssigned')}
                 readOnly
                 className="bg-muted"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="select-new-coach">{t('admin.reassignStudent.selectNewCoach')}</Label>
-              <Select value={selectedCoachId || 'unassign'} onValueChange={setSelectedCoachId}>
+              <Select value={selectedCoachId || 'unassign'} onValueChange={(value) => setSelectedCoachId(value)}>
                 <SelectTrigger id="select-new-coach">
                   <SelectValue placeholder={t('admin.reassignStudent.selectCoachPlaceholder')} />
                 </SelectTrigger>

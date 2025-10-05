@@ -29,7 +29,7 @@ serve(async (req) => {
       })
     }
 
-    const { student_id } = await req.json()
+    const { student_id, coach_id } = await req.json()
     if (!student_id) {
       return new Response(JSON.stringify({ error: 'student_id is required' }), {
         status: 400,
@@ -42,7 +42,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Check if the user is an admin
     const { data: adminProfile, error: adminError } = await supabaseAdmin
       .from('profiles')
       .select('role')
@@ -56,19 +55,22 @@ serve(async (req) => {
       })
     }
 
-    // Delete all associated records before deleting the user
-    const { error: pairDeleteError } = await supabaseAdmin.from('coach_student_pairs').delete().eq('student_id', student_id);
-    if (pairDeleteError) throw new Error(`Failed to delete student pair: ${pairDeleteError.message}`);
+    // Delete any existing pair for the student
+    const { error: deleteError } = await supabaseAdmin
+      .from('coach_student_pairs')
+      .delete()
+      .eq('student_id', student_id);
+    if (deleteError) throw deleteError;
 
-    const { error: tasksDeleteError } = await supabaseAdmin.from('tasks').delete().eq('student_id', student_id);
-    if (tasksDeleteError) throw new Error(`Failed to delete tasks: ${tasksDeleteError.message}`);
-
-    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(student_id)
-    if (deleteError) {
-      throw new Error(`Failed to delete user: ${deleteError.message}`);
+    // If a new coach_id is provided (not null or 'unassign'), insert the new pair
+    if (coach_id && coach_id !== 'unassign') {
+      const { error: insertError } = await supabaseAdmin
+        .from('coach_student_pairs')
+        .insert({ student_id: student_id, coach_id: coach_id });
+      if (insertError) throw insertError;
     }
 
-    return new Response(JSON.stringify({ message: 'Student deleted successfully' }), {
+    return new Response(JSON.stringify({ message: 'Coach reassigned successfully' }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
