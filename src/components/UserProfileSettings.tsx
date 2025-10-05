@@ -126,6 +126,12 @@ const UserProfileSettings = () => {
       return;
     }
 
+    if (newPassword.length < 6) {
+      setError(t('settings.passwordLengthError'));
+      setLoading(false);
+      return;
+    }
+
     const { error: passwordError } = await supabase.auth.updateUser({ password: newPassword });
 
     if (passwordError) {
@@ -230,7 +236,7 @@ const UserProfileSettings = () => {
           <form onSubmit={handlePasswordUpdate} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="new-password">{t('settings.newPasswordLabel')}</Label>
-              <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder={t('settings.passwordLengthError')} required />
+              <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirm-password">{t('settings.confirmPasswordLabel')}</Label>

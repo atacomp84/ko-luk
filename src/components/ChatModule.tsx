@@ -20,6 +20,7 @@ interface ChatPartner {
 interface Message {
   id: string;
   sender_id: string;
+  receiver_id: string;
   content: string;
   created_at: string;
 }
@@ -36,32 +37,42 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     setTimeout(() => {
       const scrollViewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
       if (scrollViewport) {
         scrollViewport.scrollTop = scrollViewport.scrollHeight;
       }
     }, 100);
-  };
+  }, []);
 
   const markMessagesAsRead = useCallback(async () => {
     if (!user || !chatPartner) return;
+    console.log(`[ChatModule] Marking messages from ${chatPartner.id} as read for user ${user.id}`);
     const { error } = await supabase
       .from('messages')
       .update({ is_read: true })
       .eq('receiver_id', user.id)
       .eq('sender_id', chatPartner.id)
       .eq('is_read', false);
-    if (error) console.error('[ChatModule] Error marking messages as read:', error.message);
+    if (error) {
+      console.error('[ChatModule] Error marking messages as read:', error.message);
+    } else {
+      console.log('[ChatModule] Successfully marked messages as read.');
+    }
   }, [user, chatPartner]);
 
   const fetchMessages = useCallback(async () => {
-    if (!user || !chatPartner) return;
+    if (!user || !chatPartner) {
+      console.log('[ChatModule] Fetch messages skipped: No user or chat partner.');
+      setMessages([]);
+      return;
+    }
+    console.log(`[ChatModule] Fetching messages between ${user.id} and ${chatPartner.id}`);
     setLoading(true);
     const { data, error } = await supabase
       .from('messages')
-      .select('id, sender_id, content, created_at')
+      .select('id, sender_id, receiver_id, content, created_at')
       .or(`(sender_id.eq.${user.id},and(receiver_id.eq.${chatPartner.id})),(sender_id.eq.${chatPartner.id},and(receiver_id.eq.${user.id}))`)
       .order('created_at', { ascending: true });
 
@@ -69,12 +80,13 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
       console.error('[ChatModule] Error fetching messages:', error.message);
       setMessages([]);
     } else {
+      console.log(`[ChatModule] Fetched ${data.length} messages.`);
       setMessages(data as Message[]);
-      markMessagesAsRead();
+      await markMessagesAsRead();
       scrollToBottom();
     }
     setLoading(false);
-  }, [user, chatPartner, markMessagesAsRead]);
+  }, [user, chatPartner, markMessagesAsRead, scrollToBottom]);
 
   useEffect(() => {
     fetchMessages();
@@ -83,25 +95,52 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
   useEffect(() => {
     if (!user || !chatPartner) return;
 
+    const channelId = `chat_${[user.id, chatPartner.id].sort().join('_')}`;
+    console.log(`[ChatModule] Subscribing to real-time channel: ${channelId}`);
+    
     const channel = supabase
-      .channel(`chat_${user.id}_${chatPartner.id}`)
+      .channel(channelId)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'messages',
-        filter: `receiver_id=eq.${user.id},sender_id=eq.${chatPartner.id}`
       }, (payload) => {
-        console.log('[ChatModule] Realtime message received:', payload.new);
-        setMessages(currentMessages => [...currentMessages, payload.new as Message]);
-        markMessagesAsRead();
-        scrollToBottom();
+        const newMessage = payload.new as Message;
+        console.log('[ChatModule] Real-time message received:', newMessage);
+        
+        const isRelevant = (newMessage.sender_id === user.id && newMessage.receiver_id === chatPartner.id) ||
+                           (newMessage.sender_id === chatPartner.id && newMessage.receiver_id === user.id);
+
+        if (isRelevant) {
+          console.log('[ChatModule] Message is relevant, updating state.');
+          setMessages(currentMessages => {
+            if (currentMessages.some(m => m.id === newMessage.id)) {
+              return currentMessages;
+            }
+            return [...currentMessages, newMessage];
+          });
+          if (newMessage.receiver_id === user.id) {
+            markMessagesAsRead();
+          }
+          scrollToBottom();
+        } else {
+          console.log('[ChatModule] Received message is not for this chat, ignoring.');
+        }
       })
-      .subscribe();
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`[ChatModule] Successfully subscribed to channel ${channelId}`);
+        }
+        if (status === 'CHANNEL_ERROR') {
+          console.error(`[ChatModule] Subscription error on channel ${channelId}:`, err);
+        }
+      });
 
     return () => {
+      console.log(`[ChatModule] Unsubscribing from channel: ${channelId}`);
       supabase.removeChannel(channel);
     };
-  }, [user, chatPartner, markMessagesAsRead]);
+  }, [user, chatPartner, markMessagesAsRead, scrollToBottom]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,15 +153,28 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
     };
 
     console.log('[ChatModule] Attempting to send message:', messageToSend);
+    
+    // Optimistically update UI
+    const tempId = `temp_${Date.now()}`;
+    const optimisticMessage: Message = {
+      id: tempId,
+      ...messageToSend,
+      created_at: new Date().toISOString(),
+    };
+    setMessages(currentMessages => [...currentMessages, optimisticMessage]);
+    setNewMessage('');
+    scrollToBottom();
+
     const { data, error } = await supabase.from('messages').insert(messageToSend).select().single();
 
     if (error) {
       console.error('[ChatModule] Error sending message:', error.message);
+      // Revert optimistic update on error
+      setMessages(currentMessages => currentMessages.filter(m => m.id !== tempId));
     } else {
-      console.log('[ChatModule] Message sent successfully:', data);
-      setMessages(currentMessages => [...currentMessages, data as Message]);
-      setNewMessage('');
-      scrollToBottom();
+      console.log('[ChatModule] Message sent successfully and confirmed by server:', data);
+      // Replace optimistic message with real one from server
+      setMessages(currentMessages => currentMessages.map(m => m.id === tempId ? (data as Message) : m));
     }
   };
 
