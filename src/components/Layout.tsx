@@ -23,42 +23,40 @@ const Layout = ({ children, title }: LayoutProps) => {
   const { t } = useTranslation();
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
-  const fetchUnreadMessageCount = useCallback(async () => {
+  useEffect(() => {
     if (!user) {
       setUnreadMessageCount(0);
       return;
     }
-    const { count, error } = await supabase
-      .from('messages')
-      .select('*', { count: 'exact', head: true })
-      .eq('receiver_id', user.id)
-      .eq('is_read', false);
 
-    if (error) {
-      console.error("[Layout] Error fetching unread message count:", error.message);
-      setUnreadMessageCount(0);
-    } else {
-      setUnreadMessageCount(count || 0);
-    }
-  }, [user]);
+    const fetchAndSetCount = async () => {
+      const { count, error } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', user.id)
+        .eq('is_read', false);
 
-  useEffect(() => {
-    fetchUnreadMessageCount();
+      if (!error) {
+        setUnreadMessageCount(count ?? 0);
+      } else {
+        console.error('[Layout] Failed to fetch unread message count:', error.message);
+      }
+    };
 
-    if (!user) return;
+    fetchAndSetCount();
 
     const channel = supabase
-      .channel(`unread_messages_layout_${user.id}`)
+      .channel(`public:messages:receiver_id=eq.${user.id}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'messages',
-          filter: `receiver_id.eq.${user.id}`,
+          filter: `receiver_id=eq.${user.id}`,
         },
         () => {
-          fetchUnreadMessageCount();
+          fetchAndSetCount();
         }
       )
       .subscribe();
@@ -66,7 +64,7 @@ const Layout = ({ children, title }: LayoutProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, fetchUnreadMessageCount]);
+  }, [user]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -74,7 +72,6 @@ const Layout = ({ children, title }: LayoutProps) => {
   };
 
   const handleGoBack = () => {
-    // Specific fix for admin settings page lock
     if (profile?.role === 'admin' && location.pathname === '/settings') {
       navigate('/admin/dashboard');
     } else {

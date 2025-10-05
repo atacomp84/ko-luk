@@ -3,261 +3,175 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Send, MessageCircle } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
-import { showError } from '@/utils/toast';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Send } from 'lucide-react';
 import { getInitials } from '@/lib/utils';
-
-interface Message {
-  id: string;
-  sender_id: string;
-  receiver_id: string;
-  content: string;
-  is_read: boolean;
-  created_at: string;
-}
+import { useTranslation } from 'react-i18next';
+import { Skeleton } from './ui/skeleton';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
 
 interface ChatPartner {
   id: string;
   first_name: string;
   last_name: string;
-  role: string;
+}
+
+interface Message {
+  id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
 }
 
 interface ChatModuleProps {
   chatPartner: ChatPartner | null;
-  onUnreadCountChange?: (count: number) => void;
 }
 
-export const ChatModule = ({ chatPartner, onUnreadCountChange }: ChatModuleProps) => {
-  console.log("[ChatModule] Component rendered.");
+const ChatModule = ({ chatPartner }: ChatModuleProps) => {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(true);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    setTimeout(() => {
+      const scrollViewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
+      if (scrollViewport) {
+        scrollViewport.scrollTop = scrollViewport.scrollHeight;
+      }
+    }, 100);
   };
 
-  const fetchMessages = useCallback(async () => {
-    if (!user || !chatPartner) {
-      console.log("[ChatModule] Fetching messages skipped: no user or chat partner.");
-      setLoading(false); // Ensure loading is set to false even if skipped
-      return;
-    }
-    setLoading(true);
-    console.log(`[ChatModule] Fetching messages between user ${user.id} and chat partner ${chatPartner.id}`);
-    
-    // Corrected OR condition syntax for Supabase
-    const queryCondition = `and(sender_id.eq.${user.id},receiver_id.eq.${chatPartner.id}),and(sender_id.eq.${chatPartner.id},receiver_id.eq.${user.id})`;
-    console.log(`[ChatModule] Supabase query condition for fetch: ${queryCondition}`);
+  const markMessagesAsRead = useCallback(async () => {
+    if (!user || !chatPartner) return;
+    const { error } = await supabase
+      .from('messages')
+      .update({ is_read: true })
+      .eq('receiver_id', user.id)
+      .eq('sender_id', chatPartner.id)
+      .eq('is_read', false);
+    if (error) console.error('[ChatModule] Error marking messages as read:', error.message);
+  }, [user, chatPartner]);
 
+  const fetchMessages = useCallback(async () => {
+    if (!user || !chatPartner) return;
+    setLoading(true);
     const { data, error } = await supabase
       .from('messages')
-      .select('*')
-      .or(queryCondition)
+      .select('id, sender_id, content, created_at')
+      .or(`(sender_id.eq.${user.id},and(receiver_id.eq.${chatPartner.id})),(sender_id.eq.${chatPartner.id},and(receiver_id.eq.${user.id}))`)
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.error("[ChatModule] Error fetching messages:", error.message, error);
-      showError(t('messages.fetchError'));
+      console.error('[ChatModule] Error fetching messages:', error.message);
+      setMessages([]);
     } else {
-      console.log(`[ChatModule] Fetched ${data.length} messages successfully. Data:`, data);
-      setMessages(data || []);
-      
-      const unreadMessages = data.filter(msg => msg.receiver_id === user.id && !msg.is_read);
-      if (unreadMessages.length > 0) {
-        console.log(`[ChatModule] Found ${unreadMessages.length} unread messages for current user. Marking as read.`);
-        const { error: updateError } = await supabase
-          .from('messages')
-          .update({ is_read: true })
-          .in('id', unreadMessages.map(msg => msg.id));
-        
-        if (updateError) {
-          console.error("[ChatModule] Error marking messages as read:", updateError.message, updateError);
-        } else {
-          console.log(`[ChatModule] Marked ${unreadMessages.length} messages as read successfully.`);
-          if (onUnreadCountChange) {
-            onUnreadCountChange(0); // Update parent with 0 unread messages
-          }
-        }
-      }
+      setMessages(data as Message[]);
+      markMessagesAsRead();
+      scrollToBottom();
     }
     setLoading(false);
-  }, [user, chatPartner, t, onUnreadCountChange]);
+  }, [user, chatPartner, markMessagesAsRead]);
 
   useEffect(() => {
     fetchMessages();
   }, [fetchMessages]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  useEffect(() => {
     if (!user || !chatPartner) return;
 
-    // Create a consistent channel name by sorting the user IDs
-    const sortedIds = [user.id, chatPartner.id].sort();
-    const channelName = `chat_${sortedIds[0]}_${sortedIds[1]}`;
-    console.log(`[ChatModule] Setting up real-time subscription for channel: ${channelName}`);
-
     const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          // Corrected filter for real-time subscription
-          filter: `or(and(sender_id.eq.${user.id},receiver_id.eq.${chatPartner.id}),and(sender_id.eq.${chatPartner.id},receiver_id.eq.${user.id}))`,
-        },
-        (payload) => {
-          console.log("[ChatModule] Real-time message update received:", payload);
-          if (payload.eventType === 'INSERT') {
-            setMessages((prev) => [...prev, payload.new as Message]);
-            if ((payload.new as Message).receiver_id === user.id) {
-              // Mark new incoming message as read
-              supabase
-                .from('messages')
-                .update({ is_read: true })
-                .eq('id', (payload.new as Message).id)
-                .then(({ error: updateError }) => {
-                  if (updateError) {
-                    console.error(`[ChatModule] Error marking new message ${payload.new.id} as read:`, updateError.message, updateError);
-                  } else {
-                    console.log(`[ChatModule] Marked new message ${payload.new.id} as read.`);
-                    if (onUnreadCountChange) {
-                      onUnreadCountChange(0); // Ensure unread count is 0 after receiving and marking as read
-                    }
-                  }
-                });
-            }
-          } else if (payload.eventType === 'UPDATE') {
-            setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === (payload.new as Message).id ? (payload.new as Message) : msg
-              )
-            );
-          }
-        }
-      )
+      .channel(`chat_${user.id}_${chatPartner.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `receiver_id=eq.${user.id},sender_id=eq.${chatPartner.id}`
+      }, (payload) => {
+        setMessages(currentMessages => [...currentMessages, payload.new as Message]);
+        markMessagesAsRead();
+        scrollToBottom();
+      })
       .subscribe();
 
     return () => {
-      console.log(`[ChatModule] Unsubscribing from real-time channel: ${channelName}`);
       supabase.removeChannel(channel);
     };
-  }, [user, chatPartner, onUnreadCountChange]);
+  }, [user, chatPartner, markMessagesAsRead]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !user || !chatPartner) {
-      console.warn("[ChatModule] Message not sent: empty message, no user, or no chat partner.");
-      return;
-    }
+    if (!newMessage.trim() || !user || !chatPartner) return;
 
-    console.log(`[ChatModule] Sending message from ${user.id} to ${chatPartner.id}: "${newMessage}"`);
-    const { data, error } = await supabase.from('messages').insert({
+    const messageToSend = {
       sender_id: user.id,
       receiver_id: chatPartner.id,
       content: newMessage.trim(),
-    }).select().single(); // Select the inserted message to add it to state
+    };
+
+    const { data, error } = await supabase.from('messages').insert(messageToSend).select().single();
 
     if (error) {
-      console.error("[ChatModule] Error sending message:", error.message, error);
-      showError(t('messages.sendError'));
+      console.error('[ChatModule] Error sending message:', error.message);
     } else {
-      console.log("[ChatModule] Message sent successfully. Adding to state:", data);
-      setMessages((prev) => [...prev, data]); // Add the new message instantly for the sender
+      setMessages(currentMessages => [...currentMessages, data as Message]);
       setNewMessage('');
+      scrollToBottom();
     }
   };
 
   if (!chatPartner) {
     return (
-      <Card className="h-[calc(100vh-15rem)] flex items-center justify-center">
-        <CardContent className="text-center text-muted-foreground">
-          <MessageCircle className="h-12 w-12 mx-auto mb-4" />
-          <p>{t('messages.selectChat')}</p>
+      <Card className="h-full flex items-center justify-center">
+        <CardContent className="text-center">
+          <p className="text-muted-foreground">{t('messages.selectChat')}</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="h-[calc(100vh-15rem)] flex flex-col">
-      <CardHeader className="border-b p-4">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-secondary text-secondary-foreground text-sm">
-              {getInitials(chatPartner.first_name, chatPartner.last_name)}
-            </AvatarFallback>
-          </Avatar>
-          {chatPartner.first_name} {chatPartner.last_name}
-        </CardTitle>
+    <Card className="flex flex-col h-[calc(100vh-12rem)]">
+      <CardHeader>
+        <CardTitle>{chatPartner.first_name} {chatPartner.last_name}</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 p-4 overflow-hidden">
-        {loading ? (
-          <div className="space-y-4">
-            <Skeleton className="h-12 w-3/4" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-1/2" />
+      <CardContent className="flex-1 overflow-hidden">
+        <ScrollArea className="h-full" ref={scrollAreaRef}>
+          <div className="p-4 space-y-4">
+            {loading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-12 w-3/4" />
+                <Skeleton className="h-12 w-3/4 ml-auto" />
+                <Skeleton className="h-12 w-3/4" />
+              </div>
+            ) : messages.map(msg => (
+              <div key={msg.id} className={`flex items-end gap-2 ${msg.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}>
+                {msg.sender_id !== user?.id && (
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback>{getInitials(chatPartner.first_name, chatPartner.last_name)}</AvatarFallback>
+                  </Avatar>
+                )}
+                <div className={`max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-3 py-2 ${msg.sender_id === user?.id ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                  <p className="text-sm">{msg.content}</p>
+                </div>
+              </div>
+            ))}
           </div>
-        ) : (
-          <ScrollArea className="h-full pr-4">
-            <div className="space-y-4">
-              {messages.length === 0 ? (
-                <p className="text-center text-muted-foreground">{t('messages.noMessages')}</p>
-              ) : (
-                messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${msg.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[70%] p-3 rounded-lg ${
-                        msg.sender_id === user?.id
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted text-muted-foreground'
-                      }`}
-                    >
-                      <p className="text-sm">{msg.content}</p>
-                      <span className="text-xs opacity-70 mt-1 block">
-                        {format(new Date(msg.created_at), 'HH:mm')}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-          </ScrollArea>
-        )}
+        </ScrollArea>
       </CardContent>
-      <div className="p-4 border-t">
-        <form onSubmit={handleSendMessage} className="flex gap-2">
-          <Input
-            placeholder={t('messages.typeMessage')}
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            className="flex-1"
-          />
-          <Button type="submit" disabled={!newMessage.trim()}>
+      <CardFooter>
+        <form onSubmit={handleSendMessage} className="flex w-full items-center space-x-2">
+          <Input value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder={t('messages.typeMessage')} autoComplete="off" />
+          <Button type="submit" size="icon" disabled={!newMessage.trim()}>
             <Send className="h-4 w-4" />
-            <span className="sr-only">{t('messages.sendButton')}</span>
           </Button>
         </form>
-      </div>
+      </CardFooter>
     </Card>
   );
 };
+
+export default ChatModule;
