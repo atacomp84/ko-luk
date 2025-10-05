@@ -887,7 +887,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
             <AlertDialogAction onClick={() => handleSimpleApproval('completed')}>{t('coach.approval.approve')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </Dialog>
+      </AlertDialog>
 
       <Dialog open={isScoreEntryOpen} onOpenChange={setScoreEntryOpen}>
         <DialogContent>
