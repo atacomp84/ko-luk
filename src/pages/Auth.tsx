@@ -31,7 +31,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [username, setUsername] = useState(""); // New username state for registration
+  const [username, setUsername] = useState("");
   const [role, setRole] = useState<"student" | "coach">("student");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,20 +62,24 @@ export default function AuthPage() {
     setLoading(true);
     setError(null);
 
-    // Check if username already exists
-    const { data: existingUser, error: usernameCheckError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('username', username)
-      .single();
+    // Kullanıcı adının var olup olmadığını Edge Function ile kontrol et
+    try {
+      const { data: checkData, error: checkError } = await supabase.functions.invoke('check-username', {
+        body: { username },
+      });
 
-    if (existingUser) {
-      setError(t('auth.usernameExistsError'));
-      setLoading(false);
-      return;
-    }
-    if (usernameCheckError && usernameCheckError.code !== 'PGRST116') { // PGRST116 means no rows found
-      setError(usernameCheckError.message);
+      if (checkError) {
+        throw new Error(checkError.message);
+      }
+
+      if (checkData.exists) {
+        setError(t('auth.usernameExistsError'));
+        setLoading(false);
+        return;
+      }
+    } catch (err: any) {
+      setError(err.message);
+      showError(err.message);
       setLoading(false);
       return;
     }
@@ -88,19 +92,19 @@ export default function AuthPage() {
           first_name: firstName,
           last_name: lastName,
           role: role,
-          username: username, // Pass username to raw_user_meta_data
+          username: username,
         },
       },
     });
 
     if (signUpError) {
       setLoading(false);
+      setError(signUpError.message);
       showError(signUpError.message);
     } else {
       await supabase.auth.signOut();
       setLoading(false);
       showSuccess(t('auth.registerSuccess'));
-      // Düzeltme: Şifreyi temizle, sekmeyi değiştir. E-posta state'i aynı kalacak.
       setPassword("");
       setActiveTab("login");
     }
@@ -203,7 +207,7 @@ export default function AuthPage() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="register-username">{t('auth.usernameLabel')}</Label> {/* New username field */}
+                      <Label htmlFor="register-username">{t('auth.usernameLabel')}</Label>
                       <Input id="register-username" required value={username} onChange={(e) => setUsername(e.target.value)} />
                     </div>
                     <div className="space-y-2">
@@ -240,6 +244,13 @@ export default function AuthPage() {
                         </div>
                       </RadioGroup>
                     </div>
+                    {error && (
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>{t('auth.errorTitle')}</AlertTitle>
+                        <AlertDescription>{error}</AlertDescription>
+                      </Alert>
+                    )}
                     <Button type="submit" className="w-full" disabled={loading}>
                       {loading ? t('auth.registering') : t('auth.registerButton')}
                     </Button>
