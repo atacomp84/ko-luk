@@ -43,43 +43,42 @@ const UserProfileSettings = () => {
       return;
     }
 
-    if (username !== profile?.username) {
-      const { data: existingUser, error: usernameCheckError } = await supabase
+    try {
+      if (username !== profile?.username) {
+        const { data: existingUser, error: usernameCheckError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', username)
+          .single();
+
+        if (existingUser && existingUser.id !== user.id) {
+          throw new Error(t('auth.usernameExistsError'));
+        }
+        if (usernameCheckError && usernameCheckError.code !== 'PGRST116') {
+          throw usernameCheckError;
+        }
+      }
+
+      const { error: profileError } = await supabase
         .from('profiles')
-        .select('id')
-        .eq('username', username)
-        .single();
+        .update({ 
+          first_name: firstName, 
+          last_name: lastName, 
+          username: username,
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', user.id);
 
-      if (existingUser && existingUser.id !== user.id) {
-        setError(t('auth.usernameExistsError'));
-        setLoading(false);
-        return;
-      }
-      if (usernameCheckError && usernameCheckError.code !== 'PGRST116') {
-        setError(usernameCheckError.message);
-        setLoading(false);
-        return;
-      }
-    }
+      if (profileError) throw profileError;
 
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ 
-        first_name: firstName, 
-        last_name: lastName, 
-        username: username,
-        updated_at: new Date().toISOString() 
-      })
-      .eq('id', user.id);
-
-    if (profileError) {
-      setError(profileError.message);
-      showError(t('settings.profileUpdateError'));
-    } else {
       showSuccess(t('settings.profileUpdateSuccess'));
       await refreshProfile();
+    } catch (err: any) {
+      setError(err.message);
+      showError(t('settings.profileUpdateError'));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleEmailUpdate = async (e: React.FormEvent) => {
@@ -103,7 +102,7 @@ const UserProfileSettings = () => {
 
     if (emailError) {
       setError(emailError.message);
-      showError(t('settings.emailUpdateError'));
+      showError(emailError.message);
     } else {
       showSuccess(t('settings.emailUpdateSuccess'));
     }
@@ -127,17 +126,11 @@ const UserProfileSettings = () => {
       return;
     }
 
-    if (newPassword.length < 6) {
-      setError(t('settings.passwordLengthError'));
-      setLoading(false);
-      return;
-    }
-
     const { error: passwordError } = await supabase.auth.updateUser({ password: newPassword });
 
     if (passwordError) {
       setError(passwordError.message);
-      showError(t('settings.passwordUpdateError'));
+      showError(passwordError.message);
     } else {
       showSuccess(t('settings.passwordUpdateSuccess'));
       setNewPassword('');
@@ -237,7 +230,7 @@ const UserProfileSettings = () => {
           <form onSubmit={handlePasswordUpdate} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="new-password">{t('settings.newPasswordLabel')}</Label>
-              <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+              <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder={t('settings.passwordLengthError')} required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirm-password">{t('settings.confirmPasswordLabel')}</Label>

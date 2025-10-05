@@ -91,6 +91,7 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
         table: 'messages',
         filter: `receiver_id=eq.${user.id},sender_id=eq.${chatPartner.id}`
       }, (payload) => {
+        console.log('[ChatModule] Realtime message received:', payload.new);
         setMessages(currentMessages => [...currentMessages, payload.new as Message]);
         markMessagesAsRead();
         scrollToBottom();
@@ -112,11 +113,13 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
       content: newMessage.trim(),
     };
 
+    console.log('[ChatModule] Attempting to send message:', messageToSend);
     const { data, error } = await supabase.from('messages').insert(messageToSend).select().single();
 
     if (error) {
       console.error('[ChatModule] Error sending message:', error.message);
     } else {
+      console.log('[ChatModule] Message sent successfully:', data);
       setMessages(currentMessages => [...currentMessages, data as Message]);
       setNewMessage('');
       scrollToBottom();
