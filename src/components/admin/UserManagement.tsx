@@ -5,14 +5,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { showError, showSuccess } from '@/utils/toast';
 import { useTranslation } from 'react-i18next';
-import { Trash2, Edit, UserPlus, User, GraduationCap } from 'lucide-react';
+import { Trash2, Edit, GraduationCap } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn, getInitials } from '@/lib/utils';
 import { EditUserDialog } from './EditUserDialog';
 import { ReassignStudentDialog } from './ReassignStudentDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge'; // <-- Eklendi
-import { User as SupabaseUser } from '@supabase/supabase-js'; // <-- Eklendi
+import { Badge } from '@/components/ui/badge';
 
 interface UserProfile {
   id: string;
@@ -20,6 +19,7 @@ interface UserProfile {
   last_name: string;
   role: 'student' | 'coach' | 'admin';
   email: string;
+  username?: string;
 }
 
 const avatarColors = [
@@ -44,36 +44,14 @@ const UserManagement = () => {
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, first_name, last_name, role');
+    const { data, error } = await supabase.functions.invoke('get-users');
 
-    if (profilesError) {
+    if (error) {
       showError(t('admin.userManagement.fetchError'));
       setUsers([]);
-      setLoading(false);
-      return;
+    } else {
+      setUsers(data as UserProfile[]);
     }
-
-    const userIds = profiles.map(p => p.id);
-    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-
-    if (authError) {
-      showError(t('admin.userManagement.fetchError'));
-      setUsers([]);
-      setLoading(false);
-      return;
-    }
-
-    const usersWithEmails = profiles.map(profile => {
-      const authUser = authUsers.users.find((u: SupabaseUser) => u.id === profile.id); // <-- Düzeltildi
-      return {
-        ...profile,
-        email: authUser?.email || 'N/A',
-      };
-    });
-
-    setUsers(usersWithEmails as UserProfile[]);
     setLoading(false);
   }, [t]);
 
@@ -114,7 +92,6 @@ const UserManagement = () => {
         });
         if (error) throw error;
       } else {
-        // Admin deletion - requires special handling, usually not allowed via UI
         throw new Error(t('admin.userManagement.adminDeleteError'));
       }
       showSuccess(t('admin.userManagement.deleteSuccess', { userName: `${userToDelete.first_name} ${userToDelete.last_name}` }));

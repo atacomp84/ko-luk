@@ -27,8 +27,9 @@ export default function AuthPage() {
   const navigate = useNavigate();
   const { session, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
-  const [email, setEmail] = useState("");
+  const [loginIdentifier, setLoginIdentifier] = useState(""); // Can be email or username
   const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
@@ -47,12 +48,32 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
+
+    let loginEmail = loginIdentifier;
+
+    // If the identifier doesn't look like an email, assume it's a username
+    if (!loginIdentifier.includes('@')) {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('username', loginIdentifier)
+        .single();
+
+      if (profileError || !profile) {
+        setError('Invalid credentials');
+        setLoading(false);
+        return;
+      }
+      loginEmail = profile.email;
+    }
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: loginEmail,
       password,
     });
-    if (error) {
-      setError(error.message);
+
+    if (signInError) {
+      setError(signInError.message);
       setLoading(false);
     }
   };
@@ -62,16 +83,12 @@ export default function AuthPage() {
     setLoading(true);
     setError(null);
 
-    // Kullanıcı adının var olup olmadığını Edge Function ile kontrol et
     try {
       const { data: checkData, error: checkError } = await supabase.functions.invoke('check-username', {
         body: { username },
       });
 
-      if (checkError) {
-        throw new Error(checkError.message);
-      }
-
+      if (checkError) throw new Error(checkError.message);
       if (checkData.exists) {
         setError(t('auth.usernameExistsError'));
         setLoading(false);
@@ -150,14 +167,13 @@ export default function AuthPage() {
                 <form onSubmit={handleLogin}>
                   <div className="space-y-4">
                     <div className="space-y-2 text-left">
-                      <Label htmlFor="login-email">{t('auth.emailLabel')}</Label>
+                      <Label htmlFor="login-identifier">{t('auth.emailLabel')} / {t('auth.usernameLabel')}</Label>
                       <Input
-                        id="login-email"
-                        type="email"
-                        placeholder={t('auth.emailPlaceholder')}
+                        id="login-identifier"
+                        placeholder={`${t('auth.emailPlaceholder')} or username`}
                         required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        value={loginIdentifier}
+                        onChange={(e) => setLoginIdentifier(e.target.value)}
                       />
                     </div>
                     <div className="space-y-2 text-left">
