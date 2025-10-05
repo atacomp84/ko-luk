@@ -99,27 +99,42 @@ const UserProfileSettings = () => {
       return;
     }
 
-    // Re-authenticate with current password to ensure session freshness for sensitive update
+    console.log("[handleEmailUpdate] Attempting to re-authenticate for email update...");
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: user.email!, // Current email
       password: currentPassword,
     });
 
     if (signInError) {
+      console.error("[handleEmailUpdate] Re-authentication failed:", signInError.message);
       setError(signInError.message);
       showError(signInError.message);
       setLoading(false);
       return;
     }
+    console.log("[handleEmailUpdate] Re-authentication successful. Refreshing session...");
+
+    const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError || !refreshedSession) {
+        console.error("[handleEmailUpdate] Failed to refresh session:", refreshError?.message);
+        setError(t('settings.emailUpdateError') + ": " + (refreshError?.message || "Session refresh failed."));
+        showError(t('settings.emailUpdateError'));
+        setLoading(false);
+        return;
+    }
+    console.log("[handleEmailUpdate] Session refreshed. Attempting to update email...");
 
     const { error: emailUpdateError } = await supabase.auth.updateUser({ email });
 
     if (emailUpdateError) {
+      console.error("[handleEmailUpdate] Email update failed:", emailUpdateError.message);
       setError(emailUpdateError.message);
-      showError(emailUpdateError.message);
+      showError(t('settings.emailUpdateError'));
     } else {
+      console.log("[handleEmailUpdate] Email update initiated successfully.");
       showSuccess(t('settings.emailUpdateSuccess'));
       setCurrentPassword(''); // Clear current password after successful update
+      await refreshProfile(); // Refresh profile to get the new email in context
     }
     setLoading(false);
   };
@@ -147,25 +162,47 @@ const UserProfileSettings = () => {
       return;
     }
 
-    // Re-authenticate with current password to ensure session freshness for sensitive update
+    // Prevent updating to the same password
+    if (newPassword === currentPassword) {
+        setError(t('settings.passwordSameError')); // Add this translation key
+        showError(t('settings.passwordSameError'));
+        setLoading(false);
+        return;
+    }
+
+    console.log("[handlePasswordUpdate] Attempting to re-authenticate for password update...");
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: user.email!, // Current email
       password: currentPassword,
     });
 
     if (signInError) {
+      console.error("[handlePasswordUpdate] Re-authentication failed:", signInError.message);
       setError(signInError.message);
       showError(signInError.message);
       setLoading(false);
       return;
     }
+    console.log("[handlePasswordUpdate] Re-authentication successful. Refreshing session...");
+
+    const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError || !refreshedSession) {
+        console.error("[handlePasswordUpdate] Failed to refresh session:", refreshError?.message);
+        setError(t('settings.passwordUpdateError') + ": " + (refreshError?.message || "Session refresh failed."));
+        showError(t('settings.passwordUpdateError'));
+        setLoading(false);
+        return;
+    }
+    console.log("[handlePasswordUpdate] Session refreshed. Attempting to update password...");
 
     const { error: passwordError } = await supabase.auth.updateUser({ password: newPassword });
 
     if (passwordError) {
+      console.error("[handlePasswordUpdate] Password update failed:", passwordError.message);
       setError(passwordError.message);
-      showError(passwordError.message);
+      showError(t('settings.passwordUpdateError'));
     } else {
+      console.log("[handlePasswordUpdate] Password updated successfully.");
       showSuccess(t('settings.passwordUpdateSuccess'));
       setNewPassword('');
       setConfirmPassword('');
