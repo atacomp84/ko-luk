@@ -9,6 +9,8 @@ import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/Auth";
 import CoachDashboard from "./pages/coach/Dashboard";
 import StudentDashboard from "./pages/student/Dashboard";
+import AdminAuthPage from "./pages/admin/AdminAuthPage"; // Yeni import
+import AdminDashboard from "./pages/admin/Dashboard"; // Yeni import
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -23,6 +25,10 @@ const router = createBrowserRouter([
     element: <AuthPage />,
   },
   {
+    path: "/admin/login", // Yeni admin giriş rotası
+    element: <AdminAuthPage />,
+  },
+  {
     path: "/coach/dashboard",
     element: (
       <ProtectedRoute allowedRoles={['coach']}>
@@ -35,6 +41,14 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute allowedRoles={['student']}>
         <StudentDashboard />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/admin/dashboard", // Yeni admin paneli rotası
+    element: (
+      <ProtectedRoute allowedRoles={['admin']}>
+        <AdminDashboard />
       </ProtectedRoute>
     ),
   },

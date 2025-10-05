@@ -29,7 +29,8 @@
   "index": {
     "welcomeTitle": "Welcome to the LGS Coaching Platform",
     "welcomeDescription": "Please log in or register to continue.",
-    "ctaButton": "Login / Register"
+    "ctaButton": "Login / Register",
+    "adminLoginButton": "Admin Login"
   },
   "coach": {
     "dashboardTitle": "Coach Dashboard",
@@ -158,6 +159,78 @@
     "toggleChatError": "Failed to toggle chat status.",
     "chatDisabledByCoach": "Chat Disabled by Coach",
     "chatDisabledDescription": "Your coach has temporarily disabled chat. Please contact them through other means if urgent."
+  },
+  "settings": {
+    "title": "Settings",
+    "profileInfoTitle": "Profile Information",
+    "profileInfoDescription": "Update your name and other profile details.",
+    "emailTitle": "Email Address",
+    "emailDescription": "Update your email address. A confirmation email will be sent to the new address.",
+    "passwordTitle": "Password",
+    "passwordDescription": "Change your password.",
+    "newPasswordLabel": "New Password",
+    "confirmPasswordLabel": "Confirm New Password",
+    "saveProfile": "Save Profile",
+    "updateEmail": "Update Email",
+    "updatePassword": "Update Password",
+    "saving": "Saving...",
+    "noUserError": "User not found. Please log in again.",
+    "profileUpdateError": "Failed to update profile.",
+    "profileUpdateSuccess": "Profile updated successfully!",
+    "emailSameError": "New email is the same as current email.",
+    "emailUpdateError": "Failed to update email.",
+    "emailUpdateSuccess": "Email update initiated! Please check your new email for confirmation.",
+    "passwordMismatchError": "Passwords do not match.",
+    "passwordLengthError": "Password must be at least 6 characters long.",
+    "passwordUpdateError": "Failed to update password.",
+    "passwordUpdateSuccess": "Password updated successfully!",
+    "passwordPlaceholder": "Leave blank to keep current password"
+  },
+  "admin": {
+    "dashboardTitle": "Admin Dashboard",
+    "roleAdmin": "Admin",
+    "login": {
+      "title": "Admin Login",
+      "description": "Enter admin credentials to access the admin panel.",
+      "button": "Login as Admin",
+      "loggingIn": "Logging in...",
+      "notAdminError": "You are not authorized to access the admin panel."
+    },
+    "userManagement": {
+      "title": "User Management",
+      "description": "Manage all users (students, coaches, and admins).",
+      "fetchError": "Failed to fetch user data.",
+      "noUsers": "No users found.",
+      "edit": "Edit",
+      "reassignCoach": "Reassign Coach",
+      "delete": "Delete",
+      "adminDeleteError": "Admin users cannot be deleted via this interface.",
+      "confirmDeleteTitle": "Confirm Deletion",
+      "confirmDeleteDescription": "Are you sure you want to permanently delete {{userName}} ({{role}})? This action cannot be undone and will delete all associated data.",
+      "confirmDeleteButton": "Yes, Delete User",
+      "deleteSuccess": "{{userName}} deleted successfully.",
+      "deleteError": "Failed to delete user: {{message}}"
+    },
+    "editUser": {
+      "title": "Edit User: {{userName}}",
+      "leaveBlankForNoChange": "Leave blank for no change",
+      "saveChanges": "Save Changes",
+      "updateSuccess": "User updated successfully!",
+      "updateError": "Failed to update user: {{message}}"
+    },
+    "reassignStudent": {
+      "title": "Reassign Coach for {{studentName}}",
+      "currentCoach": "Current Coach",
+      "noCoachAssigned": "No coach assigned",
+      "selectNewCoach": "Select New Coach",
+      "selectCoachPlaceholder": "Select a coach",
+      "unassignCoach": "Unassign Coach",
+      "reassignButton": "Reassign Coach",
+      "fetchCoachesError": "Failed to fetch coaches.",
+      "fetchCurrentCoachError": "Failed to fetch current coach assignment.",
+      "reassignSuccess": "Coach reassigned successfully!",
+      "reassignError": "Failed to reassign coach: {{message}}"
+    }
   },
   "logout": "Logout"
 }

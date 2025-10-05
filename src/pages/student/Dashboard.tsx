@@ -5,6 +5,7 @@ import StudentCompletedTasks from "@/components/student/StudentCompletedTasks";
 import Layout from "@/components/Layout";
 import StudentMessages from "@/components/student/StudentMessages";
 import { Badge } from "@/components/ui/badge";
+import UserProfileSettings from "@/components/UserProfileSettings"; // Yeni import
 
 const StudentDashboard = () => {
   const { t } = useTranslation();
@@ -14,7 +15,7 @@ const StudentDashboard = () => {
         {(unreadMessageCount: number) => (
             <div className="dotted-background -mx-4 -my-2 sm:-mx-6 sm:-my-0 p-4 sm:p-6 rounded-lg min-h-[calc(100vh-5rem)]">
                 <Tabs defaultValue="current-tasks" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3">
+                    <TabsList className="grid w-full grid-cols-4"> {/* Grid sütun sayısı artırıldı */}
                         <TabsTrigger value="current-tasks">{t('student.currentTasks')}</TabsTrigger>
                         <TabsTrigger value="completed-tasks">{t('student.completedTasks')}</TabsTrigger>
                         <TabsTrigger value="messages" className="relative">
@@ -25,6 +26,7 @@ const StudentDashboard = () => {
                                 </Badge>
                             )}
                         </TabsTrigger>
+                        <TabsTrigger value="settings">{t('settings.title')}</TabsTrigger> {/* Yeni Ayarlar sekmesi */}
                     </TabsList>
                     <TabsContent value="current-tasks" className="mt-4">
                         <StudentCurrentTasks />
@@ -34,6 +36,9 @@ const StudentDashboard = () => {
                     </TabsContent>
                     <TabsContent value="messages" className="mt-4">
                         <StudentMessages />
+                    </TabsContent>
+                    <TabsContent value="settings" className="mt-4"> {/* Yeni Ayarlar içeriği */}
+                        <UserProfileSettings />
                     </TabsContent>
                 </Tabs>
             </div>

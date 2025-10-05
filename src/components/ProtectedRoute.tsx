@@ -12,7 +12,16 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
       if (!session || !profile) {
         navigate('/auth');
       } else if (!allowedRoles.includes(profile.role)) {
-        navigate('/');
+        // Redirect based on role if not allowed for the current route
+        if (profile.role === 'coach') {
+          navigate('/coach/dashboard');
+        } else if (profile.role === 'student') {
+          navigate('/student/dashboard');
+        } else if (profile.role === 'admin') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/'); // Fallback for unknown roles
+        }
       }
     }
   }, [loading, session, profile, navigate, allowedRoles]);

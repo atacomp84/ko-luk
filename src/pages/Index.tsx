@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { MadeWithDyad } from "@/components/made-with-dyad";
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -20,6 +19,8 @@ const Index = () => {
         navigate('/coach/dashboard');
       } else if (profile.role === 'student') {
         navigate('/student/dashboard');
+      } else if (profile.role === 'admin') {
+        navigate('/admin/dashboard');
       }
     }
   }, [loading, profile, navigate]);
@@ -48,10 +49,10 @@ const Index = () => {
         <p className="text-xl text-muted-foreground mb-6">
           {t('index.welcomeDescription')}
         </p>
-        <Button onClick={() => navigate('/auth')} size="lg">{t('index.ctaButton')}</Button>
-      </div>
-      <div className="absolute bottom-4">
-        <MadeWithDyad />
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Button onClick={() => navigate('/auth')} size="lg">{t('index.ctaButton')}</Button>
+          <Button onClick={() => navigate('/admin/login')} variant="outline" size="lg">{t('index.adminLoginButton')}</Button>
+        </div>
       </div>
     </div>
   );

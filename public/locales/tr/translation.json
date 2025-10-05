@@ -29,7 +29,8 @@
   "index": {
     "welcomeTitle": "LGS Koçluk Platformuna Hoş Geldiniz",
     "welcomeDescription": "Devam etmek için lütfen giriş yapın veya kayıt olun.",
-    "ctaButton": "Giriş Yap / Kayıt Ol"
+    "ctaButton": "Giriş Yap / Kayıt Ol",
+    "adminLoginButton": "Yönetici Girişi"
   },
   "coach": {
     "dashboardTitle": "Koç Paneli",
@@ -158,6 +159,78 @@
     "toggleChatError": "Sohbet durumu güncellenirken hata oluştu.",
     "chatDisabledByCoach": "Koç Tarafından Sohbet Devre Dışı Bırakıldı",
     "chatDisabledDescription": "Koçunuz sohbeti geçici olarak devre dışı bıraktı. Acil durumlarda lütfen başka yollarla iletişime geçin."
+  },
+  "settings": {
+    "title": "Ayarlar",
+    "profileInfoTitle": "Profil Bilgileri",
+    "profileInfoDescription": "Adınızı, soyadınızı ve diğer profil detaylarınızı güncelleyin.",
+    "emailTitle": "E-posta Adresi",
+    "emailDescription": "E-posta adresinizi güncelleyin. Yeni adrese bir onay e-postası gönderilecektir.",
+    "passwordTitle": "Şifre",
+    "passwordDescription": "Şifrenizi değiştirin.",
+    "newPasswordLabel": "Yeni Şifre",
+    "confirmPasswordLabel": "Yeni Şifreyi Onayla",
+    "saveProfile": "Profili Kaydet",
+    "updateEmail": "E-postayı Güncelle",
+    "updatePassword": "Şifreyi Güncelle",
+    "saving": "Kaydediliyor...",
+    "noUserError": "Kullanıcı bulunamadı. Lütfen tekrar giriş yapın.",
+    "profileUpdateError": "Profil güncellenirken hata oluştu.",
+    "profileUpdateSuccess": "Profil başarıyla güncellendi!",
+    "emailSameError": "Yeni e-posta mevcut e-posta ile aynı.",
+    "emailUpdateError": "E-posta güncellenirken hata oluştu.",
+    "emailUpdateSuccess": "E-posta güncelleme başlatıldı! Onay için yeni e-postanızı kontrol edin.",
+    "passwordMismatchError": "Şifreler eşleşmiyor.",
+    "passwordLengthError": "Şifre en az 6 karakter uzunluğunda olmalıdır.",
+    "passwordUpdateError": "Şifre güncellenirken hata oluştu.",
+    "passwordUpdateSuccess": "Şifre başarıyla güncellendi!",
+    "passwordPlaceholder": "Mevcut şifreyi korumak için boş bırakın"
+  },
+  "admin": {
+    "dashboardTitle": "Yönetici Paneli",
+    "roleAdmin": "Yönetici",
+    "login": {
+      "title": "Yönetici Girişi",
+      "description": "Yönetici paneline erişmek için yönetici kimlik bilgilerini girin.",
+      "button": "Yönetici Olarak Giriş Yap",
+      "loggingIn": "Giriş yapılıyor...",
+      "notAdminError": "Yönetici paneline erişim yetkiniz yok."
+    },
+    "userManagement": {
+      "title": "Kullanıcı Yönetimi",
+      "description": "Tüm kullanıcıları (öğrenciler, koçlar ve yöneticiler) yönetin.",
+      "fetchError": "Kullanıcı verileri getirilirken hata oluştu.",
+      "noUsers": "Kullanıcı bulunamadı.",
+      "edit": "Düzenle",
+      "reassignCoach": "Koç Ata",
+      "delete": "Sil",
+      "adminDeleteError": "Yönetici kullanıcılar bu arayüz üzerinden silinemez.",
+      "confirmDeleteTitle": "Silme Onayı",
+      "confirmDeleteDescription": "{{userName}} ({{role}}) adlı kullanıcıyı kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve ilgili tüm verileri silecektir.",
+      "confirmDeleteButton": "Evet, Kullanıcıyı Sil",
+      "deleteSuccess": "{{userName}} başarıyla silindi.",
+      "deleteError": "Kullanıcı silinirken hata oluştu: {{message}}"
+    },
+    "editUser": {
+      "title": "Kullanıcıyı Düzenle: {{userName}}",
+      "leaveBlankForNoChange": "Değişiklik yapmak istemiyorsanız boş bırakın",
+      "saveChanges": "Değişiklikleri Kaydet",
+      "updateSuccess": "Kullanıcı başarıyla güncellendi!",
+      "updateError": "Kullanıcı güncellenirken hata oluştu: {{message}}"
+    },
+    "reassignStudent": {
+      "title": "{{studentName}} için Koç Ata",
+      "currentCoach": "Mevcut Koç",
+      "noCoachAssigned": "Koç atanmamış",
+      "selectNewCoach": "Yeni Koç Seç",
+      "selectCoachPlaceholder": "Bir koç seçin",
+      "unassignCoach": "Koçu Kaldır",
+      "reassignButton": "Koçu Ata",
+      "fetchCoachesError": "Koçlar getirilirken hata oluştu.",
+      "fetchCurrentCoachError": "Mevcut koç ataması getirilirken hata oluştu.",
+      "reassignSuccess": "Koç ataması başarıyla yapıldı!",
+      "reassignError": "Koç ataması yapılırken hata oluştu: {{message}}"
+    }
   },
   "logout": "Çıkış Yap"
 }
