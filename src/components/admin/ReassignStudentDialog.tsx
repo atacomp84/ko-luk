@@ -56,7 +56,7 @@ export const ReassignStudentDialog = ({ isOpen, onClose, student, onStudentReass
     if (isOpen && student) {
       fetchCoaches();
     }
-  }, [isOpen, student, t]);
+  }, [isOpen, student]); // Removed 't' from dependencies to prevent infinite loop
 
   const handleReassign = async () => {
     if (!student) return;

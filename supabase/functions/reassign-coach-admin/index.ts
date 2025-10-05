@@ -55,19 +55,20 @@ serve(async (req) => {
       })
     }
 
-    // Delete any existing pair for the student
-    const { error: deleteError } = await supabaseAdmin
-      .from('coach_student_pairs')
-      .delete()
-      .eq('student_id', student_id);
-    if (deleteError) throw deleteError;
-
-    // If a new coach_id is provided (not null or 'unassign'), insert the new pair
-    if (coach_id && coach_id !== 'unassign') {
-      const { error: insertError } = await supabaseAdmin
+    // If coach_id is null or 'unassign', it means we are removing the coach.
+    if (!coach_id || coach_id === 'unassign') {
+      const { error: deleteError } = await supabaseAdmin
         .from('coach_student_pairs')
-        .insert({ student_id: student_id, coach_id: coach_id });
-      if (insertError) throw insertError;
+        .delete()
+        .eq('student_id', student_id);
+      if (deleteError) throw deleteError;
+    } else {
+      // If a coach_id is provided, we upsert the record.
+      // This will create a new assignment or update an existing one.
+      const { error: upsertError } = await supabaseAdmin
+        .from('coach_student_pairs')
+        .upsert({ student_id: student_id, coach_id: coach_id }, { onConflict: 'student_id' });
+      if (upsertError) throw upsertError;
     }
 
     return new Response(JSON.stringify({ message: 'Coach reassigned successfully' }), {
