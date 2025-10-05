@@ -15,7 +15,6 @@ serve(async (req) => {
   }
 
   try {
-    // 1. İstek yapan kullanıcının kimliğini doğrula
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -30,13 +29,11 @@ serve(async (req) => {
       })
     }
 
-    // 2. Service role key ile admin client oluştur
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // 3. İstek yapan kullanıcının admin olup olmadığını kontrol et
     const { data: adminProfile, error: adminProfileError } = await supabaseAdmin
       .from('profiles')
       .select('role')
@@ -50,7 +47,6 @@ serve(async (req) => {
       })
     }
 
-    // 4. Tüm kullanıcıları ve profillerini getir
     const { data: { users }, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
     if (usersError) throw usersError;
 
@@ -59,9 +55,29 @@ serve(async (req) => {
       .select('id, first_name, last_name, role, username');
     if (profilesError) throw profilesError;
 
-    // 5. Auth kullanıcıları ile profil bilgilerini birleştir
+    const { data: pairs, error: pairsError } = await supabaseAdmin
+      .from('coach_student_pairs')
+      .select('student_id, coach_id');
+    if (pairsError) throw pairsError;
+
+    const profilesMap = new Map(profiles.map(p => [p.id, p]));
+    const pairsMap = new Map(pairs.map(p => [p.student_id, p.coach_id]));
+
     const combinedUsers = users.map(authUser => {
-      const profile = profiles.find(p => p.id === authUser.id);
+      const profile = profilesMap.get(authUser.id);
+      let coachName = null;
+      let coachId = null;
+
+      if (profile?.role === 'student') {
+        coachId = pairsMap.get(authUser.id);
+        if (coachId) {
+          const coachProfile = profilesMap.get(coachId);
+          if (coachProfile) {
+            coachName = `${coachProfile.first_name} ${coachProfile.last_name}`;
+          }
+        }
+      }
+
       return {
         id: authUser.id,
         email: authUser.email,
@@ -69,6 +85,8 @@ serve(async (req) => {
         last_name: profile?.last_name || '',
         role: profile?.role || 'student',
         username: profile?.username || '',
+        coach_id: coachId,
+        coach_name: coachName,
       };
     });
 

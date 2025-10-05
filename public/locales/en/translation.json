@@ -223,6 +223,7 @@
     },
     "reassignStudent": {
       "title": "Reassign Coach for {{studentName}}",
+      "description": "You can change the student's current coach or unassign them.",
       "currentCoach": "Current Coach",
       "noCoachAssigned": "No coach assigned",
       "selectNewCoach": "Select New Coach",

@@ -14,6 +14,8 @@ interface UserProfile {
   first_name: string;
   last_name: string;
   role: 'student' | 'coach' | 'admin';
+  coach_id?: string | null;
+  coach_name?: string | null;
 }
 
 interface Coach {
@@ -30,45 +32,31 @@ interface ReassignStudentDialogProps {
 }
 
 export const ReassignStudentDialog = ({ isOpen, onClose, student, onStudentReassigned }: ReassignStudentDialogProps) => {
-  const [currentCoachId, setCurrentCoachId] = useState<string | null>(null);
-  const [selectedCoachId, setSelectedCoachId] = useState<string | null>(null);
+  const [selectedCoachId, setSelectedCoachId] = useState<string>('unassign');
   const [availableCoaches, setAvailableCoaches] = useState<Coach[]>([]);
   const [loading, setLoading] = useState(true);
   const { t } = useTranslation();
 
   useEffect(() => {
-    const fetchCoachesAndCurrentAssignment = async () => {
+    const fetchCoaches = async () => {
       if (!student) return;
       setLoading(true);
-
       try {
         const { data: coachesData, error: coachesError } = await supabase.functions.invoke('get-coaches');
         if (coachesError) throw coachesError;
         setAvailableCoaches(coachesData as Coach[]);
-
-        const { data: pairData, error: pairError } = await supabase
-          .from('coach_student_pairs')
-          .select('coach_id')
-          .eq('student_id', student.id)
-          .single();
-
-        if (pairError && pairError.code !== 'PGRST116') throw pairError;
-        
-        const coachId = pairData?.coach_id || null;
-        setCurrentCoachId(coachId);
-        setSelectedCoachId(coachId);
-
+        setSelectedCoachId(student.coach_id || 'unassign');
       } catch (error: any) {
-        showError(error.message);
+        showError(t('admin.reassignStudent.fetchCoachesError'));
       } finally {
         setLoading(false);
       }
     };
 
     if (isOpen && student) {
-      fetchCoachesAndCurrentAssignment();
+      fetchCoaches();
     }
-  }, [isOpen, student]);
+  }, [isOpen, student, t]);
 
   const handleReassign = async () => {
     if (!student) return;
@@ -93,7 +81,7 @@ export const ReassignStudentDialog = ({ isOpen, onClose, student, onStudentReass
 
   if (!student) return null;
 
-  const currentCoachName = availableCoaches.find(c => c.id === currentCoachId)?.first_name + ' ' + availableCoaches.find(c => c.id === currentCoachId)?.last_name;
+  const currentCoachName = student.coach_name || t('admin.reassignStudent.noCoachAssigned');
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -101,7 +89,7 @@ export const ReassignStudentDialog = ({ isOpen, onClose, student, onStudentReass
         <DialogHeader>
           <DialogTitle>{t('admin.reassignStudent.title', { studentName: `${student.first_name} ${student.last_name}` })}</DialogTitle>
           <DialogDescription>
-            Öğrencinin mevcut koçunu değiştirebilir veya koç atamasını kaldırabilirsiniz.
+            {t('admin.reassignStudent.description')}
           </DialogDescription>
         </DialogHeader>
         {loading ? (
@@ -116,14 +104,14 @@ export const ReassignStudentDialog = ({ isOpen, onClose, student, onStudentReass
             <div className="space-y-2">
               <Label>{t('admin.reassignStudent.currentCoach')}</Label>
               <Input
-                value={currentCoachId ? currentCoachName : t('admin.reassignStudent.noCoachAssigned')}
+                value={currentCoachName}
                 readOnly
                 className="bg-muted"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="select-new-coach">{t('admin.reassignStudent.selectNewCoach')}</Label>
-              <Select value={selectedCoachId || 'unassign'} onValueChange={(value) => setSelectedCoachId(value)}>
+              <Select value={selectedCoachId} onValueChange={setSelectedCoachId}>
                 <SelectTrigger id="select-new-coach">
                   <SelectValue placeholder={t('admin.reassignStudent.selectCoachPlaceholder')} />
                 </SelectTrigger>
@@ -143,7 +131,7 @@ export const ReassignStudentDialog = ({ isOpen, onClose, student, onStudentReass
           <DialogClose asChild>
             <Button type="button" variant="outline">{t('coach.cancel')}</Button>
           </DialogClose>
-          <Button onClick={handleReassign} disabled={loading || selectedCoachId === currentCoachId}>
+          <Button onClick={handleReassign} disabled={loading || selectedCoachId === (student.coach_id || 'unassign')}>
             {loading ? t('settings.saving') : t('admin.reassignStudent.reassignButton')}
           </Button>
         </DialogFooter>

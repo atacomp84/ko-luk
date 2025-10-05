@@ -223,6 +223,7 @@
     },
     "reassignStudent": {
       "title": "{{studentName}} için Koç Ata",
+      "description": "Öğrencinin mevcut koçunu değiştirebilir veya koç atamasını kaldırabilirsiniz.",
       "currentCoach": "Mevcut Koç",
       "noCoachAssigned": "Koç atanmamış",
       "selectNewCoach": "Yeni Koç Seç",

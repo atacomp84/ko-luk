@@ -20,6 +20,8 @@ interface UserProfile {
   role: 'student' | 'coach' | 'admin';
   email: string;
   username?: string;
+  coach_id?: string | null;
+  coach_name?: string | null;
 }
 
 const avatarColors = [
@@ -134,6 +136,11 @@ const UserManagement = () => {
                       <Badge variant="secondary" className="mt-1">
                         {user.role === 'student' ? t('auth.roleStudent') : user.role === 'coach' ? t('auth.roleCoach') : t('admin.roleAdmin')}
                       </Badge>
+                      {user.role === 'student' && (
+                        <div className="mt-2 text-xs text-muted-foreground">
+                          <strong>{t('admin.reassignStudent.currentCoach')}:</strong> {user.coach_name || t('admin.reassignStudent.noCoachAssigned')}
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                   <div className="grid grid-cols-3 gap-1 p-2 border-t bg-muted/50">
