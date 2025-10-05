@@ -50,32 +50,44 @@ export const ChatModule = ({ chatPartner, onUnreadCountChange }: ChatModuleProps
   const fetchMessages = useCallback(async () => {
     if (!user || !chatPartner) {
       console.log("[ChatModule] Fetching messages skipped: no user or chat partner.");
+      setLoading(false); // Ensure loading is set to false even if skipped
       return;
     }
     setLoading(true);
-    console.log(`[ChatModule] Fetching messages between ${user.id} and ${chatPartner.id}`);
+    console.log(`[ChatModule] Fetching messages between user ${user.id} and chat partner ${chatPartner.id}`);
+    
+    // Construct the OR condition for the query
+    const queryCondition = `(sender_id.eq.${user.id}.and.receiver_id.eq.${chatPartner.id}).or(sender_id.eq.${chatPartner.id}.and.receiver_id.eq.${user.id})`;
+    console.log(`[ChatModule] Supabase query condition: ${queryCondition}`);
+
     const { data, error } = await supabase
       .from('messages')
       .select('*')
-      .or(`(sender_id.eq.${user.id},receiver_id.eq.${user.id}),(sender_id.eq.${chatPartner.id},receiver_id.eq.${chatPartner.id})`)
+      .or(queryCondition)
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.error("[ChatModule] Error fetching messages:", error.message);
+      console.error("[ChatModule] Error fetching messages:", error.message, error);
       showError(t('messages.fetchError'));
     } else {
-      console.log(`[ChatModule] Fetched ${data.length} messages.`);
+      console.log(`[ChatModule] Fetched ${data.length} messages successfully. Data:`, data);
       setMessages(data || []);
-      // Mark messages as read if the current user is the receiver
+      
       const unreadMessages = data.filter(msg => msg.receiver_id === user.id && !msg.is_read);
       if (unreadMessages.length > 0) {
-        await supabase
+        console.log(`[ChatModule] Found ${unreadMessages.length} unread messages for current user. Marking as read.`);
+        const { error: updateError } = await supabase
           .from('messages')
           .update({ is_read: true })
           .in('id', unreadMessages.map(msg => msg.id));
-        console.log(`[ChatModule] Marked ${unreadMessages.length} messages as read.`);
-        if (onUnreadCountChange) {
-          onUnreadCountChange(0); // Update parent with 0 unread messages
+        
+        if (updateError) {
+          console.error("[ChatModule] Error marking messages as read:", updateError.message, updateError);
+        } else {
+          console.log(`[ChatModule] Marked ${unreadMessages.length} messages as read successfully.`);
+          if (onUnreadCountChange) {
+            onUnreadCountChange(0); // Update parent with 0 unread messages
+          }
         }
       }
     }
@@ -93,9 +105,13 @@ export const ChatModule = ({ chatPartner, onUnreadCountChange }: ChatModuleProps
   useEffect(() => {
     if (!user || !chatPartner) return;
 
-    console.log("[ChatModule] Setting up real-time subscription for messages.");
+    // Create a consistent channel name by sorting the user IDs
+    const sortedIds = [user.id, chatPartner.id].sort();
+    const channelName = `chat_${sortedIds[0]}_${sortedIds[1]}`;
+    console.log(`[ChatModule] Setting up real-time subscription for channel: ${channelName}`);
+
     const channel = supabase
-      .channel(`chat_${user.id}_${chatPartner.id}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -114,10 +130,14 @@ export const ChatModule = ({ chatPartner, onUnreadCountChange }: ChatModuleProps
                 .from('messages')
                 .update({ is_read: true })
                 .eq('id', (payload.new as Message).id)
-                .then(() => {
-                  console.log(`[ChatModule] Marked new message ${payload.new.id} as read.`);
-                  if (onUnreadCountChange) {
-                    onUnreadCountChange(0); // Ensure unread count is 0 after receiving and marking as read
+                .then(({ error: updateError }) => {
+                  if (updateError) {
+                    console.error(`[ChatModule] Error marking new message ${payload.new.id} as read:`, updateError.message, updateError);
+                  } else {
+                    console.log(`[ChatModule] Marked new message ${payload.new.id} as read.`);
+                    if (onUnreadCountChange) {
+                      onUnreadCountChange(0); // Ensure unread count is 0 after receiving and marking as read
+                    }
                   }
                 });
             }
@@ -133,14 +153,17 @@ export const ChatModule = ({ chatPartner, onUnreadCountChange }: ChatModuleProps
       .subscribe();
 
     return () => {
-      console.log("[ChatModule] Unsubscribing from real-time channel.");
+      console.log(`[ChatModule] Unsubscribing from real-time channel: ${channelName}`);
       supabase.removeChannel(channel);
     };
   }, [user, chatPartner, onUnreadCountChange]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !user || !chatPartner) return;
+    if (!newMessage.trim() || !user || !chatPartner) {
+      console.warn("[ChatModule] Message not sent: empty message, no user, or no chat partner.");
+      return;
+    }
 
     console.log(`[ChatModule] Sending message from ${user.id} to ${chatPartner.id}: "${newMessage}"`);
     const { error } = await supabase.from('messages').insert({
@@ -150,7 +173,7 @@ export const ChatModule = ({ chatPartner, onUnreadCountChange }: ChatModuleProps
     });
 
     if (error) {
-      console.error("[ChatModule] Error sending message:", error.message);
+      console.error("[ChatModule] Error sending message:", error.message, error);
       showError(t('messages.sendError'));
     } else {
       console.log("[ChatModule] Message sent successfully.");
