@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { showError, showSuccess } from '@/utils/toast';
 import { getInitials } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { User as AuthUser } from '@supabase/supabase-js'; // AuthUser tipini içe aktar
 
 interface UserProfile {
   id: string;
@@ -84,7 +85,7 @@ export const UserManagement = () => {
     }
 
     const combinedUsers: UserProfile[] = typedProfiles.map(profile => {
-      const authUser = authUsers.users.find(u => u.id === profile.id);
+      const authUser = authUsers.users.find((u: AuthUser) => u.id === profile.id); // AuthUser tipini burada kullan
       return {
         id: profile.id,
         first_name: profile.first_name,
