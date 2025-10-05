@@ -89,10 +89,13 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
     setLoading(true);
     try {
       // Düzeltilen Supabase sorgusu: 'or' operatörü doğru sözdizimi ile kullanılıyor.
+      // İki koşul grubu:
+      // 1. Ben göndericiyim VE o alıcı
+      // 2. O gönderici VE ben alıcı
       const { data, error } = await supabase
         .from('messages')
         .select('id, sender_id, receiver_id, content, created_at')
-        .or(`sender_id.eq.${user.id},receiver_id.eq.${chatPartner.id}.or.sender_id.eq.${chatPartner.id},receiver_id.eq.${user.id}`)
+        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${chatPartner.id}),and(sender_id.eq.${chatPartner.id},receiver_id.eq.${user.id})`)
         .order('created_at', { ascending: true });
 
       if (error) {
