@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { LanguageSwitcher } from '@/components/language-switcher';
-import { LogOut, Rocket, MessageCircle } from 'lucide-react';
+import { LogOut, Rocket, MessageCircle, ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -83,6 +83,10 @@ const Layout = ({ children, title }: LayoutProps) => {
     <div className="min-h-screen w-full bg-secondary/50">
       <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 py-4">
         <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="mr-2">
+                <ArrowLeft className="h-4 w-4" />
+                <span className="sr-only">{t('back')}</span>
+            </Button>
             <Rocket className="h-6 w-6 text-primary" />
             <h1 className="text-xl font-bold tracking-tight">{title}</h1>
         </div>

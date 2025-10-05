@@ -18,13 +18,15 @@
     "registerDescription": "Create a new account to get started.",
     "firstNameLabel": "First Name",
     "lastNameLabel": "Last Name",
+    "usernameLabel": "Username",
     "roleLabel": "I am a...",
     "roleStudent": "Student",
     "roleCoach": "Coach",
     "registerButton": "Create Account",
     "registering": "Creating account...",
     "registerSuccess": "Registration successful! Please log in.",
-    "errorTitle": "Error"
+    "errorTitle": "Error",
+    "usernameExistsError": "This username is already taken. Please choose another one."
   },
   "index": {
     "welcomeTitle": "Welcome to the LGS Coaching Platform",
@@ -194,7 +196,8 @@
       "description": "Enter admin credentials to access the admin panel.",
       "button": "Login as Admin",
       "loggingIn": "Logging in...",
-      "notAdminError": "You are not authorized to access the admin panel."
+      "notAdminError": "You are not authorized to access the admin panel.",
+      "invalidCredentials": "Invalid username or password."
     },
     "userManagement": {
       "title": "User Management",
@@ -232,5 +235,6 @@
       "reassignError": "Failed to reassign coach: {{message}}"
     }
   },
-  "logout": "Logout"
+  "logout": "Logout",
+  "back": "Back"
 }

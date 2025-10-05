@@ -15,6 +15,7 @@ const UserProfileSettings = () => {
   const { user, profile, loading: authLoading } = useAuth();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [username, setUsername] = useState(''); // Add username state
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -26,6 +27,7 @@ const UserProfileSettings = () => {
     if (profile && user) {
       setFirstName(profile.first_name || '');
       setLastName(profile.last_name || '');
+      setUsername(profile.username || ''); // Set username
       setEmail(user.email || '');
     }
   }, [profile, user]);
@@ -41,9 +43,34 @@ const UserProfileSettings = () => {
       return;
     }
 
+    // Check if username already exists and is not the current user's username
+    if (username !== profile?.username) {
+      const { data: existingUser, error: usernameCheckError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', username)
+        .single();
+
+      if (existingUser && existingUser.id !== user.id) {
+        setError(t('auth.usernameExistsError'));
+        setLoading(false);
+        return;
+      }
+      if (usernameCheckError && usernameCheckError.code !== 'PGRST116') {
+        setError(usernameCheckError.message);
+        setLoading(false);
+        return;
+      }
+    }
+
     const { error: profileError } = await supabase
       .from('profiles')
-      .update({ first_name: firstName, last_name: lastName, updated_at: new Date().toISOString() })
+      .update({ 
+        first_name: firstName, 
+        last_name: lastName, 
+        username: username, // Update username
+        updated_at: new Date().toISOString() 
+      })
       .eq('id', user.id);
 
     if (profileError) {
@@ -172,6 +199,10 @@ const UserProfileSettings = () => {
                 <Label htmlFor="last-name">{t('auth.lastNameLabel')}</Label>
                 <Input id="last-name" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="username">{t('auth.usernameLabel')}</Label> {/* New username field */}
+              <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? t('settings.saving') : t('settings.saveProfile')}

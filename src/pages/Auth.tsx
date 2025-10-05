@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, Rocket } from "lucide-react";
+import { AlertCircle, Rocket, ArrowLeft } from "lucide-react";
 import { showError, showSuccess } from "@/utils/toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
@@ -31,6 +31,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [username, setUsername] = useState(""); // New username state for registration
   const [role, setRole] = useState<"student" | "coach">("student");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +61,25 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    // Check if username already exists
+    const { data: existingUser, error: usernameCheckError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('username', username)
+      .single();
+
+    if (existingUser) {
+      setError(t('auth.usernameExistsError'));
+      setLoading(false);
+      return;
+    }
+    if (usernameCheckError && usernameCheckError.code !== 'PGRST116') { // PGRST116 means no rows found
+      setError(usernameCheckError.message);
+      setLoading(false);
+      return;
+    }
+
     const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
@@ -68,6 +88,7 @@ export default function AuthPage() {
           first_name: firstName,
           last_name: lastName,
           role: role,
+          username: username, // Pass username to raw_user_meta_data
         },
       },
     });
@@ -96,6 +117,12 @@ export default function AuthPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-secondary/50 p-4">
+      <div className="absolute top-4 left-4">
+        <Button variant="outline" size="icon" onClick={() => navigate('/')}>
+          <ArrowLeft className="h-4 w-4" />
+          <span className="sr-only">{t('back')}</span>
+        </Button>
+      </div>
       <div className="absolute top-4 right-4 flex items-center gap-2">
         <LanguageSwitcher />
         <ThemeToggle />
@@ -174,6 +201,10 @@ export default function AuthPage() {
                         <Label htmlFor="last-name">{t('auth.lastNameLabel')}</Label>
                         <Input id="last-name" required value={lastName} onChange={(e) => setLastName(e.target.value)} />
                       </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="register-username">{t('auth.usernameLabel')}</Label> {/* New username field */}
+                      <Input id="register-username" required value={username} onChange={(e) => setUsername(e.target.value)} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="register-email">{t('auth.emailLabel')}</Label>

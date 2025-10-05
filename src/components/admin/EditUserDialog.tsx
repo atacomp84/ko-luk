@@ -16,6 +16,7 @@ interface UserProfile {
   last_name: string;
   role: 'student' | 'coach' | 'admin';
   email: string;
+  username?: string; // Add username
 }
 
 interface EditUserDialogProps {
@@ -29,6 +30,7 @@ export const EditUserDialog = ({ isOpen, onClose, user, onUserUpdated }: EditUse
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState(''); // Add username state
   const [role, setRole] = useState<'student' | 'coach' | 'admin'>('student');
   const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -40,6 +42,7 @@ export const EditUserDialog = ({ isOpen, onClose, user, onUserUpdated }: EditUse
       setFirstName(user.first_name || '');
       setLastName(user.last_name || '');
       setEmail(user.email || '');
+      setUsername(user.username || ''); // Set username
       setRole(user.role);
       setNewPassword('');
       setError(null);
@@ -57,7 +60,13 @@ export const EditUserDialog = ({ isOpen, onClose, user, onUserUpdated }: EditUse
       // Update profile data
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ first_name: firstName, last_name: lastName, role: role, updated_at: new Date().toISOString() })
+        .update({ 
+          first_name: firstName, 
+          last_name: lastName, 
+          role: role, 
+          username: username, // Update username
+          updated_at: new Date().toISOString() 
+        })
         .eq('id', user.id);
 
       if (profileError) throw profileError;
@@ -113,6 +122,10 @@ export const EditUserDialog = ({ isOpen, onClose, user, onUserUpdated }: EditUse
               <Label htmlFor="edit-last-name">{t('auth.lastNameLabel')}</Label>
               <Input id="edit-last-name" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-username">{t('auth.usernameLabel')}</Label> {/* New username field */}
+            <Input id="edit-username" value={username} onChange={(e) => setUsername(e.target.value)} required />
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-email">{t('auth.emailLabel')}</Label>

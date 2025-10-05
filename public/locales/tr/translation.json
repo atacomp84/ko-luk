@@ -18,13 +18,15 @@
     "registerDescription": "Başlamak için yeni bir hesap oluşturun.",
     "firstNameLabel": "Ad",
     "lastNameLabel": "Soyad",
+    "usernameLabel": "Kullanıcı Adı",
     "roleLabel": "Ben bir...",
     "roleStudent": "Öğrenci",
     "roleCoach": "Koç",
     "registerButton": "Hesap Oluştur",
     "registering": "Hesap oluşturuluyor...",
     "registerSuccess": "Kayıt başarılı! Lütfen giriş yapın.",
-    "errorTitle": "Hata"
+    "errorTitle": "Hata",
+    "usernameExistsError": "Bu kullanıcı adı zaten alınmış. Lütfen başka bir tane seçin."
   },
   "index": {
     "welcomeTitle": "LGS Koçluk Platformuna Hoş Geldiniz",
@@ -194,7 +196,8 @@
       "description": "Yönetici paneline erişmek için yönetici kimlik bilgilerini girin.",
       "button": "Yönetici Olarak Giriş Yap",
       "loggingIn": "Giriş yapılıyor...",
-      "notAdminError": "Yönetici paneline erişim yetkiniz yok."
+      "notAdminError": "Yönetici paneline erişim yetkiniz yok.",
+      "invalidCredentials": "Geçersiz kullanıcı adı veya şifre."
     },
     "userManagement": {
       "title": "Kullanıcı Yönetimi",
@@ -232,5 +235,6 @@
       "reassignError": "Koç ataması yapılırken hata oluştu: {{message}}"
     }
   },
-  "logout": "Çıkış Yap"
+  "logout": "Çıkış Yap",
+  "back": "Geri"
 }

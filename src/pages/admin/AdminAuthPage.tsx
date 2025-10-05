@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, ShieldCheck } from "lucide-react";
+import { AlertCircle, ShieldCheck, ArrowLeft } from "lucide-react";
 import { showError } from "@/utils/toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
@@ -22,7 +22,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 export default function AdminAuthPage() {
   const navigate = useNavigate();
   const { session, loading: authLoading, profile } = useAuth();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState(""); // Changed from email to username
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,29 +42,36 @@ export default function AdminAuthPage() {
     setLoading(true);
     setError(null);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    // First, get the email associated with the username
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('email, role') // Select email and role
+      .eq('username', username)
+      .single();
 
-    if (error) {
-      setError(error.message);
-      showError(error.message);
+    if (profileError || !profileData) {
+      setError(t('admin.login.invalidCredentials'));
+      showError(t('admin.login.invalidCredentials'));
       setLoading(false);
       return;
     }
 
-    // After successful login, check if the user is an admin
-    const { data: userProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', data.user?.id)
-      .single();
-
-    if (profileError || userProfile?.role !== 'admin') {
+    if (profileData.role !== 'admin') {
       setError(t('admin.login.notAdminError'));
       showError(t('admin.login.notAdminError'));
-      await supabase.auth.signOut(); // Log out non-admin users
+      setLoading(false);
+      return;
+    }
+
+    // Use the fetched email for Supabase authentication
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      email: profileData.email,
+      password,
+    });
+
+    if (signInError) {
+      setError(signInError.message);
+      showError(signInError.message);
       setLoading(false);
       return;
     }
@@ -78,6 +85,12 @@ export default function AdminAuthPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-secondary/50 p-4">
+      <div className="absolute top-4 left-4">
+        <Button variant="outline" size="icon" onClick={() => navigate('/')}>
+          <ArrowLeft className="h-4 w-4" />
+          <span className="sr-only">{t('back')}</span>
+        </Button>
+      </div>
       <div className="absolute top-4 right-4 flex items-center gap-2">
         <LanguageSwitcher />
         <ThemeToggle />
@@ -95,14 +108,14 @@ export default function AdminAuthPage() {
             <form onSubmit={handleLogin}>
               <div className="space-y-4">
                 <div className="space-y-2 text-left">
-                  <Label htmlFor="admin-email">{t('auth.emailLabel')}</Label>
+                  <Label htmlFor="admin-username">{t('auth.usernameLabel')}</Label> {/* Changed label */}
                   <Input
-                    id="admin-email"
-                    type="email"
-                    placeholder="admin@example.com"
+                    id="admin-username"
+                    type="text"
+                    placeholder="admin" // Changed placeholder
                     required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2 text-left">
