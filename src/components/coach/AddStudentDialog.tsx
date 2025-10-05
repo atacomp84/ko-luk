@@ -27,15 +27,25 @@ export const AddStudentDialog = ({ isOpen, onClose, onStudentAdded }: AddStudent
   const { t } = useTranslation();
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      console.log('[AddStudentDialog] Dialog closed, resetting selected students.');
+      setSelectedStudents([]); // Diyalog kapandığında seçili öğrencileri sıfırla
+      return;
+    }
 
     const fetchUnassignedStudents = async () => {
+      console.log('[AddStudentDialog] Fetching unassigned students...');
       setLoading(true);
       try {
         const { data, error } = await supabase.functions.invoke('get-unassigned-students');
-        if (error) throw error;
+        if (error) {
+          console.error('[AddStudentDialog] Error invoking get-unassigned-students:', error);
+          throw error;
+        }
+        console.log('[AddStudentDialog] Fetched unassigned students:', data);
         setUnassignedStudents(data as Student[]);
       } catch (error: any) {
+        console.error('[AddStudentDialog] Error fetching unassigned students:', error.message);
         showError(t('coach.fetchUnassignedError', 'Boştaki öğrenciler getirilirken bir hata oluştu.'));
         setUnassignedStudents([]);
       } finally {
@@ -52,22 +62,30 @@ export const AddStudentDialog = ({ isOpen, onClose, onStudentAdded }: AddStudent
         ? prev.filter(id => id !== studentId)
         : [...prev, studentId]
     );
+    console.log('[AddStudentDialog] Selected students updated:', selectedStudents);
   };
 
   const handleAddStudents = async () => {
+    console.log('[AddStudentDialog] Attempting to add selected students:', selectedStudents);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user || selectedStudents.length === 0) return;
+    if (!user || selectedStudents.length === 0) {
+      console.warn('[AddStudentDialog] No user or no students selected. Aborting add operation.');
+      return;
+    }
 
     const pairsToInsert = selectedStudents.map(student_id => ({
       coach_id: user.id,
       student_id,
     }));
 
+    console.log('[AddStudentDialog] Inserting pairs:', pairsToInsert);
     const { error } = await supabase.from('coach_student_pairs').insert(pairsToInsert);
 
     if (error) {
+      console.error('[AddStudentDialog] Error adding students:', error.message);
       showError('Öğrenciler eklenirken bir hata oluştu.');
     } else {
+      console.log('[AddStudentDialog] Students added successfully.');
       showSuccess('Öğrenciler başarıyla eklendi.');
       onStudentAdded();
       onClose();

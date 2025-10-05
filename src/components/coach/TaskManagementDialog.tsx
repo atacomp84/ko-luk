@@ -133,6 +133,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     }
     console.log(`[TaskManagementDialog] fetchTasks started for student ID: ${student.id}`);
     setLoading(true);
+    // Removed filtering by coach_id so that any coach assigned to the student can see all tasks
     const { data, error } = await supabase
       .from('tasks')
       .select('*')
