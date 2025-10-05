@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -80,6 +80,7 @@ export const AddStudentDialog = ({ isOpen, onClose, onStudentAdded }: AddStudent
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t('coach.addStudentTitle')}</DialogTitle>
+          <DialogDescription>{t('coach.addStudentDescription', 'Koç atanmamış öğrencileri listenize ekleyin.')}</DialogDescription>
         </DialogHeader>
         <div className="max-h-96 overflow-y-auto p-2 space-y-4">
           {loading ? (

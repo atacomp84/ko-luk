@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -79,18 +79,19 @@ export const EditUserDialog = ({ isOpen, onClose, user, onUserUpdated }: EditUse
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t('admin.editUser.title', { userName: `${user.first_name} ${user.last_name}` })}</DialogTitle>
+          <DialogDescription>{t('admin.editUser.description', 'Buradan kullanıcının bilgilerini ve rolünü güncelleyebilirsiniz.')}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="first_name">{t('auth.firstName')}</Label>
+            <Label htmlFor="first_name">{t('auth.firstNameLabel')}</Label>
             <Input id="first_name" name="first_name" value={formData.first_name} onChange={handleChange} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="last_name">{t('auth.lastName')}</Label>
+            <Label htmlFor="last_name">{t('auth.lastNameLabel')}</Label>
             <Input id="last_name" name="last_name" value={formData.last_name} onChange={handleChange} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="role">{t('auth.role')}</Label>
+            <Label htmlFor="role">{t('auth.roleLabel')}</Label>
             <Select value={formData.role} onValueChange={handleRoleChange}>
               <SelectTrigger>
                 <SelectValue placeholder={t('auth.selectRole')} />
