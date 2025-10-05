@@ -31,14 +31,13 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [role, setRole] = useState<"student" | "coach" | "admin">("student"); // 'admin' rolü eklendi
+  const [role, setRole] = useState<"student" | "coach">("student");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation();
 
   useEffect(() => {
     if (!authLoading && session) {
-      console.log("[AuthPage] User already authenticated, redirecting to /.");
       navigate("/");
     }
   }, [session, authLoading, navigate]);
@@ -47,17 +46,13 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    console.log("[AuthPage] Attempting login for:", email);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     if (error) {
-      console.error("[AuthPage] Login error:", error.message);
       setError(error.message);
       setLoading(false);
-    } else {
-      console.log("[AuthPage] Login successful.");
     }
   };
 
@@ -65,7 +60,6 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    console.log("[AuthPage] Attempting registration for:", email, "with role:", role);
     const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
@@ -79,13 +73,13 @@ export default function AuthPage() {
     });
 
     if (signUpError) {
-      console.error("[AuthPage] Registration error:", signUpError.message);
       setLoading(false);
       showError(signUpError.message);
     } else {
-      console.log("[AuthPage] Registration successful. Please log in.");
+      await supabase.auth.signOut();
       setLoading(false);
       showSuccess(t('auth.registerSuccess'));
+      // Düzeltme: Şifreyi temizle, sekmeyi değiştir. E-posta state'i aynı kalacak.
       setPassword("");
       setActiveTab("login");
     }
@@ -204,7 +198,7 @@ export default function AuthPage() {
                     </div>
                     <div className="space-y-2">
                       <Label>{t('auth.roleLabel')}</Label>
-                      <RadioGroup defaultValue="student" value={role} onValueChange={(value: "student" | "coach" | "admin") => setRole(value)}>
+                      <RadioGroup defaultValue="student" value={role} onValueChange={(value: "student" | "coach") => setRole(value)}>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="student" id="role-student" />
                           <Label htmlFor="role-student">{t('auth.roleStudent')}</Label>
@@ -212,10 +206,6 @@ export default function AuthPage() {
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="coach" id="role-coach" />
                           <Label htmlFor="role-coach">{t('auth.roleCoach')}</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="admin" id="role-admin" />
-                          <Label htmlFor="role-admin">{t('auth.roleAdmin')}</Label>
                         </div>
                       </RadioGroup>
                     </div>

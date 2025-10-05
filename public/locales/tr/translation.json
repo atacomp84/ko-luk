@@ -21,7 +21,6 @@
     "roleLabel": "Ben bir...",
     "roleStudent": "Öğrenci",
     "roleCoach": "Koç",
-    "roleAdmin": "Yönetici",
     "registerButton": "Hesap Oluştur",
     "registering": "Hesap oluşturuluyor...",
     "registerSuccess": "Kayıt başarılı! Lütfen giriş yapın.",
@@ -151,44 +150,6 @@
     "fetchError": "Mesajlar yüklenirken hata oluştu.",
     "sendError": "Mesaj gönderilirken hata oluştu.",
     "noCoach": "Henüz bir koçla eşleşmediniz. Lütfen yöneticinizle iletişime geçin."
-  },
-  "admin": {
-    "dashboardTitle": "Yönetici Paneli",
-    "userManagement": "Kullanıcı Yönetimi",
-    "databaseManagement": "Veritabanı Yönetimi",
-    "userManagement": {
-      "title": "Kullanıcı Yönetimi",
-      "description": "Kullanıcı profillerini ve rollerini görüntüleyin, düzenleyin ve silin.",
-      "fetchError": "Kullanıcı verileri getirilirken hata oluştu.",
-      "updateError": "Kullanıcı güncellenirken hata oluştu.",
-      "updateSuccess": "Kullanıcı başarıyla güncellendi.",
-      "deleteError": "Kullanıcı silinirken hata oluştu.",
-      "deleteSuccess": "Kullanıcı başarıyla silindi.",
-      "noUsers": "Kullanıcı bulunamadı.",
-      "editUserTitle": "Kullanıcıyı Düzenle",
-      "deleteUserTitle": "Kullanıcıyı Sil",
-      "deleteUserDescription": "{{userName}} adlı kullanıcıyı ve tüm ilişkili verilerini kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
-      "saveChanges": "Değişiklikleri Kaydet",
-      "confirmDelete": "Kullanıcıyı Sil"
-    },
-    "databaseManagement": {
-      "title": "Veritabanı Yönetimi",
-      "description": "Tüm uygulama verilerini yedekleyin, geri yükleyin veya temizleyin.",
-      "backupButton": "Veritabanını Yedekle",
-      "backupSuccess": "Veritabanı yedekleme başarılı!",
-      "backupError": "Veritabanı yedeklenirken hata oluştu.",
-      "restoreButton": "Veritabanını Geri Yükle",
-      "restoreSuccess": "Veritabanı başarıyla geri yüklendi!",
-      "restoreError": "Veritabanı geri yüklenirken hata oluştu.",
-      "noFileSelected": "Geri yüklemek için dosya seçilmedi.",
-      "clearButton": "Tüm Verileri Temizle",
-      "clearWarning": "Bu işlem, kullanıcılar, görevler, mesajlar ve eşleşmeler dahil olmak üzere TÜM uygulama verilerini kalıcı olarak silecektir. Son derece dikkatli ilerleyin.",
-      "clearConfirmTitle": "Veri Silme Onayı",
-      "clearConfirmDescription": "Veritabanındaki TÜM verileri kalıcı olarak silmek istediğinizden kesinlikle emin misiniz? Bu işlem geri alınamaz ve oturumunuzu kapatacaktır.",
-      "clearConfirmButton": "Evet, Tüm Verileri Sil",
-      "clearSuccess": "Tüm veritabanı verileri başarıyla temizlendi!",
-      "clearError": "Veritabanı verileri temizlenirken hata oluştu."
-    }
   },
   "logout": "Çıkış Yap"
 }

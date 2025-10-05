@@ -8,7 +8,7 @@ import { LanguageSwitcher } from '@/components/language-switcher';
 import { LogOut, Rocket, MessageCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from './ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'; // Added import
 import { getInitials } from '@/lib/utils';
 
 interface LayoutProps {
