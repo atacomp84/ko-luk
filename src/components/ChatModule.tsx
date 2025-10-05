@@ -68,12 +68,18 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
   }, [user, chatPartner]);
 
   const fetchMessages = useCallback(async () => {
-    if (!user || !chatPartner) {
-      console.log('[ChatModule] Fetch messages skipped: No user or chat partner.');
+    if (!user) {
+      console.log('[ChatModule] fetchMessages skipped: No current user.');
       setMessages([]);
       return;
     }
-    console.log(`[ChatModule] Fetching messages between ${user.id} and ${chatPartner.id}`);
+    if (!chatPartner) {
+      console.log('[ChatModule] fetchMessages skipped: No chat partner selected.');
+      setMessages([]);
+      return;
+    }
+
+    console.log(`[ChatModule] Fetching messages between user ${user.id} and chat partner ${chatPartner.id}`);
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -83,24 +89,27 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
         .order('created_at', { ascending: true });
 
       if (error) {
+        console.error('[ChatModule] Error fetching messages from Supabase:', error.message);
         throw error;
       }
       
-      console.log(`[ChatModule] Fetched ${data.length} messages.`);
+      console.log(`[ChatModule] Fetched ${data.length} messages successfully.`);
       setMessages(data as Message[]);
       await markMessagesAsRead();
       scrollToBottom();
     } catch (error: any) {
-      console.error('[ChatModule] Error fetching messages:', error.message);
+      console.error('[ChatModule] General error during message fetch:', error.message);
       setMessages([]);
+      showError(t('messages.fetchError'));
     } finally {
       setLoading(false);
     }
-  }, [user, chatPartner, markMessagesAsRead, scrollToBottom]);
+  }, [user, chatPartner, markMessagesAsRead, scrollToBottom, t]);
 
   useEffect(() => {
+    console.log('[ChatModule] chatPartner changed, re-fetching messages.');
     fetchMessages();
-  }, [fetchMessages]);
+  }, [chatPartner, fetchMessages]); // chatPartner değiştiğinde mesajları yeniden çek
 
   useEffect(() => {
     if (!user || !chatPartner) {
@@ -148,6 +157,9 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
         if (status === 'CHANNEL_ERROR') {
           console.error(`[ChatModule] Subscription error on channel ${channelId}:`, err);
         }
+        if (status === 'TIMED_OUT') {
+            console.warn(`[ChatModule] Subscription timed out on channel ${channelId}.`);
+        }
       });
 
     return () => {
@@ -185,14 +197,15 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
       const { data, error } = await supabase.from('messages').insert(messageToSend).select().single();
 
       if (error) {
+        console.error('[ChatModule] Error inserting message into Supabase:', error.message);
         throw error;
       }
       
       console.log('[ChatModule] Message sent successfully and confirmed by server:', data);
       setMessages(currentMessages => currentMessages.map(m => m.id === tempId ? (data as Message) : m));
     } catch (error: any) {
-      console.error('[ChatModule] Error sending message:', error.message);
-      setMessages(currentMessages => currentMessages.filter(m => m.id !== tempId));
+      console.error('[ChatModule] General error during message send:', error.message);
+      setMessages(currentMessages => currentMessages.filter(m => m.id !== tempId)); // Optimistik mesajı geri al
       showError(t('messages.sendError'));
     }
   };
