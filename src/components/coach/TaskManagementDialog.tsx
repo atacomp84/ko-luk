@@ -74,8 +74,6 @@ const CustomizedAxisTick = (props: any) => {
 };
 
 export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagementDialogProps) => {
-  console.log('[TaskManagementDialog] Component rendered or re-rendered.');
-
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSubject, setSelectedSubject] = useState('');
@@ -93,31 +91,15 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   const [isScoreEntryOpen, setScoreEntryOpen] = useState(false);
   const [isSimpleApprovalOpen, setSimpleApprovalOpen] = useState(false);
   const [scoreData, setScoreData] = useState<ScoreData>({ correct: 0, empty: 0, wrong: 0 });
-  const [openCollapsibles, setOpenCollapsibles] = useState<string[]>([]); // For task list
+  const [openCollapsibles, setOpenCollapsibles] = useState<string[]>([]);
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('weekly');
-  const [openAnalyticsAccordions, setOpenAnalyticsAccordions] = useState<string[]>([]); // For analytics accordions
+  const [openAnalyticsAccordions, setOpenAnalyticsAccordions] = useState<string[]>([]);
   const intervalRefs = useRef<Record<string, NodeJS.Timeout>>({});
-
 
   const { t, i18n } = useTranslation();
   const dateLocale = i18n.language === 'tr' ? tr : enUS;
 
-  useEffect(() => {
-    console.log('[TaskManagementDialog] State changed:', {
-      tasksCount: tasks.length,
-      loading,
-      selectedSubject,
-      selectedTopic,
-      taskType,
-      questionCount,
-      activeTab,
-      studentId: student?.id,
-      isOpen,
-    });
-  }, [tasks, loading, selectedSubject, selectedTopic, taskType, questionCount, activeTab, student, isOpen]);
-
   const resetForm = useCallback(() => {
-    console.log('[TaskManagementDialog] Resetting form.');
     setSelectedSubject('');
     setSelectedTopic('');
     setAvailableTopics([]);
@@ -127,14 +109,8 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   }, []);
 
   const fetchTasks = useCallback(async () => {
-    if (!student) {
-        console.log('[TaskManagementDialog] fetchTasks skipped: no student.');
-        return;
-    }
-    console.log(`[TaskManagementDialog] fetchTasks started for student ID: ${student.id}`);
+    if (!student) return;
     setLoading(true);
-    // Fetch all tasks for the student, regardless of which coach assigned them
-    // Removed filtering by coach_id to ensure all tasks for the student are visible to any assigned coach.
     const { data, error } = await supabase
       .from('tasks')
       .select('*')
@@ -142,43 +118,20 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       .order('created_at', { ascending: false });
     
     if (error) {
-      console.error('[TaskManagementDialog] fetchTasks error:', error.message);
       showError('Görevler getirilirken hata oluştu.');
     } else {
-      console.log(`[TaskManagementDialog] fetchTasks success: fetched ${data.length} tasks.`);
       setTasks(data as Task[]);
     }
     setLoading(false);
   }, [student]);
 
-  const groupedTasks = useMemo(() => {
-    return tasks.reduce((acc, task) => {
-      const { subject } = task;
-      if (!acc[subject]) {
-        acc[subject] = [];
-      }
-      acc[subject].push(task);
-      return acc;
-    }, {} as Record<string, Task[]>);
-  }, [tasks]);
-
-  // This useEffect now only runs when the student changes, not on every task update.
-  // This prevents accordions from reopening after a manual close/toggle.
   useEffect(() => {
-    if (student) {
-      setOpenCollapsibles(Object.keys(groupedTasks));
-    }
-  }, [student?.id]); // Depend only on student.id to initially open all, not groupedTasks
-
-  useEffect(() => {
-    console.log(`[TaskManagementDialog] Effect for isOpen/student triggered. isOpen: ${isOpen}, studentId: ${student?.id}`);
     if (isOpen && student) {
       fetchTasks();
     } else {
-      console.log('[TaskManagementDialog] Effect for isOpen/student: Resetting form because dialog is closed or no student.');
       resetForm();
-      setOpenCollapsibles([]); // Clear collapsibles when dialog closes
-      setOpenAnalyticsAccordions([]); // Clear analytics accordions when dialog closes
+      setOpenCollapsibles([]);
+      setOpenAnalyticsAccordions([]);
     }
   }, [isOpen, student, fetchTasks, resetForm]);
 
@@ -203,7 +156,6 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('[TaskManagementDialog] handleAddTask started.');
     if (!student || !selectedSubject || !selectedTopic) return;
     
     const isReadingTask = selectedSubject === 'Kitap Okuma';
@@ -226,15 +178,12 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
       question_count: !isReadingTask && taskType === 'soru_cozumu' ? Number(questionCount) : null,
       status: 'pending',
     };
-    console.log('[TaskManagementDialog] handleAddTask: inserting task data:', taskData);
 
     const { error } = await supabase.from('tasks').insert(taskData);
 
     if (error) {
-      console.error('[TaskManagementDialog] handleAddTask error:', error.message);
       showError('Görev eklenirken bir hata oluştu.');
     } else {
-      console.log('[TaskManagementDialog] handleAddTask success.');
       showSuccess('Görev başarıyla eklendi.');
       resetForm();
       fetchTasks();
@@ -242,7 +191,6 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   };
 
   const handleTaskClick = (task: Task) => {
-    console.log('[TaskManagementDialog] handleTaskClick:', task);
     setTaskToUpdate(task);
     if (task.task_type === 'soru_cozumu') {
       setScoreData({ 
@@ -257,7 +205,6 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   };
 
   const handleSimpleApproval = async (newStatus: 'completed' | 'not_completed') => {
-    console.log(`[TaskManagementDialog] handleSimpleApproval: updating task ${taskToUpdate?.id} to status ${newStatus}`);
     if (!taskToUpdate) return;
     const { error } = await supabase
       .from('tasks')
@@ -276,7 +223,6 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
 
   const handleScoreSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(`[TaskManagementDialog] handleScoreSubmit for task ${taskToUpdate?.id} with data:`, scoreData);
     if (!taskToUpdate || !taskToUpdate.question_count) return;
 
     const correct = Number(scoreData.correct) || 0;
@@ -335,7 +281,6 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
 
   const handleConfirmDelete = async () => {
     if (!taskToDelete) return;
-    console.log(`[TaskManagementDialog] handleConfirmDelete: deleting task ${taskToDelete.id}`);
     const { error } = await supabase
       .from('tasks')
       .delete()
@@ -539,17 +484,14 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   }, []);
 
   const handleTaskTimeout = useCallback(async (taskId: string) => {
-    console.log(`[TaskManagementDialog] Task ${taskId} timed out. Marking as not_completed.`);
     const { error } = await supabase
       .from('tasks')
       .update({ status: 'not_completed' })
       .eq('id', taskId);
 
     if (error) {
-      console.error(`[TaskManagementDialog] Error marking task ${taskId} as not_completed:`, error.message);
       showError('Görev zaman aşımına uğradı ve güncellenirken bir hata oluştu.');
     } else {
-      console.log(`[TaskManagementDialog] Task ${taskId} successfully marked as not_completed.`);
       showSuccess('Bir görevin süresi doldu ve tamamlanmadı olarak işaretlendi.');
       fetchTasks();
     }
@@ -589,33 +531,41 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     };
   }, [tasks, handleTaskTimeout]);
 
-  const sortedGroupedTasks = useMemo(() => {
-    const grouped = tasks.reduce((acc, task) => {
+  const { currentTasks, completedTasks } = useMemo(() => {
+    const current = tasks.filter(task => task.status === 'pending' || task.status === 'pending_approval');
+    const completed = tasks.filter(task => task.status === 'completed' || task.status === 'not_completed');
+    return { currentTasks: current, completedTasks: completed };
+  }, [tasks]);
+
+  const groupAndSortTasks = (tasksToProcess: Task[]) => {
+    const grouped = tasksToProcess.reduce((acc, task) => {
       const { subject } = task;
-      if (!acc[subject]) {
-        acc[subject] = [];
-      }
+      if (!acc[subject]) acc[subject] = [];
       acc[subject].push(task);
       return acc;
     }, {} as Record<string, Task[]>);
 
     Object.keys(grouped).forEach(subject => {
-      grouped[subject].sort((a, b) => {
-        const statusOrder = { 'pending': 1, 'pending_approval': 2, 'completed': 3, 'not_completed': 4 };
-        return statusOrder[a.status as keyof typeof statusOrder] - statusOrder[b.status as keyof typeof statusOrder];
-      });
+      grouped[subject].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     });
-
     return grouped;
-  }, [tasks]);
+  };
+
+  const sortedCurrentTasks = useMemo(() => groupAndSortTasks(currentTasks), [currentTasks]);
+  const sortedCompletedTasks = useMemo(() => groupAndSortTasks(completedTasks), [completedTasks]);
+
+  const allSubjectKeys = useMemo(() => [...new Set([...Object.keys(sortedCurrentTasks), ...Object.keys(sortedCompletedTasks)])], [sortedCurrentTasks, sortedCompletedTasks]);
+
+  useEffect(() => {
+    if (student) {
+      setOpenCollapsibles(allSubjectKeys);
+    }
+  }, [student?.id, allSubjectKeys]);
 
   const toggleAllCollapsibles = () => {
-    const allSubjectKeys = Object.keys(groupedTasks);
     if (openCollapsibles.length === allSubjectKeys.length) {
-      // All are open, so close all
       setOpenCollapsibles([]);
     } else {
-      // Some are closed or all are closed, so open all
       setOpenCollapsibles(allSubjectKeys);
     }
   };
@@ -627,21 +577,74 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     }
 
     if (openAnalyticsAccordions.length === allAnalyticsKeys.length) {
-      // All are open, so close all
       setOpenAnalyticsAccordions([]);
     } else {
-      // Some are closed or all are closed, so open all
       setOpenAnalyticsAccordions(allAnalyticsKeys);
     }
   };
 
+  const renderTaskGroup = (groupedTasks: Record<string, Task[]>, noTasksKey: string) => {
+    if (loading) return <Skeleton className="h-24 w-full" />;
+    if (Object.keys(groupedTasks).length === 0) {
+      return <p className="text-center text-muted-foreground py-4">{t(noTasksKey)}</p>;
+    }
+    return Object.entries(groupedTasks).map(([subject, subjectTasks]) => {
+      const pendingCount = subjectTasks.filter(t => t.status === 'pending' || t.status === 'pending_approval').length;
+      const completedCount = subjectTasks.filter(t => t.status === 'completed').length;
+      const Icon = getSubjectIconComponent(subject);
+      const colorClass = getSubjectColorClass(subject);
+      return (
+        <Collapsible key={subject} open={openCollapsibles.includes(subject)} onOpenChange={(isOpen) => setOpenCollapsibles(prev => isOpen ? [...prev, subject] : prev.filter(s => s !== subject))} className="space-y-2">
+          <CollapsibleTrigger className="flex justify-between items-center w-full p-2 bg-muted rounded-md">
+            <div className="flex items-center gap-2">
+              <Icon className={`h-5 w-5 ${colorClass}`} />
+              <span className="font-bold">{subject}</span>
+            </div>
+            <div className="flex items-center gap-1.5 font-mono text-xs">
+              {pendingCount > 0 && <Badge className="bg-yellow-400 text-yellow-900 hover:bg-yellow-400 rounded-full h-5 w-5 flex items-center justify-center p-0">{pendingCount}</Badge>}
+              {completedCount > 0 && <Badge className="bg-green-500 text-white hover:bg-green-500 rounded-full h-5 w-5 flex items-center justify-center p-0">{completedCount}</Badge>}
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-2 pl-4 pt-2">
+            {subjectTasks.map(task => {
+              const timeLeft = task.status === 'pending' ? calculateTimeLeft(task.created_at) : null;
+              const isTimedOut = task.status === 'not_completed' && differenceInMilliseconds(addHours(new Date(task.created_at), 24), new Date()) <= 0;
+              return (
+                <Card key={task.id} className={`cursor-pointer hover:shadow-md transition-shadow rounded-lg ${getStatusBorderClass(task.status)}`} onClick={() => handleTaskClick(task)}>
+                  <CardContent className="p-3 flex items-center gap-4">
+                    {getTaskTypeIcon(task)}
+                    <div className="flex-grow">
+                      <p className="font-semibold">{formatTaskTitle(task)}</p>
+                      <Badge className={`mt-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border-0 ${getStatusBadgeClass(task.status)}`}>
+                        {t(getStatusTranslationKey(task.status))}
+                      </Badge>
+                      {timeLeft && timeLeft !== "00:00:00" && (
+                        <p className="text-xs font-semibold mt-1 text-red-600 dark:text-red-400">
+                          <Clock className="h-3 w-3 inline-block mr-1" />
+                          {t('coach.timeLeft')}: {timeLeft}
+                        </p>
+                      )}
+                      {isTimedOut && (
+                        <p className="text-xs font-semibold mt-1 text-red-700 dark:text-red-300">
+                          {t('coach.timedOut')}
+                        </p>
+                      )}
+                    </div>
+                    <Button variant="ghost" size="icon" className="ml-2 shrink-0 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(task); }}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </CollapsibleContent>
+        </Collapsible>
+      );
+    });
+  };
 
-  if (!student) {
-    console.log('[TaskManagementDialog] Render skipped: no student.');
-    return null;
-  }
+  if (!student) return null;
 
-  console.log('[TaskManagementDialog] Rendering main component body.');
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -753,62 +756,18 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                                     <ChevronsDownUp className="h-4 w-4" />
                                 </Button>
                             </div>
-                            <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-                                {loading ? <Skeleton className="h-24 w-full" /> : Object.keys(sortedGroupedTasks).length > 0 ? (
-                                    Object.entries(sortedGroupedTasks).map(([subject, subjectTasks]) => {
-                                    const pendingCount = subjectTasks.filter(t => t.status === 'pending' || t.status === 'pending_approval').length;
-                                    const completedCount = subjectTasks.filter(t => t.status === 'completed').length;
-                                    const Icon = getSubjectIconComponent(subject);
-                                    const colorClass = getSubjectColorClass(subject);
-                                    return (
-                                        <Collapsible key={subject} open={openCollapsibles.includes(subject)} onOpenChange={(isOpen) => setOpenCollapsibles(prev => isOpen ? [...prev, subject] : prev.filter(s => s !== subject))} className="space-y-2">
-                                        <CollapsibleTrigger className="flex justify-between items-center w-full p-2 bg-muted rounded-md">
-                                            <div className="flex items-center gap-2">
-                                                <Icon className={`h-5 w-5 ${colorClass}`} />
-                                                <span className="font-bold">{subject}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1.5 font-mono text-xs">
-                                                {pendingCount > 0 && <Badge className="bg-yellow-400 text-yellow-900 hover:bg-yellow-400 rounded-full h-5 w-5 flex items-center justify-center p-0">{pendingCount}</Badge>}
-                                                {completedCount > 0 && <Badge className="bg-green-500 text-white hover:bg-green-500 rounded-full h-5 w-5 flex items-center justify-center p-0">{completedCount}</Badge>}
-                                            </div>
-                                        </CollapsibleTrigger>
-                                        <CollapsibleContent className="space-y-2 pl-4 pt-2">
-                                            {subjectTasks.map(task => {
-                                                const timeLeft = task.status === 'pending' ? calculateTimeLeft(task.created_at) : null;
-                                                const isTimedOut = task.status === 'not_completed' && differenceInMilliseconds(addHours(new Date(task.created_at), 24), new Date()) <= 0;
-                                                return (
-                                                <Card key={task.id} className={`cursor-pointer hover:shadow-md transition-shadow rounded-lg ${getStatusBorderClass(task.status)}`} onClick={() => handleTaskClick(task)}>
-                                                    <CardContent className="p-3 flex items-center gap-4">
-                                                        {getTaskTypeIcon(task)}
-                                                        <div className="flex-grow">
-                                                            <p className="font-semibold">{formatTaskTitle(task)}</p>
-                                                            <Badge className={`mt-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border-0 ${getStatusBadgeClass(task.status)}`}>
-                                                                {t(getStatusTranslationKey(task.status))}
-                                                            </Badge>
-                                                            {timeLeft && timeLeft !== "00:00:00" && (
-                                                                <p className="text-xs font-semibold mt-1 text-red-600 dark:text-red-400">
-                                                                    <Clock className="h-3 w-3 inline-block mr-1" />
-                                                                    {t('coach.timeLeft')}: {timeLeft}
-                                                                </p>
-                                                            )}
-                                                            {isTimedOut && (
-                                                                <p className="text-xs font-semibold mt-1 text-red-700 dark:text-red-300">
-                                                                    {t('coach.timedOut')}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                        <Button variant="ghost" size="icon" className="ml-2 shrink-0 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleOpenDeleteDialog(task); }}>
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </CardContent>
-                                                </Card>
-                                            )})}
-                                        </CollapsibleContent>
-                                        </Collapsible>
-                                    )
-                                    })
-                                ) : (<p className="text-center text-muted-foreground py-4">{t('coach.noAssignedTasks')}</p>)}
-                            </div>
+                            <Tabs defaultValue="current" className="flex-1 flex flex-col overflow-hidden">
+                                <TabsList className="grid w-full grid-cols-2">
+                                    <TabsTrigger value="current">{t('student.currentTasks')}</TabsTrigger>
+                                    <TabsTrigger value="completed">{t('student.completedTasks')}</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="current" className="flex-1 overflow-y-auto mt-2 pr-2 space-y-2">
+                                    {renderTaskGroup(sortedCurrentTasks, 'coach.noAssignedTasks')}
+                                </TabsContent>
+                                <TabsContent value="completed" className="flex-1 overflow-y-auto mt-2 pr-2 space-y-2">
+                                    {renderTaskGroup(sortedCompletedTasks, 'student.noCompletedTasks')}
+                                </TabsContent>
+                            </Tabs>
                         </div>
                     </div>
                 </TabsContent>
