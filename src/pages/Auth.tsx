@@ -137,7 +137,7 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-secondary/50 p-4">
+    <div className="flex items-center justify-center min-h-screen p-4 floral-background">
       <div className="absolute top-4 left-4">
         <Button variant="outline" size="icon" onClick={() => navigate('/')}>
           <ArrowLeft className="h-4 w-4" />
