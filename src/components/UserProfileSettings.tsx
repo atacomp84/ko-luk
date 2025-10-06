@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { showError, showSuccess } from '@/utils/toast';
 import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, KeyRound } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 
 const UserProfileSettings = () => {
@@ -16,11 +16,14 @@ const UserProfileSettings = () => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation();
 
   useEffect(() => {
+    console.log('[UserProfileSettings] Profile or user data updated:', { profile, user });
     if (profile && user) {
       setFirstName(profile.first_name || '');
       setLastName(profile.last_name || '');
@@ -30,10 +33,12 @@ const UserProfileSettings = () => {
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[UserProfileSettings] Attempting to update profile.');
     setLoading(true);
     setError(null);
 
     if (!user) {
+      console.error('[UserProfileSettings] Profile update failed: No user found.');
       setError(t('settings.noUserError'));
       setLoading(false);
       return;
@@ -41,6 +46,7 @@ const UserProfileSettings = () => {
 
     try {
       if (username !== profile?.username) {
+        console.log(`[UserProfileSettings] Checking if username '${username}' is already taken.`);
         const { data: existingUser, error: usernameCheckError } = await supabase
           .from('profiles')
           .select('id')
@@ -48,13 +54,16 @@ const UserProfileSettings = () => {
           .single();
 
         if (existingUser && existingUser.id !== user.id) {
+          console.error(`[UserProfileSettings] Username '${username}' is already taken by another user.`);
           throw new Error(t('auth.usernameExistsError'));
         }
-        if (usernameCheckError && usernameCheckError.code !== 'PGRST116') {
+        if (usernameCheckError && usernameCheckError.code !== 'PGRST116') { // PGRST116: "no rows found"
+          console.error('[UserProfileSettings] Error checking username:', usernameCheckError.message);
           throw usernameCheckError;
         }
       }
 
+      console.log('[UserProfileSettings] Updating profile data in Supabase.');
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ 
@@ -65,19 +74,78 @@ const UserProfileSettings = () => {
         })
         .eq('id', user.id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('[UserProfileSettings] Error updating profile:', profileError.message);
+        throw profileError;
+      }
 
       showSuccess(t('settings.profileUpdateSuccess'));
+      console.log('[UserProfileSettings] Profile updated successfully. Refreshing profile data.');
       await refreshProfile();
     } catch (err: any) {
+      console.error('[UserProfileSettings] Profile update failed:', err.message);
       setError(err.message);
       showError(t('settings.profileUpdateError'));
     } finally {
       setLoading(false);
+      console.log('[UserProfileSettings] Profile update process finished.');
+    }
+  };
+
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('[UserProfileSettings] Attempting to update password.');
+    setLoading(true);
+    setError(null);
+
+    if (!user) {
+      console.error('[UserProfileSettings] Password update failed: No user found.');
+      setError(t('settings.noUserError'));
+      setLoading(false);
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      console.error('[UserProfileSettings] Password update failed: Password too short.');
+      setError('Şifre en az 6 karakter olmalıdır.'); // TODO: Add to translation
+      setLoading(false);
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      console.error('[UserProfileSettings] Password update failed: Passwords do not match.');
+      setError('Yeni şifreler eşleşmiyor.'); // TODO: Add to translation
+      setLoading(false);
+      return;
+    }
+
+    try {
+      console.log('[UserProfileSettings] Updating user password in Supabase.');
+      const { data, error: passwordError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (passwordError) {
+        console.error('[UserProfileSettings] Error updating password:', passwordError.message);
+        throw passwordError;
+      }
+
+      showSuccess('Şifre başarıyla güncellendi!'); // TODO: Add to translation
+      console.log('[UserProfileSettings] Password updated successfully:', data);
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } catch (err: any) {
+      console.error('[UserProfileSettings] Password update failed:', err.message);
+      setError(err.message);
+      showError('Şifre güncellenirken bir hata oluştu.'); // TODO: Add to translation
+    } finally {
+      setLoading(false);
+      console.log('[UserProfileSettings] Password update process finished.');
     }
   };
 
   if (authLoading) {
+    console.log('[UserProfileSettings] Rendering skeleton due to auth loading.');
     return (
       <Card className="w-full">
         <CardHeader>
@@ -103,6 +171,7 @@ const UserProfileSettings = () => {
     );
   }
 
+  console.log('[UserProfileSettings] Rendering user profile settings form.');
   return (
     <div className="space-y-6">
       {error && (
@@ -136,6 +205,47 @@ const UserProfileSettings = () => {
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? t('settings.saving') : t('settings.saveProfile')}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <KeyRound className="h-5 w-5 text-primary" />
+            Şifre Değiştir
+          </CardTitle> {/* TODO: Add to translation */}
+          <CardDescription>
+            Hesabınızın şifresini buradan değiştirebilirsiniz.
+          </CardDescription> {/* TODO: Add to translation */}
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handlePasswordUpdate} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Yeni Şifre</Label> {/* TODO: Add to translation */}
+              <Input 
+                id="new-password" 
+                type="password" 
+                value={newPassword} 
+                onChange={(e) => setNewPassword(e.target.value)} 
+                required 
+                minLength={6}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-new-password">Yeni Şifreyi Onayla</Label> {/* TODO: Add to translation */}
+              <Input 
+                id="confirm-new-password" 
+                type="password" 
+                value={confirmNewPassword} 
+                onChange={(e) => setConfirmNewPassword(e.target.value)} 
+                required 
+                minLength={6}
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? t('settings.saving') : 'Şifreyi Değiştir'} {/* TODO: Add to translation */}
             </Button>
           </form>
         </CardContent>

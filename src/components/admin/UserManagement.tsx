@@ -34,6 +34,12 @@ const avatarColors = [
     "bg-pink-100 text-pink-700 dark:bg-pink-900/50 dark:text-pink-300",
 ];
 
+const roleBorderClasses = {
+  admin: "border-red-500 dark:border-red-700",
+  coach: "border-blue-500 dark:border-blue-700",
+  student: "border-green-500 dark:border-green-700",
+};
+
 const UserManagement = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,13 +51,16 @@ const UserManagement = () => {
   const { t } = useTranslation();
 
   const fetchUsers = useCallback(async () => {
+    console.log('[UserManagement] Fetching all users for admin panel.');
     setLoading(true);
     const { data, error } = await supabase.functions.invoke('get-users');
 
     if (error) {
+      console.error('[UserManagement] Error fetching users:', error.message);
       showError(t('admin.userManagement.fetchError'));
       setUsers([]);
     } else {
+      console.log(`[UserManagement] Fetched ${data.length} users.`);
       setUsers(data as UserProfile[]);
     }
     setLoading(false);
@@ -73,51 +82,61 @@ const UserManagement = () => {
   }, [users]);
 
   const handleEditUser = (user: UserProfile) => {
+    console.log('[UserManagement] Opening edit dialog for user:', user.id);
     setSelectedUser(user);
     setEditUserDialogOpen(true);
   };
 
   const handleReassignStudent = (student: UserProfile) => {
+    console.log('[UserManagement] Opening reassign dialog for student:', student.id);
     setSelectedUser(student);
     setReassignStudentDialogOpen(true);
   };
 
   const handleDeleteUser = (user: UserProfile) => {
+    console.log('[UserManagement] Opening delete confirmation for user:', user.id);
     setUserToDelete(user);
     setDeleteDialogOpen(true);
   };
 
   const confirmDeleteUser = async () => {
     if (!userToDelete) return;
-
+  
+    console.log('[UserManagement] Confirming deletion for user:', userToDelete.id);
     setLoading(true);
     setDeleteDialogOpen(false);
 
     try {
       if (userToDelete.role === 'student') {
+        console.log('[UserManagement] Deleting student via Edge Function:', userToDelete.id);
         const { error } = await supabase.functions.invoke('delete-student', {
           body: { student_id: userToDelete.id },
         });
         if (error) throw error;
       } else if (userToDelete.role === 'coach') {
+        console.log('[UserManagement] Deleting coach via Edge Function:', userToDelete.id);
         const { error } = await supabase.functions.invoke('delete-coach', {
           body: { coach_id: userToDelete.id },
         });
         if (error) throw error;
       } else {
+        console.error('[UserManagement] Attempted to delete admin user via UI. Forbidden.');
         throw new Error(t('admin.userManagement.adminDeleteError'));
       }
       showSuccess(t('admin.userManagement.deleteSuccess', { userName: `${userToDelete.first_name} ${userToDelete.last_name}` }));
+      console.log('[UserManagement] User deleted successfully. Re-fetching users.');
       fetchUsers();
     } catch (error: any) {
+      console.error('[UserManagement] Error during user deletion:', error.message);
       showError(t('admin.userManagement.deleteError', { message: error.message }));
     } finally {
       setLoading(false);
       setUserToDelete(null);
+      console.log('[UserManagement] User deletion process finished.');
     }
   };
 
-  const renderUserGroup = (title: string, icon: React.ReactNode, userList: UserProfile[]) => {
+  const renderUserGroup = (title: string, icon: React.ReactNode, userList: UserProfile[], roleKey: 'admin' | 'coach' | 'student') => {
     if (!userList || userList.length === 0) return null;
     return (
       <div key={title}>
@@ -127,7 +146,7 @@ const UserManagement = () => {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {userList.map((user, index) => (
-            <Card key={user.id} className="flex flex-col justify-between">
+            <Card key={user.id} className={cn("flex flex-col justify-between border-2", roleBorderClasses[roleKey])}>
               <CardContent className="p-4 flex items-center gap-4">
                 <Avatar>
                   <AvatarFallback className={cn("font-bold", avatarColors[index % avatarColors.length])}>
@@ -169,6 +188,7 @@ const UserManagement = () => {
     );
   };
 
+  console.log('[UserManagement] Rendering user management section.');
   return (
     <>
       <Card>
@@ -185,9 +205,9 @@ const UserManagement = () => {
             </div>
           ) : users.length > 0 ? (
             <div>
-              {renderUserGroup(t('admin.roleAdminPlural', 'Yöneticiler'), <Shield className="h-5 w-5 text-red-500" />, groupedUsers['admin'])}
-              {renderUserGroup(t('auth.roleCoachPlural', 'Koçlar'), <UserCog className="h-5 w-5 text-blue-500" />, groupedUsers['coach'])}
-              {renderUserGroup(t('auth.roleStudentPlural', 'Öğrenciler'), <User className="h-5 w-5 text-green-500" />, groupedUsers['student'])}
+              {renderUserGroup(t('admin.roleAdminPlural'), <Shield className="h-5 w-5 text-red-500" />, groupedUsers['admin'], 'admin')}
+              {renderUserGroup(t('auth.roleCoachPlural'), <UserCog className="h-5 w-5 text-blue-500" />, groupedUsers['coach'], 'coach')}
+              {renderUserGroup(t('auth.roleStudentPlural'), <User className="h-5 w-5 text-green-500" />, groupedUsers['student'], 'student')}
             </div>
           ) : (
             <div className="text-center py-10">

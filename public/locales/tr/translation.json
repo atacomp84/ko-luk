@@ -26,7 +26,9 @@
     "registering": "Hesap oluşturuluyor...",
     "registerSuccess": "Kayıt başarılı! Lütfen giriş yapın.",
     "errorTitle": "Hata",
-    "usernameExistsError": "Bu kullanıcı adı zaten alınmış. Lütfen başka bir tane seçin."
+    "usernameExistsError": "Bu kullanıcı adı zaten alınmış. Lütfen başka bir tane seçin.",
+    "roleStudentPlural": "Öğrenciler",
+    "roleCoachPlural": "Koçlar"
   },
   "index": {
     "welcomeTitle": "LGS Koçluk Platformuna Hoş Geldiniz",
@@ -171,11 +173,20 @@
     "saving": "Kaydediliyor...",
     "noUserError": "Kullanıcı bulunamadı. Lütfen tekrar giriş yapın.",
     "profileUpdateError": "Profil güncellenirken hata oluştu.",
-    "profileUpdateSuccess": "Profil başarıyla güncellendi!"
+    "profileUpdateSuccess": "Profil başarıyla güncellendi!",
+    "changePasswordTitle": "Şifre Değiştir",
+    "changePasswordDescription": "Hesabınızın şifresini buradan değiştirebilirsiniz.",
+    "newPasswordLabel": "Yeni Şifre",
+    "confirmNewPasswordLabel": "Yeni Şifreyi Onayla",
+    "passwordTooShort": "Şifre en az 6 karakter olmalıdır.",
+    "passwordsDoNotMatch": "Yeni şifreler eşleşmiyor.",
+    "passwordUpdateSuccess": "Şifre başarıyla güncellendi!",
+    "passwordUpdateError": "Şifre güncellenirken bir hata oluştu."
   },
   "admin": {
     "dashboardTitle": "Yönetici Paneli",
     "roleAdmin": "Yönetici",
+    "roleAdminPlural": "Yöneticiler",
     "login": {
       "title": "Yönetici Girişi",
       "description": "Yönetici paneline erişmek için yönetici kimlik bilgilerini girin.",

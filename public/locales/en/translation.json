@@ -26,7 +26,9 @@
     "registering": "Creating account...",
     "registerSuccess": "Registration successful! Please log in.",
     "errorTitle": "Error",
-    "usernameExistsError": "This username is already taken. Please choose another one."
+    "usernameExistsError": "This username is already taken. Please choose another one.",
+    "roleStudentPlural": "Students",
+    "roleCoachPlural": "Coaches"
   },
   "index": {
     "welcomeTitle": "Welcome to the LGS Coaching Platform",
@@ -171,11 +173,20 @@
     "saving": "Saving...",
     "noUserError": "User not found. Please log in again.",
     "profileUpdateError": "Failed to update profile.",
-    "profileUpdateSuccess": "Profile updated successfully!"
+    "profileUpdateSuccess": "Profile updated successfully!",
+    "changePasswordTitle": "Change Password",
+    "changePasswordDescription": "You can change your account password here.",
+    "newPasswordLabel": "New Password",
+    "confirmNewPasswordLabel": "Confirm New Password",
+    "passwordTooShort": "Password must be at least 6 characters long.",
+    "passwordsDoNotMatch": "New passwords do not match.",
+    "passwordUpdateSuccess": "Password updated successfully!",
+    "passwordUpdateError": "Failed to update password."
   },
   "admin": {
     "dashboardTitle": "Admin Dashboard",
     "roleAdmin": "Admin",
+    "roleAdminPlural": "Admins",
     "login": {
       "title": "Admin Login",
       "description": "Enter admin credentials to access the admin panel.",

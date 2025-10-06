@@ -14,7 +14,9 @@ const Index = () => {
   const { t } = useTranslation();
 
   useEffect(() => {
+    console.log('[Index] Auth loading:', loading, 'Profile:', profile);
     if (!loading && profile) {
+      console.log(`[Index] User is authenticated with role: ${profile.role}. Redirecting.`);
       if (profile.role === 'coach') {
         navigate('/coach/dashboard');
       } else if (profile.role === 'student') {
@@ -22,10 +24,13 @@ const Index = () => {
       } else if (profile.role === 'admin') {
         navigate('/admin/dashboard');
       }
+    } else if (!loading && !profile) {
+      console.log('[Index] User is not authenticated. Staying on index page.');
     }
   }, [loading, profile, navigate]);
 
   if (loading) {
+    console.log('[Index] Rendering skeleton due to auth loading.');
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background">
         <div className="text-center p-8 space-y-4">
@@ -37,8 +42,9 @@ const Index = () => {
     );
   }
 
+  console.log('[Index] Rendering main index page.');
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 relative">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-secondary/50 p-4 relative">
        <div className="absolute top-4 right-4 flex items-center gap-2">
           <LanguageSwitcher />
           <ThemeToggle />
@@ -51,7 +57,7 @@ const Index = () => {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button onClick={() => navigate('/auth')} size="lg">{t('index.ctaButton')}</Button>
-          <Button onClick={() => navigate('/admin/login')} variant="outline" size="lg">{t('index.adminLoginButton')}</Button>
+          {/* Yönetici Girişi butonu kaldırıldı */}
         </div>
       </div>
     </div>
