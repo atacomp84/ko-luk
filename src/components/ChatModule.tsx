@@ -134,35 +134,33 @@ const ChatModule = ({ chatPartner }: ChatModuleProps) => {
     
     const channel = supabase
       .channel(channelId)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-      }, (payload) => {
-        const newMessage = payload.new as Message;
-        console.log('[ChatModule] Real-time message received:', newMessage);
-        
-        const isRelevant = (newMessage.sender_id === user.id && newMessage.receiver_id === chatPartner.id) ||
-                           (newMessage.sender_id === chatPartner.id && newMessage.receiver_id === user.id);
-
-        if (isRelevant) {
-          console.log('[ChatModule] Real-time: Message is relevant, updating state.');
-          setMessages(currentMessages => {
-            if (currentMessages.some(m => m.id === newMessage.id)) {
-              console.log('[ChatModule] Real-time: Duplicate message received, ignoring.');
-              return currentMessages;
-            }
-            return [...currentMessages, newMessage];
-          });
-          if (newMessage.receiver_id === user.id) {
-            console.log('[ChatModule] Real-time: New message is for current user, marking as read.');
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          // Filter for messages sent TO the current user. This is more efficient.
+          filter: `receiver_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newMessage = payload.new as Message;
+          console.log('[ChatModule] Real-time message received:', newMessage);
+          
+          // Since we filtered by receiver_id, we only need to check if the sender is the current chat partner.
+          if (newMessage.sender_id === chatPartner.id) {
+            console.log('[ChatModule] Real-time: Message is relevant, updating state.');
+            setMessages(currentMessages => {
+              if (currentMessages.some(m => m.id === newMessage.id)) {
+                return currentMessages;
+              }
+              return [...currentMessages, newMessage];
+            });
             markMessagesAsRead();
+            scrollToBottom();
           }
-          scrollToBottom();
-        } else {
-          console.log('[ChatModule] Real-time: Received message is not for this chat, ignoring.');
         }
-      })
+      )
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
           console.log(`[ChatModule] Real-time: Successfully subscribed to channel ${channelId}`);
