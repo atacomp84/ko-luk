@@ -131,9 +131,10 @@ const UserProfileSettings = () => {
       }
 
       showSuccess(t('settings.passwordUpdateSuccess'));
-      console.log('[UserProfileSettings] Password updated successfully:', data);
+      console.log('[UserProfileSettings] Password updated successfully. Logging out user.');
       setNewPassword('');
       setConfirmNewPassword('');
+      await supabase.auth.signOut(); // Kullanıcıyı oturumdan çıkar
     } catch (err: any) {
       console.error('[UserProfileSettings] Password update failed:', err.message);
       setError(err.message);
