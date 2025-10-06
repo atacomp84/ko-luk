@@ -1,34 +1,15 @@
-import { useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from './ui/skeleton';
-import { useEffect } from 'react';
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles: string[] }) => {
   const { loading, profile, session } = useAuth();
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!loading) {
-      if (!session || !profile) {
-        navigate('/auth');
-      } else if (!allowedRoles.includes(profile.role)) {
-        // Redirect based on role if not allowed for the current route
-        if (profile.role === 'coach') {
-          navigate('/coach/dashboard');
-        } else if (profile.role === 'student') {
-          navigate('/student/dashboard');
-        } else if (profile.role === 'admin') {
-          navigate('/admin/dashboard');
-        } else {
-          navigate('/'); // Fallback for unknown roles
-        }
-      }
-    }
-  }, [loading, session, profile, navigate, allowedRoles]);
-
+  // 1. Kimlik doğrulama durumu kontrol edilirken bekle ve yükleme ekranı göster.
+  // Bu, uygulamanın kararsız bir durumda karar vermesini engeller.
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-secondary/50">
         <div className="p-8 space-y-4 w-full max-w-md">
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-8 w-3/4" />
@@ -38,11 +19,26 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
     );
   }
 
-  if (session && profile && allowedRoles.includes(profile.role)) {
-    return <>{children}</>;
+  // 2. Yükleme bittikten sonra, kullanıcı giriş yapmamışsa giriş sayfasına yönlendir.
+  if (!session || !profile) {
+    return <Navigate to="/auth" replace />;
   }
 
-  return null;
+  // 3. Kullanıcı giriş yapmış ama bu sayfayı görme yetkisi yoksa, kendi paneline yönlendir.
+  if (!allowedRoles.includes(profile.role)) {
+    let redirectTo = '/'; // Varsayılan yönlendirme
+    if (profile.role === 'coach') {
+      redirectTo = '/coach/dashboard';
+    } else if (profile.role === 'student') {
+      redirectTo = '/student/dashboard';
+    } else if (profile.role === 'admin') {
+      redirectTo = '/admin/dashboard';
+    }
+    return <Navigate to={redirectTo} replace />;
+  }
+
+  // 4. Her şey yolundaysa, istenen sayfayı göster.
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;
