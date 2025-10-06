@@ -107,14 +107,14 @@ const UserProfileSettings = () => {
 
     if (newPassword.length < 6) {
       console.error('[UserProfileSettings] Password update failed: Password too short.');
-      setError('Şifre en az 6 karakter olmalıdır.'); // TODO: Add to translation
+      setError(t('settings.passwordTooShort'));
       setLoading(false);
       return;
     }
 
     if (newPassword !== confirmNewPassword) {
       console.error('[UserProfileSettings] Password update failed: Passwords do not match.');
-      setError('Yeni şifreler eşleşmiyor.'); // TODO: Add to translation
+      setError(t('settings.passwordsDoNotMatch'));
       setLoading(false);
       return;
     }
@@ -130,14 +130,14 @@ const UserProfileSettings = () => {
         throw passwordError;
       }
 
-      showSuccess('Şifre başarıyla güncellendi!'); // TODO: Add to translation
+      showSuccess(t('settings.passwordUpdateSuccess'));
       console.log('[UserProfileSettings] Password updated successfully:', data);
       setNewPassword('');
       setConfirmNewPassword('');
     } catch (err: any) {
       console.error('[UserProfileSettings] Password update failed:', err.message);
       setError(err.message);
-      showError('Şifre güncellenirken bir hata oluştu.'); // TODO: Add to translation
+      showError(t('settings.passwordUpdateError'));
     } finally {
       setLoading(false);
       console.log('[UserProfileSettings] Password update process finished.');
@@ -214,16 +214,16 @@ const UserProfileSettings = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <KeyRound className="h-5 w-5 text-primary" />
-            Şifre Değiştir
-          </CardTitle> {/* TODO: Add to translation */}
+            {t('settings.changePasswordTitle')}
+          </CardTitle>
           <CardDescription>
-            Hesabınızın şifresini buradan değiştirebilirsiniz.
-          </CardDescription> {/* TODO: Add to translation */}
+            {t('settings.changePasswordDescription')}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handlePasswordUpdate} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="new-password">Yeni Şifre</Label> {/* TODO: Add to translation */}
+              <Label htmlFor="new-password">{t('settings.newPasswordLabel')}</Label>
               <Input 
                 id="new-password" 
                 type="password" 
@@ -234,7 +234,7 @@ const UserProfileSettings = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirm-new-password">Yeni Şifreyi Onayla</Label> {/* TODO: Add to translation */}
+              <Label htmlFor="confirm-new-password">{t('settings.confirmNewPasswordLabel')}</Label>
               <Input 
                 id="confirm-new-password" 
                 type="password" 
@@ -245,7 +245,7 @@ const UserProfileSettings = () => {
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? t('settings.saving') : 'Şifreyi Değiştir'} {/* TODO: Add to translation */}
+              {loading ? t('settings.saving') : t('settings.changePasswordButton')}
             </Button>
           </form>
         </CardContent>

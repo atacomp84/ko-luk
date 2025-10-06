@@ -181,7 +181,8 @@
     "passwordTooShort": "Password must be at least 6 characters long.",
     "passwordsDoNotMatch": "New passwords do not match.",
     "passwordUpdateSuccess": "Password updated successfully!",
-    "passwordUpdateError": "Failed to update password."
+    "passwordUpdateError": "Failed to update password.",
+    "changePasswordButton": "Change Password"
   },
   "admin": {
     "dashboardTitle": "Admin Dashboard",

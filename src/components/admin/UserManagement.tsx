@@ -139,14 +139,14 @@ const UserManagement = () => {
   const renderUserGroup = (title: string, icon: React.ReactNode, userList: UserProfile[], roleKey: 'admin' | 'coach' | 'student') => {
     if (!userList || userList.length === 0) return null;
     return (
-      <div key={title}>
-        <h2 className="text-lg font-semibold flex items-center gap-2 mb-4 mt-6">
+      <div key={title} className={cn("border-2 rounded-lg p-4 mb-6", roleBorderClasses[roleKey])}> {/* Added wrapper div for the border */}
+        <h2 className="text-lg font-semibold flex items-center gap-2 mb-4 mt-0"> {/* Adjusted margin-top */}
           {icon}
           {title}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {userList.map((user, index) => (
-            <Card key={user.id} className={cn("flex flex-col justify-between border-2", roleBorderClasses[roleKey])}>
+            <Card key={user.id} className="flex flex-col justify-between"> {/* Removed individual card border */}
               <CardContent className="p-4 flex items-center gap-4">
                 <Avatar>
                   <AvatarFallback className={cn("font-bold", avatarColors[index % avatarColors.length])}>

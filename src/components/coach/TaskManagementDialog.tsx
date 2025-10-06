@@ -93,9 +93,9 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
   const [isScoreEntryOpen, setScoreEntryOpen] = useState(false);
   const [isSimpleApprovalOpen, setSimpleApprovalOpen] = useState(false);
   const [scoreData, setScoreData] = useState<ScoreData>({ correct: 0, empty: 0, wrong: 0 });
-  const [openCollapsibles, setOpenCollapsibles] = useState<string[]>([]);
+  const [openCollapsibles, setOpenCollapsibles] = useState<string[]>([]); // For task list
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('weekly');
-  const [openAccordions, setOpenAccordions] = useState<string[]>([]);
+  const [openAnalyticsAccordions, setOpenAnalyticsAccordions] = useState<string[]>([]); // For analytics accordions
   const intervalRefs = useRef<Record<string, NodeJS.Timeout>>({});
 
 
@@ -162,9 +162,13 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     }, {} as Record<string, Task[]>);
   }, [tasks]);
 
+  // This useEffect now only runs when the student changes, not on every task update.
+  // This prevents accordions from reopening after a manual close/toggle.
   useEffect(() => {
-    setOpenCollapsibles(Object.keys(groupedTasks));
-  }, [groupedTasks]);
+    if (student) {
+      setOpenCollapsibles(Object.keys(groupedTasks));
+    }
+  }, [student?.id]); // Depend only on student.id to initially open all, not groupedTasks
 
   useEffect(() => {
     console.log(`[TaskManagementDialog] Effect for isOpen/student triggered. isOpen: ${isOpen}, studentId: ${student?.id}`);
@@ -173,6 +177,8 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     } else {
       console.log('[TaskManagementDialog] Effect for isOpen/student: Resetting form because dialog is closed or no student.');
       resetForm();
+      setOpenCollapsibles([]); // Clear collapsibles when dialog closes
+      setOpenAnalyticsAccordions([]); // Clear analytics accordions when dialog closes
     }
   }, [isOpen, student, fetchTasks, resetForm]);
 
@@ -463,7 +469,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     if (readingAnalyticsData.length > 0) {
         defaultOpen.push('kitap-okuma');
     }
-    setOpenAccordions(defaultOpen);
+    setOpenAnalyticsAccordions(defaultOpen);
   }, [analyticsData, readingAnalyticsData]);
 
   const handleGenerateReport = () => {
@@ -603,6 +609,32 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
     return grouped;
   }, [tasks]);
 
+  const toggleAllCollapsibles = () => {
+    const allSubjectKeys = Object.keys(groupedTasks);
+    if (openCollapsibles.length === allSubjectKeys.length) {
+      // All are open, so close all
+      setOpenCollapsibles([]);
+    } else {
+      // Some are closed or all are closed, so open all
+      setOpenCollapsibles(allSubjectKeys);
+    }
+  };
+
+  const toggleAllAnalyticsAccordions = () => {
+    const allAnalyticsKeys = analyticsData.map(d => d.subject);
+    if (readingAnalyticsData.length > 0) {
+        allAnalyticsKeys.push('kitap-okuma');
+    }
+
+    if (openAnalyticsAccordions.length === allAnalyticsKeys.length) {
+      // All are open, so close all
+      setOpenAnalyticsAccordions([]);
+    } else {
+      // Some are closed or all are closed, so open all
+      setOpenAnalyticsAccordions(allAnalyticsKeys);
+    }
+  };
+
 
   if (!student) {
     console.log('[TaskManagementDialog] Render skipped: no student.');
@@ -717,7 +749,7 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                                     <ClipboardList className="h-5 w-5 text-primary" />
                                     {t('coach.assignedTasks')}
                                 </h3>
-                                <Button variant="ghost" size="icon" onClick={() => setOpenCollapsibles([])}>
+                                <Button variant="ghost" size="icon" onClick={toggleAllCollapsibles}>
                                     <ChevronsDownUp className="h-4 w-4" />
                                 </Button>
                             </div>
@@ -794,14 +826,14 @@ export const TaskManagementDialog = ({ student, isOpen, onClose }: TaskManagemen
                             <Download className="mr-2 h-4 w-4" />
                             {t('coach.getReport')}
                             </Button>
-                            <Button variant="outline" size="icon" onClick={() => setOpenAccordions([])}>
+                            <Button variant="outline" size="icon" onClick={toggleAllAnalyticsAccordions}>
                                 <ChevronsDownUp className="h-4 w-4" />
                             </Button>
                         </div>
                         </div>
                         <div className="mt-4">
                         {loading ? <Skeleton className="h-full w-full" /> : (
-                            <Accordion type="multiple" value={openAccordions} onValueChange={setOpenAccordions} className="w-full space-y-2">
+                            <Accordion type="multiple" value={openAnalyticsAccordions} onValueChange={setOpenAnalyticsAccordions} className="w-full space-y-2">
                             {readingAnalyticsData.length > 0 && (
                                 <AccordionItem value="kitap-okuma" className="border rounded-md px-4">
                                     <AccordionTrigger className="hover:no-underline">
