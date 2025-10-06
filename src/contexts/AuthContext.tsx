@@ -51,23 +51,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchProfile]);
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      setLoading(true);
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      setSession(initialSession);
-      const currentUser = initialSession?.user ?? null;
+    // onAuthStateChange, ilk oturum kontrolü de dahil olmak üzere tüm kimlik doğrulama
+    // olaylarını yönetir. Bu, uygulamanın başlangıçta ve "uyandıktan" sonra
+    // kararlı kalmasını sağlar.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setSession(session);
+      const currentUser = session?.user ?? null;
       setUser(currentUser);
       await fetchProfile(currentUser);
-      setLoading(false);
-    };
-
-    initializeAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      setSession(newSession);
-      const currentUser = newSession?.user ?? null;
-      setUser(currentUser);
-      await fetchProfile(currentUser);
+      
+      // İlk oturum bilgisi işlendiğinde (INITIAL_SESSION) veya kullanıcı durumu netleştiğinde
+      // (SIGNED_IN, SIGNED_OUT), yükleme durumunu sonlandırıyoruz.
+      // Bu, uygulamanın "yükleniyor" ekranında takılı kalmasını engeller.
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        setLoading(false);
+      }
     });
 
     return () => {
