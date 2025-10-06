@@ -44,12 +44,12 @@ const Index = () => {
 
   console.log('[Index] Rendering main index page.');
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-secondary/50 p-4 relative">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 relative bg-gradient-to-br from-sky-100 to-blue-200 dark:from-slate-900 dark:to-slate-800">
        <div className="absolute top-4 right-4 flex items-center gap-2">
           <LanguageSwitcher />
           <ThemeToggle />
         </div>
-      <div className="text-center p-8">
+      <div className="text-center p-8 bg-white/30 dark:bg-black/30 backdrop-blur-lg rounded-xl shadow-lg">
         <Rocket className="h-16 w-16 text-primary mx-auto mb-6" />
         <h1 className="text-4xl font-bold mb-4">{t('index.welcomeTitle')}</h1>
         <p className="text-xl text-muted-foreground mb-6">
