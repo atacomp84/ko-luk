@@ -28,62 +28,85 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchProfile = useCallback(async (currentUser: User | null) => {
     if (currentUser) {
-      const { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', currentUser.id)
-        .single();
-      
-      if (profileError) {
+      try {
+        const { data: userProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', currentUser.id)
+          .single();
+        
+        if (profileError) {
+          setProfile(null);
+          console.error("[AuthContext] Error fetching profile:", profileError.message);
+        } else {
+          setProfile(userProfile);
+          console.log("[AuthContext] Profile fetched successfully for user:", currentUser.id);
+        }
+      } catch (error: any) {
         setProfile(null);
-        console.error("Error fetching profile:", profileError.message);
-      } else {
-        setProfile(userProfile);
+        console.error("[AuthContext] Unexpected error during profile fetch:", error.message);
       }
     } else {
       setProfile(null);
+      console.log("[AuthContext] No current user, profile set to null.");
     }
   }, []);
 
   const refreshProfile = useCallback(async () => {
+    console.log("[AuthContext] Refreshing profile...");
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     await fetchProfile(currentUser);
   }, [fetchProfile]);
 
-  // Effect for initial load: This runs once on component mount to establish the initial auth state.
   useEffect(() => {
-    const initialLoad = async () => {
-      console.log("[AuthContext] Initial load started.");
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      setSession(initialSession);
-      const currentUser = initialSession?.user ?? null;
-      setUser(currentUser);
-      await fetchProfile(currentUser);
-      setLoading(false); // Set loading to false only after initial session and profile are fetched
-      console.log("[AuthContext] Initial load finished. Loading set to false.");
-    };
-
-    initialLoad();
-  }, [fetchProfile]); // fetchProfile is stable due to useCallback
-
-  // Effect for real-time auth state changes: This listens for any changes after the initial load.
-  useEffect(() => {
-    console.log("[AuthContext] Setting up onAuthStateChange listener.");
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+    const handleAuthStateChange = async (event: string, currentSession: Session | null) => {
       console.log(`[AuthContext] Auth state changed: ${event}`);
       setSession(currentSession);
       const currentUser = currentSession?.user ?? null;
       setUser(currentUser);
       await fetchProfile(currentUser);
-      // Do NOT set loading here. Loading is only for the very first app load.
-      // If an auth state change happens, the app is already "loaded".
-    });
+      // Ensure loading is false after any auth state change is processed
+      setLoading(false); 
+    };
+
+    const initialLoad = async () => {
+      console.log("[AuthContext] Initial load started.");
+      try {
+        const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+          console.error("[AuthContext] Error getting initial session:", sessionError.message);
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+        } else {
+          setSession(initialSession);
+          const currentUser = initialSession?.user ?? null;
+          setUser(currentUser);
+          await fetchProfile(currentUser);
+        }
+      } catch (error: any) {
+        console.error("[AuthContext] Unexpected error during initial session load:", error.message);
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+      } finally {
+        setLoading(false); // Always set loading to false after initial load attempt
+        console.log("[AuthContext] Initial load finished. Loading set to false.");
+      }
+    };
+
+    // Run initial load once on component mount
+    initialLoad();
+
+    // Set up real-time auth state change listener
+    console.log("[AuthContext] Setting up onAuthStateChange listener.");
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
     return () => {
       console.log("[AuthContext] Unsubscribing from auth state changes.");
       subscription.unsubscribe();
     };
-  }, [fetchProfile]); // fetchProfile is stable due to useCallback
+  }, [fetchProfile]);
 
   const value = useMemo(() => ({
     session,
