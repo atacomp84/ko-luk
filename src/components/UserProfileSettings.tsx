@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // useNavigate import edildi
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,6 +14,7 @@ import { Skeleton } from './ui/skeleton';
 
 const UserProfileSettings = () => {
   const { user, profile, loading: authLoading, refreshProfile } = useAuth();
+  const navigate = useNavigate(); // useNavigate hook'u kullanıldı
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
@@ -135,6 +137,7 @@ const UserProfileSettings = () => {
       setNewPassword('');
       setConfirmNewPassword('');
       await supabase.auth.signOut(); // Kullanıcıyı oturumdan çıkar
+      navigate('/auth'); // Giriş sayfasına yönlendir
     } catch (err: any) {
       console.error('[UserProfileSettings] Password update failed:', err.message);
       setError(err.message);
