@@ -184,6 +184,7 @@ export default function AuthPage() {
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        autoComplete="current-password"
                       />
                     </div>
                     {error && (
@@ -245,6 +246,7 @@ export default function AuthPage() {
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        autoComplete="new-password"
                       />
                     </div>
                     <div className="space-y-2">

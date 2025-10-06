@@ -127,6 +127,7 @@ export default function AdminAuthPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
                   />
                 </div>
                 {error && (
