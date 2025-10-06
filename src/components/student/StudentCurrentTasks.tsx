@@ -8,9 +8,9 @@ import { showError, showSuccess } from '@/utils/toast';
 import { useTranslation } from 'react-i18next';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '../ui/badge';
-import { lgsSubjects } from '@/data/lgsSubjects';
 import { getSubjectIconComponent, getSubjectColorClass } from '@/utils/subjectUtils';
 import { differenceInMilliseconds, addHours } from 'date-fns';
+import { useAuth } from '@/contexts/AuthContext'; // useAuth hook'unu import et
 
 interface Task {
     id: string;
@@ -24,11 +24,11 @@ interface Task {
 }
 
 const StudentCurrentTasks = () => {
-  console.log("[StudentCurrentTasks] Component rendered.");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const { t } = useTranslation();
   const intervalRefs = useRef<Record<string, NodeJS.Timeout>>({});
+  const { user } = useAuth(); // Oturum açmış kullanıcıyı al
 
   const fetchTasks = useCallback(async () => {
     console.log("[StudentCurrentTasks] Fetching current tasks.");
@@ -51,11 +51,38 @@ const StudentCurrentTasks = () => {
 
   useEffect(() => {
     fetchTasks();
-    return () => {
-      // Clear all intervals on unmount
-      Object.values(intervalRefs.current).forEach(clearInterval);
-    };
   }, [fetchTasks]);
+
+  // --- YENİ: Real-time abonelik için useEffect ---
+  useEffect(() => {
+    if (!user) return;
+
+    console.log(`[StudentCurrentTasks] Subscribing to real-time tasks for user: ${user.id}`);
+    const channel = supabase
+      .channel(`student-tasks-${user.id}`)
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', // INSERT, UPDATE, DELETE olaylarını dinle
+          schema: 'public', 
+          table: 'tasks',
+          filter: `student_id=eq.${user.id}` // Sadece mevcut öğrenciyi ilgilendiren olayları dinle
+        },
+        (payload) => {
+          console.log('[StudentCurrentTasks] Real-time task change received!', payload);
+          // Bir görev eklendiğinde, güncellendiğinde veya silindiğinde listeyi yeniden çek
+          fetchTasks();
+        }
+      )
+      .subscribe();
+
+    // Bileşen kaldırıldığında aboneliği temizle
+    return () => {
+      console.log(`[StudentCurrentTasks] Unsubscribing from real-time tasks for user: ${user.id}`);
+      supabase.removeChannel(channel);
+    };
+  }, [user, fetchTasks]);
+  // --- YENİ KOD SONU ---
 
   const handleCompleteTask = async (taskId: string) => {
     console.log(`[StudentCurrentTasks] Marking task ${taskId} as pending_approval.`);
@@ -70,7 +97,7 @@ const StudentCurrentTasks = () => {
     } else {
       console.log(`[StudentCurrentTasks] Task ${taskId} sent for coach approval.`);
       showSuccess('Göreviniz koç onayına gönderildi!');
-      fetchTasks();
+      // Real-time güncelleme fetchTasks'i tetikleyeceği için burada tekrar çağırmaya gerek yok.
     }
   };
 
@@ -87,9 +114,9 @@ const StudentCurrentTasks = () => {
     } else {
       console.log(`[StudentCurrentTasks] Task ${taskId} successfully marked as not_completed.`);
       showSuccess('Bir görevin süresi doldu ve tamamlanmadı olarak işaretlendi.');
-      fetchTasks(); // Refresh tasks to reflect the change
+      // Real-time güncelleme fetchTasks'i tetikleyeceği için burada tekrar çağırmaya gerek yok.
     }
-  }, [fetchTasks]);
+  }, []);
 
   const formatTaskTitle = (task: Task) => {
     let title = `${task.subject}: ${task.topic}`;
@@ -98,7 +125,7 @@ const StudentCurrentTasks = () => {
     } else if (task.task_type === 'konu_anlatimi') {
       title += ` (${t('coach.topicExplanation')})`;
     } else if (task.task_type === 'kitap_okuma') {
-        title += ` (${t('coach.selectPageCountPlaceholder')})`; // Using a generic placeholder for page count
+        title += ` (${t('coach.selectPageCountPlaceholder')})`;
     }
     return title;
   };
@@ -151,7 +178,6 @@ const StudentCurrentTasks = () => {
   }, []);
 
   useEffect(() => {
-    // Clear existing intervals
     Object.values(intervalRefs.current).forEach(clearInterval);
     intervalRefs.current = {};
 
@@ -163,10 +189,8 @@ const StudentCurrentTasks = () => {
         const timeLeftMs = differenceInMilliseconds(twentyFourHoursLater, now);
 
         if (timeLeftMs <= 0) {
-          // Task is already overdue, mark it as not_completed immediately
           handleTaskTimeout(task.id);
         } else {
-          // Set up a countdown interval
           const interval = setInterval(() => {
             const updatedTimeLeftMs = differenceInMilliseconds(addHours(new Date(task.created_at), 24), new Date());
             if (updatedTimeLeftMs <= 0) {
@@ -174,7 +198,6 @@ const StudentCurrentTasks = () => {
               delete intervalRefs.current[task.id];
               handleTaskTimeout(task.id);
             } else {
-              // Force a re-render to update the timer display
               setTasks(prevTasks => prevTasks.map(t => t.id === task.id ? { ...t } : t));
             }
           }, 1000);
@@ -186,7 +209,7 @@ const StudentCurrentTasks = () => {
     return () => {
       Object.values(intervalRefs.current).forEach(clearInterval);
     };
-  }, [tasks, handleTaskTimeout]); // Re-run when tasks change
+  }, [tasks, handleTaskTimeout]);
 
   return (
     <Card>
