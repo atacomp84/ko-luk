@@ -182,7 +182,8 @@
     "passwordsDoNotMatch": "Yeni şifreler eşleşmiyor.",
     "passwordUpdateSuccess": "Şifre başarıyla güncellendi!",
     "passwordUpdateError": "Şifre güncellenirken bir hata oluştu.",
-    "changePasswordButton": "Şifreyi Değiştir"
+    "changePasswordButton": "Şifreyi Değiştir",
+    "redirectingToLogin": "Giriş sayfasına yönlendiriliyorsunuz..."
   },
   "admin": {
     "dashboardTitle": "Yönetici Paneli",

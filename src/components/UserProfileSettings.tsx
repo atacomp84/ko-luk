@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // useNavigate import edildi
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -14,7 +14,7 @@ import { Skeleton } from './ui/skeleton';
 
 const UserProfileSettings = () => {
   const { user, profile, loading: authLoading, refreshProfile } = useAuth();
-  const navigate = useNavigate(); // useNavigate hook'u kullanıldı
+  const navigate = useNavigate();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
@@ -25,7 +25,6 @@ const UserProfileSettings = () => {
   const { t } = useTranslation();
 
   useEffect(() => {
-    console.log('[UserProfileSettings] Profile or user data updated:', { profile, user });
     if (profile && user) {
       setFirstName(profile.first_name || '');
       setLastName(profile.last_name || '');
@@ -35,12 +34,10 @@ const UserProfileSettings = () => {
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('[UserProfileSettings] Attempting to update profile.');
     setLoading(true);
     setError(null);
 
     if (!user) {
-      console.error('[UserProfileSettings] Profile update failed: No user found.');
       setError(t('settings.noUserError'));
       setLoading(false);
       return;
@@ -48,7 +45,6 @@ const UserProfileSettings = () => {
 
     try {
       if (username !== profile?.username) {
-        console.log(`[UserProfileSettings] Checking if username '${username}' is already taken.`);
         const { data: existingUser, error: usernameCheckError } = await supabase
           .from('profiles')
           .select('id')
@@ -56,16 +52,13 @@ const UserProfileSettings = () => {
           .single();
 
         if (existingUser && existingUser.id !== user.id) {
-          console.error(`[UserProfileSettings] Username '${username}' is already taken by another user.`);
           throw new Error(t('auth.usernameExistsError'));
         }
-        if (usernameCheckError && usernameCheckError.code !== 'PGRST116') { // PGRST116: "no rows found"
-          console.error('[UserProfileSettings] Error checking username:', usernameCheckError.message);
+        if (usernameCheckError && usernameCheckError.code !== 'PGRST116') {
           throw usernameCheckError;
         }
       }
 
-      console.log('[UserProfileSettings] Updating profile data in Supabase.');
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ 
@@ -76,80 +69,65 @@ const UserProfileSettings = () => {
         })
         .eq('id', user.id);
 
-      if (profileError) {
-        console.error('[UserProfileSettings] Error updating profile:', profileError.message);
-        throw profileError;
-      }
+      if (profileError) throw profileError;
 
       showSuccess(t('settings.profileUpdateSuccess'));
-      console.log('[UserProfileSettings] Profile updated successfully. Refreshing profile data.');
       await refreshProfile();
     } catch (err: any) {
-      console.error('[UserProfileSettings] Profile update failed:', err.message);
       setError(err.message);
       showError(t('settings.profileUpdateError'));
     } finally {
       setLoading(false);
-      console.log('[UserProfileSettings] Profile update process finished.');
     }
   };
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('[UserProfileSettings] Attempting to update password.');
     setLoading(true);
     setError(null);
 
     if (!user) {
-      console.error('[UserProfileSettings] Password update failed: No user found.');
       setError(t('settings.noUserError'));
       setLoading(false);
       return;
     }
 
     if (newPassword.length < 6) {
-      console.error('[UserProfileSettings] Password update failed: Password too short.');
       setError(t('settings.passwordTooShort'));
       setLoading(false);
       return;
     }
 
     if (newPassword !== confirmNewPassword) {
-      console.error('[UserProfileSettings] Password update failed: Passwords do not match.');
       setError(t('settings.passwordsDoNotMatch'));
       setLoading(false);
       return;
     }
 
     try {
-      console.log('[UserProfileSettings] Updating user password in Supabase.');
-      const { data, error: passwordError } = await supabase.auth.updateUser({
+      const { error: passwordError } = await supabase.auth.updateUser({
         password: newPassword,
       });
 
-      if (passwordError) {
-        console.error('[UserProfileSettings] Error updating password:', passwordError.message);
-        throw passwordError;
-      }
+      if (passwordError) throw passwordError;
 
-      showSuccess(t('settings.passwordUpdateSuccess'));
-      console.log('[UserProfileSettings] Password updated successfully. Logging out user.');
-      setNewPassword('');
-      setConfirmNewPassword('');
-      await supabase.auth.signOut(); // Kullanıcıyı oturumdan çıkar
-      navigate('/auth'); // Giriş sayfasına yönlendir
+      showSuccess(t('settings.passwordUpdateSuccess') + " " + t('settings.redirectingToLogin'));
+      
+      // The session is now invalid. Sign out to clear client-side storage
+      // and then navigate to the login page. The .finally() ensures navigation
+      // happens even if signOut itself throws an error (which is expected).
+      supabase.auth.signOut().finally(() => {
+        navigate('/auth', { replace: true });
+      });
+
     } catch (err: any) {
-      console.error('[UserProfileSettings] Password update failed:', err.message);
       setError(err.message);
       showError(t('settings.passwordUpdateError'));
-    } finally {
       setLoading(false);
-      console.log('[UserProfileSettings] Password update process finished.');
     }
   };
 
   if (authLoading) {
-    console.log('[UserProfileSettings] Rendering skeleton due to auth loading.');
     return (
       <Card className="w-full">
         <CardHeader>
@@ -175,7 +153,6 @@ const UserProfileSettings = () => {
     );
   }
 
-  console.log('[UserProfileSettings] Rendering user profile settings form.');
   return (
     <div className="space-y-6">
       {error && (

@@ -182,7 +182,8 @@
     "passwordsDoNotMatch": "New passwords do not match.",
     "passwordUpdateSuccess": "Password updated successfully!",
     "passwordUpdateError": "Failed to update password.",
-    "changePasswordButton": "Change Password"
+    "changePasswordButton": "Change Password",
+    "redirectingToLogin": "Redirecting to login page..."
   },
   "admin": {
     "dashboardTitle": "Admin Dashboard",
