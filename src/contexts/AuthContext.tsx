@@ -50,37 +50,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await fetchProfile(currentUser);
   }, [fetchProfile]);
 
+  // Effect for initial load: This runs once on component mount to establish the initial auth state.
   useEffect(() => {
-    // This effect handles both initial session loading and subsequent auth state changes.
-    // It ensures `loading` is set to false only after the session and profile are processed.
+    const initialLoad = async () => {
+      console.log("[AuthContext] Initial load started.");
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      setSession(initialSession);
+      const currentUser = initialSession?.user ?? null;
+      setUser(currentUser);
+      await fetchProfile(currentUser);
+      setLoading(false); // Set loading to false only after initial session and profile are fetched
+      console.log("[AuthContext] Initial load finished. Loading set to false.");
+    };
+
+    initialLoad();
+  }, [fetchProfile]); // fetchProfile is stable due to useCallback
+
+  // Effect for real-time auth state changes: This listens for any changes after the initial load.
+  useEffect(() => {
+    console.log("[AuthContext] Setting up onAuthStateChange listener.");
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       console.log(`[AuthContext] Auth state changed: ${event}`);
       setSession(currentSession);
       const currentUser = currentSession?.user ?? null;
       setUser(currentUser);
       await fetchProfile(currentUser);
-      setLoading(false); // Always set loading to false after processing an auth state change
+      // Do NOT set loading here. Loading is only for the very first app load.
+      // If an auth state change happens, the app is already "loaded".
     });
-
-    // Initial check for session on component mount
-    // This is important for cases where onAuthStateChange might not fire immediately on page load
-    // or when the component mounts after a quick navigation.
-    const initialLoad = async () => {
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      setSession(initialSession);
-      const currentUser = initialSession?.user ?? null;
-      setUser(currentUser);
-      await fetchProfile(currentUser);
-      setLoading(false); // Ensure loading is false after initial session check
-    };
-
-    initialLoad();
 
     return () => {
       console.log("[AuthContext] Unsubscribing from auth state changes.");
       subscription.unsubscribe();
     };
-  }, [fetchProfile]); // fetchProfile is a dependency because it's called inside the effect.
+  }, [fetchProfile]); // fetchProfile is stable due to useCallback
 
   const value = useMemo(() => ({
     session,

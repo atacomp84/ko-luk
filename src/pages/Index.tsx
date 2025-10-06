@@ -14,9 +14,9 @@ const Index = () => {
   const { t } = useTranslation();
 
   useEffect(() => {
-    console.log('[Index] Auth loading:', loading, 'Profile:', profile);
+    console.log(`[Index] useEffect - Auth loading: ${loading}, Profile: ${profile ? 'Object' : 'null'}`);
     if (!loading && profile) {
-      console.log(`[Index] User is authenticated with role: ${profile.role}. Redirecting.`);
+      console.log(`[Index] useEffect - User is authenticated with role: ${profile.role}. Redirecting.`);
       if (profile.role === 'coach') {
         navigate('/coach/dashboard');
       } else if (profile.role === 'student') {
@@ -25,12 +25,13 @@ const Index = () => {
         navigate('/admin/dashboard');
       }
     } else if (!loading && !profile) {
-      console.log('[Index] User is not authenticated. Staying on index page.');
+      console.log('[Index] useEffect - User is not authenticated. Staying on index page.');
     }
   }, [loading, profile, navigate]);
 
+  console.log(`[Index] Render - Auth loading: ${loading}, Profile: ${profile ? 'Object' : 'null'}`);
   if (loading) {
-    console.log('[Index] Rendering skeleton due to auth loading.');
+    console.log('[Index] Render - Showing skeleton due to auth loading.');
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background">
         <div className="text-center p-8 space-y-4">
@@ -42,7 +43,7 @@ const Index = () => {
     );
   }
 
-  console.log('[Index] Rendering main index page.');
+  console.log('[Index] Render - Showing main content.');
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 relative bg-gradient-to-br from-sky-100 to-blue-200 dark:from-slate-900 dark:to-slate-800">
        <div className="absolute top-4 right-4 flex items-center gap-2">
