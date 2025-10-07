@@ -8,15 +8,14 @@ interface Profile {
   first_name: string;
   last_name: string;
   username: string;
-  email: string; // Added email to profile interface
-  // Add other profile fields as needed
+  email: string;
 }
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
-  loading: boolean; // Indicates if the initial auth state is being loaded
+  loading: boolean;
   refreshProfile: () => Promise<void>;
 }
 
@@ -41,13 +40,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (profileError || !userProfile) {
         console.error("[AuthContext] Refresh failed, profile not found. Signing out and redirecting.");
         await supabase.auth.signOut();
-        // Explicitly clear local storage for Supabase session keys
+        // Clear Supabase session storage manually
         Object.keys(localStorage).forEach(key => {
           if (key.startsWith('sb-') || key.startsWith('supabase.auth.token')) {
             localStorage.removeItem(key);
           }
         });
-        window.location.replace('/auth'); // Force full reload to clean state
+        window.location.replace('/auth');
       } else {
         setProfile(userProfile as Profile);
         console.log("[AuthContext] Profile refreshed successfully.");
@@ -67,7 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(currentUser);
 
       if (currentUser) {
-        // User is logged in, now we MUST verify their profile exists.
+        // User is logged in, verify their profile exists
         const { data: userProfile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
@@ -75,28 +74,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .single();
 
         if (profileError || !userProfile) {
-          // CRITICAL: User has a session but no profile. This is an inconsistent state.
-          // Force a sign-out to clear the bad session from storage and redirect.
-          console.error("[AuthContext] CRITICAL: User session exists but profile is missing. Forcing sign out and redirect to prevent app lock.", profileError);
+          // CRITICAL: User session exists but profile is missing
+          console.error("[AuthContext] CRITICAL: User session exists but profile is missing. Forcing sign out and redirect.", profileError);
           await supabase.auth.signOut();
-          // Explicitly clear local storage for Supabase session keys
+          // Clear Supabase session storage manually
           Object.keys(localStorage).forEach(key => {
             if (key.startsWith('sb-') || key.startsWith('supabase.auth.token')) {
               localStorage.removeItem(key);
             }
           });
-          window.location.replace('/auth'); // Force full reload to clean state
+          window.location.replace('/auth');
         } else {
-          // Profile found, normal state.
+          // Profile found, normal state
           setProfile(userProfile as Profile);
           console.log("[AuthContext] Profile fetched successfully:", userProfile);
         }
       } else {
-        // User is logged out, so there's no profile.
+        // User is logged out
         setProfile(null);
       }
       
-      // Only stop loading after the session AND profile check is complete.
       setLoading(false);
       console.log("[AuthContext] Auth flow complete. Loading set to false.");
     });
