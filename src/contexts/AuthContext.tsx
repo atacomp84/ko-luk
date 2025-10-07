@@ -25,57 +25,64 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true); // Start loading as true
+  const [loading, setLoading] = useState(true);
 
-  const fetchProfile = useCallback(async (currentUser: User | null) => {
-    console.log("[AuthContext] fetchProfile called for user:", currentUser?.id);
+  const refreshProfile = useCallback(async () => {
+    console.log("[AuthContext] Manually refreshing profile.");
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
     if (currentUser) {
-      try {
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .single();
+      
+      if (profileError || !userProfile) {
+        console.error("[AuthContext] Refresh failed, profile not found. Signing out.");
+        await supabase.auth.signOut();
+      } else {
+        setProfile(userProfile as Profile);
+        console.log("[AuthContext] Profile refreshed successfully.");
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    console.log("[AuthContext] Setting up onAuthStateChange listener.");
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log(`[AuthContext] Auth event: ${event}. Session exists: ${!!session}`);
+      
+      const currentUser = session?.user ?? null;
+      setSession(session);
+      setUser(currentUser);
+
+      if (currentUser) {
+        // User is logged in, now we MUST verify their profile exists.
         const { data: userProfile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', currentUser.id)
           .single();
-        
-        if (profileError) {
-          console.error("[AuthContext] Error fetching profile:", profileError.message);
+
+        if (profileError || !userProfile) {
+          // CRITICAL: User has a session but no profile. This is an inconsistent state.
+          // Force a sign-out to clear the bad session from storage.
+          console.error("[AuthContext] CRITICAL: User session exists but profile is missing. Forcing sign out to prevent app lock.", profileError);
+          await supabase.auth.signOut();
           setProfile(null);
         } else {
+          // Profile found, normal state.
           setProfile(userProfile as Profile);
           console.log("[AuthContext] Profile fetched successfully:", userProfile);
         }
-      } catch (error: any) {
-        console.error("[AuthContext] Unexpected error during profile fetch:", error.message);
+      } else {
+        // User is logged out, so there's no profile.
         setProfile(null);
       }
-    } else {
-      console.log("[AuthContext] No current user provided to fetchProfile, setting profile to null.");
-      setProfile(null);
-    }
-  }, []);
-
-  const refreshProfile = useCallback(async () => {
-    console.log("[AuthContext] refreshProfile called.");
-    const { data: { user: currentUser } } = await supabase.auth.getUser();
-    await fetchProfile(currentUser);
-  }, [fetchProfile]);
-
-  // This single useEffect now handles both the initial load and subsequent auth changes.
-  useEffect(() => {
-    setLoading(true);
-    console.log("[AuthContext] Setting up unified onAuthStateChange listener.");
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log(`[AuthContext] Auth state changed: ${event}. Session exists: ${!!session}`);
       
-      setSession(session);
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      
-      // Fetch profile based on the new user state
-      await fetchProfile(currentUser); 
-      
-      // After the entire auth flow (session check + profile fetch) is complete, stop loading.
+      // Only stop loading after the session AND profile check is complete.
       setLoading(false);
       console.log("[AuthContext] Auth flow complete. Loading set to false.");
     });
@@ -84,7 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log("[AuthContext] Unsubscribing from auth state changes.");
       subscription.unsubscribe();
     };
-  }, [fetchProfile]); // fetchProfile is a stable dependency
+  }, []);
 
   const value = useMemo(() => ({
     session,
