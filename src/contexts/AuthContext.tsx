@@ -8,6 +8,7 @@ interface Profile {
   first_name: string;
   last_name: string;
   username: string;
+  email: string; // Added email to profile interface
   // Add other profile fields as needed
 }
 
@@ -38,8 +39,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .single();
       
       if (profileError || !userProfile) {
-        console.error("[AuthContext] Refresh failed, profile not found. Signing out.");
+        console.error("[AuthContext] Refresh failed, profile not found. Signing out and redirecting.");
         await supabase.auth.signOut();
+        // Explicitly clear local storage for Supabase session keys
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('sb-') || key.startsWith('supabase.auth.token')) {
+            localStorage.removeItem(key);
+          }
+        });
+        window.location.replace('/auth'); // Force full reload to clean state
       } else {
         setProfile(userProfile as Profile);
         console.log("[AuthContext] Profile refreshed successfully.");
@@ -68,10 +76,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (profileError || !userProfile) {
           // CRITICAL: User has a session but no profile. This is an inconsistent state.
-          // Force a sign-out to clear the bad session from storage.
-          console.error("[AuthContext] CRITICAL: User session exists but profile is missing. Forcing sign out to prevent app lock.", profileError);
+          // Force a sign-out to clear the bad session from storage and redirect.
+          console.error("[AuthContext] CRITICAL: User session exists but profile is missing. Forcing sign out and redirect to prevent app lock.", profileError);
           await supabase.auth.signOut();
-          setProfile(null);
+          // Explicitly clear local storage for Supabase session keys
+          Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('sb-') || key.startsWith('supabase.auth.token')) {
+              localStorage.removeItem(key);
+            }
+          });
+          window.location.replace('/auth'); // Force full reload to clean state
         } else {
           // Profile found, normal state.
           setProfile(userProfile as Profile);
