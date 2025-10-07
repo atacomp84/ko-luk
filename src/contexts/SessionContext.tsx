@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { Session, User } from '@supabase/supabase-js'
-import { useNavigate } from 'react-router-dom'
+// import { useNavigate } from 'react-router-dom' // useNavigate importu kaldırıldı
 import { showError } from '@/utils/toast'
 
 interface Profile {
@@ -31,7 +31,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
-  const navigate = useNavigate()
+  // const navigate = useNavigate() // useNavigate kullanımı kaldırıldı
 
   // Session'ı tamamen temizleme fonksiyonu
   const clearSession = useCallback(() => {
@@ -78,9 +78,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       
     } catch (error) {
       console.error('[SessionContext] Failed to load profile:', error)
-      throw error
+      // If profile loading fails, it's a critical state, force a full logout
+      clearSession(); // Clear local state
+      window.location.replace('/auth'); // Force redirect to login page
+      throw error; // Re-throw to stop further processing
     }
-  }, [])
+  }, [clearSession])
 
   // Session durumunu kontrol etme
   const checkSession = useCallback(async () => {
@@ -111,6 +114,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('[SessionContext] Session check failed:', error)
       clearSession()
+      window.location.replace('/auth'); // Force redirect to login page on session check failure
+    } finally {
+      setLoading(false); // Ensure loading is set to false after initial check
     }
   }, [clearSession, loadProfile])
 
@@ -128,7 +134,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }
       
       clearSession()
-      navigate('/auth', { replace: true })
+      // navigate('/auth', { replace: true }) // Navigasyon buradan kaldırıldı
       
     } catch (error) {
       console.error('[SessionContext] Sign out failed:', error)
@@ -136,7 +142,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [clearSession, navigate])
+  }, [clearSession])
 
   // Profile yenileme
   const refreshProfile = useCallback(async () => {
@@ -153,9 +159,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       async (event, currentSession) => {
         console.log('[SessionContext] Auth event:', event)
         
-        if (event === 'SIGNED_OUT') {
+        if (event === 'SIGNED_OUT') { // USER_DELETED kontrolü kaldırıldı
           console.log('[SessionContext] User signed out')
           clearSession()
+          window.location.replace('/auth'); // Force redirect on sign out
           return
         }
 
@@ -168,9 +175,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             } catch (error) {
               console.error('[SessionContext] Failed to load profile after sign in:', error)
               clearSession()
+              window.location.replace('/auth'); // Force redirect on profile load failure after sign in
             }
           }
         }
+        setLoading(false); // Ensure loading is set to false after any auth state change
       }
     )
 

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, ReactNode } from 'react'
 import { useSession, SessionProvider as SessionProviderComponent } from './SessionContext'
-import { useNavigate } from 'react-router-dom'
+// import { useNavigate } from 'react-router-dom' // useNavigate importu kaldırıldı
 
 interface AuthContextType {
   session: any
@@ -22,20 +22,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 function AuthContextInner({ children }: { children: ReactNode }) {
   const session = useSession()
-  const navigate = useNavigate()
+  // const navigate = useNavigate() // useNavigate kullanımı kaldırıldı
 
+  // Bu useEffect artık sadece loglama yapıyor, gerçek yönlendirme ProtectedRoute veya ilgili dashboard sayfaları tarafından ele alınacak.
   useEffect(() => {
-    // Auto-redirect based on role
-    if (!session.loading && session.profile) {
-      if (session.profile.role === 'coach') {
-        navigate('/coach/dashboard', { replace: true })
-      } else if (session.profile.role === 'student') {
-        navigate('/student/dashboard', { replace: true })
-      } else if (session.profile.role === 'admin') {
-        navigate('/admin/dashboard', { replace: true })
-      }
-    }
-  }, [session.loading, session.profile, navigate])
+    console.log(`[AuthContextInner] Session loading: ${session.loading}, Profile: ${session.profile ? 'Object' : 'null'}`);
+    // Otomatik yönlendirme mantığı buradan kaldırıldı.
+  }, [session.loading, session.profile])
 
   return (
     <AuthContext.Provider value={session}>
