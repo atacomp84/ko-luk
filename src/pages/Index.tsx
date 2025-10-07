@@ -58,7 +58,6 @@ const Index = () => {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button onClick={() => navigate('/auth')} size="lg">{t('index.ctaButton')}</Button>
-          {/* Yönetici Girişi butonu kaldırıldı */}
         </div>
       </div>
     </div>

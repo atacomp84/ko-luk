@@ -1,128 +1,53 @@
-import { createContext, useState, useEffect, useContext, ReactNode, useMemo, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Session, User } from '@supabase/supabase-js';
-
-interface Profile {
-  id: string;
-  role: string;
-  first_name: string;
-  last_name: string;
-  username: string;
-  email: string;
-}
+import { createContext, useContext, useEffect, ReactNode } from 'react'
+import { useSession, SessionProvider as SessionProviderComponent } from './SessionContext'
+import { useNavigate } from 'react-router-dom'
 
 interface AuthContextType {
-  session: Session | null;
-  user: User | null;
-  profile: Profile | null;
-  loading: boolean;
-  refreshProfile: () => Promise<void>;
+  session: any
+  user: any
+  profile: any
+  loading: boolean
+  refreshProfile: () => Promise<void>
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  return (
+    <SessionProviderComponent>
+      <AuthContextInner>{children}</AuthContextInner>
+    </SessionProviderComponent>
+  )
+}
 
-  const refreshProfile = useCallback(async () => {
-    console.log("[AuthContext] Manually refreshing profile.");
-    const { data: { user: currentUser } } = await supabase.auth.getUser();
-    if (currentUser) {
-      const { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', currentUser.id)
-        .single();
-      
-      if (profileError || !userProfile) {
-        console.error("[AuthContext] Refresh failed, profile not found. Signing out and redirecting.");
-        await supabase.auth.signOut();
-        // Clear Supabase session storage manually
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('sb-') || key.startsWith('supabase.auth.token')) {
-            localStorage.removeItem(key);
-          }
-        });
-        window.location.replace('/auth');
-      } else {
-        setProfile(userProfile as Profile);
-        console.log("[AuthContext] Profile refreshed successfully.");
-      }
-    }
-  }, []);
+function AuthContextInner({ children }: { children: ReactNode }) {
+  const session = useSession()
+  const navigate = useNavigate()
 
   useEffect(() => {
-    setLoading(true);
-    console.log("[AuthContext] Setting up onAuthStateChange listener.");
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log(`[AuthContext] Auth event: ${event}. Session exists: ${!!session}`);
-      
-      const currentUser = session?.user ?? null;
-      setSession(session);
-      setUser(currentUser);
-
-      if (currentUser) {
-        // User is logged in, verify their profile exists
-        const { data: userProfile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', currentUser.id)
-          .single();
-
-        if (profileError || !userProfile) {
-          // CRITICAL: User session exists but profile is missing
-          console.error("[AuthContext] CRITICAL: User session exists but profile is missing. Forcing sign out and redirect.", profileError);
-          await supabase.auth.signOut();
-          // Clear Supabase session storage manually
-          Object.keys(localStorage).forEach(key => {
-            if (key.startsWith('sb-') || key.startsWith('supabase.auth.token')) {
-              localStorage.removeItem(key);
-            }
-          });
-          window.location.replace('/auth');
-        } else {
-          // Profile found, normal state
-          setProfile(userProfile as Profile);
-          console.log("[AuthContext] Profile fetched successfully:", userProfile);
-        }
-      } else {
-        // User is logged out
-        setProfile(null);
+    // Auto-redirect based on role
+    if (!session.loading && session.profile) {
+      if (session.profile.role === 'coach') {
+        navigate('/coach/dashboard', { replace: true })
+      } else if (session.profile.role === 'student') {
+        navigate('/student/dashboard', { replace: true })
+      } else if (session.profile.role === 'admin') {
+        navigate('/admin/dashboard', { replace: true })
       }
-      
-      setLoading(false);
-      console.log("[AuthContext] Auth flow complete. Loading set to false.");
-    });
-
-    return () => {
-      console.log("[AuthContext] Unsubscribing from auth state changes.");
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const value = useMemo(() => ({
-    session,
-    user,
-    profile,
-    loading,
-    refreshProfile,
-  }), [session, user, profile, loading, refreshProfile]);
+    }
+  }, [session.loading, session.profile, navigate])
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={session}>
       {children}
     </AuthContext.Provider>
-  );
-};
+  )
+}
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
+export function useAuth() {
+  const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider')
   }
-  return context;
-};
+  return context
+}

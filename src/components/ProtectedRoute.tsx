@@ -3,10 +3,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from './ui/skeleton';
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles: string[] }) => {
-  const { loading, profile, session } = useAuth();
+  const { loading, profile } = useAuth();
 
-  // 1. Kimlik doğrulama durumu kontrol edilirken bekle ve yükleme ekranı göster.
-  // Bu, uygulamanın kararsız bir durumda karar vermesini engeller.
+  // Show loading state while checking authentication
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-secondary/50">
@@ -19,14 +18,14 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
     );
   }
 
-  // 2. Yükleme bittikten sonra, kullanıcı giriş yapmamışsa giriş sayfasına yönlendir.
-  if (!session || !profile) {
+  // If not authenticated, redirect to auth page
+  if (!profile) {
     return <Navigate to="/auth" replace />;
   }
 
-  // 3. Kullanıcı giriş yapmış ama bu sayfayı görme yetkisi yoksa, kendi paneline yönlendir.
+  // If authenticated but role not allowed, redirect to appropriate dashboard
   if (!allowedRoles.includes(profile.role)) {
-    let redirectTo = '/'; // Varsayılan yönlendirme
+    let redirectTo = '/';
     if (profile.role === 'coach') {
       redirectTo = '/coach/dashboard';
     } else if (profile.role === 'student') {
@@ -37,7 +36,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
     return <Navigate to={redirectTo} replace />;
   }
 
-  // 4. Her şey yolundaysa, istenen sayfayı göster.
+  // All checks passed, render the protected content
   return <>{children}</>;
 };
 
